@@ -72,32 +72,32 @@ export default function DoctorPortal({ onClose }) {
     if (!rawText || !rawText.trim()) return "";
     let str = rawText.trim();
 
-    // 1. Convert common Hindi Devanagari phrases
+    // 1. Compound Hindi Devanagari expressions
     const devanagariMap = [
-      { pattern: /कमर\s*(में)?\s*(बहुत\s*)?(तेज़\s*|ज्यादा\s*)?दर्द/gi, text: "severe lumbar lower back pain" },
+      { pattern: /कमर\s*(में)?\s*(बहुत\s*)?(तेज़\s*|ज्यादा\s*)?दर्द/gi, text: "severe lower back (lumbar) pain" },
       { pattern: /गर्दन\s*(में)?\s*(बहुत\s*)?(तेज़\s*|ज्यादा\s*)?दर्द/gi, text: "cervical neck pain and stiffness" },
-      { pattern: /घुटने?\s*(में)?\s*(बहुत\s*)?(तेज़\s*|ज्यादा\s*)?दर्द/gi, text: "bilateral knee joint pain and arthritis" },
-      { pattern: /कंधा\s*जाम/gi, text: "frozen shoulder (adhesive capsulitis)" },
-      { pattern: /हाथ\s*नहीं\s*उठ\s*रहा/gi, text: "restricted shoulder mobility / upper limb motor weakness" },
-      { pattern: /पैर\s*(में)?\s*झनझनाहट|झनझनाहट|झुनझुनी/gi, text: "lower extremity neuropathic tingling and paresthesia" },
-      { pattern: /हाथ\s*(में)?\s*झनझनाहट/gi, text: "upper limb paresthesia and numbness" },
+      { pattern: /घुटने?\s*(में)?\s*(बहुत\s*)?(तेज़\s*|ज्यादा\s*)?दर्द/gi, text: "knee joint arthritis and pain" },
+      { pattern: /कंधा\s*जाम|हाथ\s*नहीं\s*उठ\s*रहा/gi, text: "frozen shoulder (adhesive capsulitis) with restricted mobility" },
+      { pattern: /पैर\s*(में)?\s*(झनझनाहट|झुनझुनी|सुन्न)/gi, text: "lower extremity paresthesia, tingling and numbness" },
+      { pattern: /हाथ\s*(में)?\s*(झनझनाहट|झुनझुनी|सुन्न)/gi, text: "upper limb tingling, numbness and paresthesia" },
       { pattern: /सूजन\s*(है)?/gi, text: "localized joint swelling and edema" },
-      { pattern: /चलने\s*में\s*दिक्कत|चलने\s*में\s*परेशानी/gi, text: "difficulty walking and impaired ambulation" },
-      { pattern: /झुकने\s*पर\s*दर्द|झुकने\s*में\s*दर्द/gi, text: "pain aggravated on forward flexion/bending" },
-      { pattern: /नस\s*दब\s*गई|नस\s*खिंच\s*रही/gi, text: "lumbar nerve root compression / sciatica radiculopathy" },
-      { pattern: /लकवा/gi, text: "motor hemiplegia / neurological weakness" },
-      { pattern: /चक्कर\s*(आता\s*है|आना)?/gi, text: "cervical vertigo and dizziness" },
-      { pattern: /सुबह\s*जकड़न/gi, text: "morning joint stiffness" },
-      { pattern: /एड़ी\s*(में)?\s*दर्द/gi, text: "plantar fasciitis / calcaneal heel pain" },
-      { pattern: /चोट\s*लग\s*गई|गिर\s*गए\s*थे/gi, text: "post-traumatic musculoskeletal strain" },
+      { pattern: /चलने\s*में\s*(दिक्कत|परेशानी|तकलीफ)|चल\s*नहीं\s*पा\s*रहे/gi, text: "impaired ambulation and difficulty in walking" },
+      { pattern: /उठने\s*बैठने\s*में\s*(दिक्कत|परेशानी)/gi, text: "difficulty in sit-to-stand movements and weight-bearing" },
+      { pattern: /झुकने\s*(पर|में)\s*(दर्द|दिक्कत)/gi, text: "pain aggravated on forward flexion/bending" },
+      { pattern: /नस\s*(दब\s*गई|खिंच\s*रही|ब्लॉक)/gi, text: "lumbar nerve root compression / sciatica radiculopathy" },
+      { pattern: /लकवा|फालिज|पैरालिसिस/gi, text: "motor hemiplegia / neurological muscle weakness" },
+      { pattern: /चक्कर\s*(आता\s*है|आना|आ\s*रहा)/gi, text: "cervical vertigo and dizziness" },
+      { pattern: /सुबह\s*(जकड़न|अकड़न)/gi, text: "morning joint stiffness" },
+      { pattern: /एड़ी\s*(में)?\s*दर्द|पैर\s*के\s*तलवे\s*में\s*दर्द/gi, text: "plantar fasciitis / calcaneal heel pain" },
+      { pattern: /चोट\s*लग\s*गई|गिर\s*गए\s*थे|मोच\s*आ\s*गई/gi, text: "post-traumatic musculoskeletal sprain / contusion" },
       { pattern: /बहुत\s*दिन\s*से|पुराना\s*दर्द/gi, text: "chronic persistent pain" },
       { pattern: /दर्द/gi, text: "pain" },
-      { pattern: /कमर/gi, text: "lumbar spine" },
+      { pattern: /कमर|पीठ/gi, text: "lumbar spine" },
       { pattern: /गर्दन/gi, text: "cervical neck" },
-      { pattern: /घुटना|घुटने/gi, text: "knee" },
-      { pattern: /कंधा/gi, text: "shoulder" },
-      { pattern: /पैर/gi, text: "leg / lower limb" },
-      { pattern: /हाथ/gi, text: "arm / upper limb" },
+      { pattern: /घुटना|घुटने/gi, text: "knee joint" },
+      { pattern: /कंधा|कंधे/gi, text: "shoulder" },
+      { pattern: /पैर|पैरों|टांग/gi, text: "lower limb" },
+      { pattern: /हाथ|हाथों|कलाई/gi, text: "upper limb / hand" },
       { pattern: /रीढ़/gi, text: "spine" },
       { pattern: /नस/gi, text: "nerve" },
       { pattern: /सूजन/gi, text: "swelling" }
@@ -107,41 +107,41 @@ export default function DoctorPortal({ onClose }) {
       str = str.replace(pattern, text);
     });
 
-    // 2. Convert common Hinglish & phonetic Hindi expressions
+    // 2. Compound Hinglish & phonetic expressions
     const hinglishMap = [
       { pattern: /kamar\s*(me)?\s*(bahut\s*|bohot\s*)?(tez\s*|jyada\s*)?dard/gi, text: "severe lower back (lumbar) pain" },
       { pattern: /gardan\s*(me)?\s*(bahut\s*|bohot\s*)?(tez\s*|jyada\s*)?dard/gi, text: "cervical neck pain and stiffness" },
       { pattern: /ghutne?\s*(me)?\s*(bahut\s*|bohot\s*)?(tez\s*|jyada\s*)?dard/gi, text: "knee joint pain and stiffness" },
-      { pattern: /kandha\s*jam/gi, text: "frozen shoulder (adhesive capsulitis)" },
-      { pattern: /hath\s*nahi\s*uth\s*raha/gi, text: "restricted shoulder mobility and arm weakness" },
+      { pattern: /kandha\s*jam|hath\s*nahi\s*uth\s*raha/gi, text: "frozen shoulder (adhesive capsulitis) with restricted mobility" },
       { pattern: /jhanjhanahat|jhunjhuni|sunn\s*pad\s*jana|sunn/gi, text: "neuropathic tingling, numbness and paresthesia" },
       { pattern: /sujan|sweling|swelling/gi, text: "localized joint swelling and edema" },
-      { pattern: /chalne\s*me\s*(dikkat|problem|pareshani)/gi, text: "difficulty walking and impaired ambulation" },
+      { pattern: /chalne\s*me\s*(dikkat|problem|pareshani)|chal\s*nahi\s*pa\s*rahe/gi, text: "impaired ambulation and difficulty in walking" },
+      { pattern: /uthne\s*baithne\s*me\s*(dikkat|problem)/gi, text: "difficulty in sit-to-stand transitions" },
       { pattern: /jhukne\s*me\s*(dikkat|dard|problem)/gi, text: "pain aggravated on forward flexion/bending" },
-      { pattern: /nas\s*(dab\s*gayi|khinch\s*rahi|dab\s*gaya)/gi, text: "nerve root compression / sciatica radiculopathy" },
-      { pattern: /lakwa|paralysis/gi, text: "neurological motor hemiplegia / paralysis" },
+      { pattern: /nas\s*(dab\s*gayi|khinch\s*rahi|dab\s*gaya|block)/gi, text: "lumbar nerve root compression / sciatica radiculopathy" },
+      { pattern: /lakwa|paralysis|falij/gi, text: "neurological motor hemiplegia / paralysis" },
       { pattern: /chakkar\s*(aana|aata\s*hai|aa\s*raha)/gi, text: "cervical vertigo and dizziness" },
-      { pattern: /subah\s*(jakdan|stiffness)/gi, text: "morning joint stiffness" },
-      { pattern: /edhi\s*(me)?\s*dard|heel\s*pain/gi, text: "plantar fasciitis / calcaneal heel pain" },
-      { pattern: /chot\s*lag\s*gayi|gir\s*gaye\s*the/gi, text: "post-traumatic musculoskeletal injury" },
+      { pattern: /subah\s*(jakdan|stiffness|akdan)/gi, text: "morning joint stiffness" },
+      { pattern: /edhi\s*(me)?\s*dard|heel\s*pain|talwe\s*me\s*dard/gi, text: "plantar fasciitis / calcaneal heel pain" },
+      { pattern: /chot\s*lag\s*gayi|gir\s*gaye\s*the|moch/gi, text: "post-traumatic musculoskeletal sprain" },
       { pattern: /bahut\s*tez\s*dard|bohot\s*dard/gi, text: "acute severe pain" },
-      { pattern: /kamar/gi, text: "lumbar back" },
-      { pattern: /gardan/gi, text: "cervical spine / neck" },
-      { pattern: /ghutna|ghutne/gi, text: "knee joint" },
-      { pattern: /kandha/gi, text: "shoulder" },
-      { pattern: /pair|paav/gi, text: "lower limb / leg" },
-      { pattern: /hath|haath/gi, text: "upper limb / arm" },
-      { pattern: /dard/gi, text: "pain" },
-      { pattern: /dikkat|pareshani/gi, text: "discomfort and impairment" },
-      { pattern: /din\s*se/gi, text: "days duration" },
-      { pattern: /mahine\s*se/gi, text: "months duration" }
+      { pattern: /\bkamar\b/gi, text: "lumbar back" },
+      { pattern: /\bgardan\b/gi, text: "cervical neck" },
+      { pattern: /\bghutna\b|\bghutne\b/gi, text: "knee" },
+      { pattern: /\bkandha\b|\bkandhe\b/gi, text: "shoulder" },
+      { pattern: /\bpair\b|\bpaav\b/gi, text: "lower limb" },
+      { pattern: /\bhath\b|\bhaath\b/gi, text: "upper limb" },
+      { pattern: /\bdard\b/gi, text: "pain" },
+      { pattern: /\bdikkat\b|\bpareshani\b/gi, text: "discomfort" },
+      { pattern: /\bdin\s*se\b/gi, text: "days duration" },
+      { pattern: /\bmahine\s*se\b/gi, text: "months duration" }
     ];
 
     hinglishMap.forEach(({ pattern, text }) => {
       str = str.replace(pattern, text);
     });
 
-    // 3. Fix common English typos & spellings
+    // 3. Common English spelling and phonetic fixes
     const spellingMap = [
       { pattern: /\bbak\s*pain\b/gi, text: "back pain" },
       { pattern: /\bnek\s*pain\b/gi, text: "neck pain" },
@@ -150,7 +150,7 @@ export default function DoctorPortal({ onClose }) {
       { pattern: /\btinling\b/gi, text: "tingling" },
       { pattern: /\bscatica\b/gi, text: "sciatica" },
       { pattern: /\bsholder\b/gi, text: "shoulder" },
-      { pattern: /\bcant\s*walk\b/gi, text: "unable to ambulate properly" }
+      { pattern: /\bcant\s*walk\b/gi, text: "unable to walk properly" }
     ];
 
     spellingMap.forEach(({ pattern, text }) => {
@@ -1214,7 +1214,7 @@ _(Saved in patient clinic records)_`;
                           <td><strong>{p.name}</strong> ({p.age}y/{p.gender[0]})</td>
                           <td>+91 {p.phone}</td>
                           <td><span className="visit-count-tag">{p.totalVisits} visits</span></td>
-                          <td>{p.lastVisitDate}</td>
+                          <td>{cleanDateOnly(p.lastVisitDate || p.registrationDate)}</td>
                           <td>
                             <button className="table-action-btn" onClick={() => openPatientProfile(p.patientId)}>Consult & Slip</button>
                           </td>

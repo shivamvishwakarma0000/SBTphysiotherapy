@@ -223,6 +223,20 @@ function doPost(e) {
     // 1. Patient Registration
     if (action === "sync_patient") {
       var patientSheet = ss.getSheetByName("PATIENTS") || ss.insertSheet("PATIENTS");
+      if (patientSheet.getLastRow() === 0) {
+        var patientHeaders = [
+          "Patient ID", "Registration Date", "Patient Name", "Age", "Gender", 
+          "Phone", "Alternate Phone", "Address", "Date of Birth", "Emergency Contact", 
+          "Reason for Visit", "Status"
+        ];
+        patientSheet.getRange(1, 1, 1, patientHeaders.length).setValues([patientHeaders]);
+        patientSheet.getRange(1, 1, 1, patientHeaders.length)
+          .setBackground("#071927")
+          .setFontColor("#10b981")
+          .setFontWeight("bold")
+          .setFontSize(10);
+        patientSheet.setFrozenRows(1);
+      }
       patientSheet.appendRow([
         data.patientId || "",
         data.registrationDate || "",
@@ -244,6 +258,20 @@ function doPost(e) {
     // 2. Consultation & Visit Record
     if (action === "sync_visit") {
       var visitSheet = ss.getSheetByName("VISITS") || ss.insertSheet("VISITS");
+      if (visitSheet.getLastRow() === 0) {
+        var visitHeaders = [
+          "Visit ID", "Patient ID", "Patient Name", "Phone", "Visit Number", 
+          "Date", "Time", "Reason for Visit", "Complaint", "Diagnosis", 
+          "Treatment / Notes", "Follow-up Date", "Status", "Doctor"
+        ];
+        visitSheet.getRange(1, 1, 1, visitHeaders.length).setValues([visitHeaders]);
+        visitSheet.getRange(1, 1, 1, visitHeaders.length)
+          .setBackground("#071927")
+          .setFontColor("#f59e0b")
+          .setFontWeight("bold")
+          .setFontSize(10);
+        visitSheet.setFrozenRows(1);
+      }
       visitSheet.appendRow([
         data.visitId || "",
         data.patientId || "",
@@ -267,6 +295,19 @@ function doPost(e) {
     // 3. Online Consultation Booking
     if (action === "sync_enquiry") {
       var enquirySheet = ss.getSheetByName("ENQUIRIES") || ss.insertSheet("ENQUIRIES");
+      if (enquirySheet.getLastRow() === 0) {
+        var enquiryHeaders = [
+          "Enquiry ID", "Date", "Time", "Patient Name", "Phone Number", 
+          "Condition / Pain Area", "Duration", "Preferred Date", "Symptoms & Message"
+        ];
+        enquirySheet.getRange(1, 1, 1, enquiryHeaders.length).setValues([enquiryHeaders]);
+        enquirySheet.getRange(1, 1, 1, enquiryHeaders.length)
+          .setBackground("#071927")
+          .setFontColor("#38bdf8")
+          .setFontWeight("bold")
+          .setFontSize(10);
+        enquirySheet.setFrozenRows(1);
+      }
       enquirySheet.appendRow([
         data.id || "",
         data.date || "",
@@ -279,6 +320,21 @@ function doPost(e) {
         data.concern || ""
       ]);
       return ContentService.createTextOutput(JSON.stringify({ ok: true, result: "success", type: "enquiry", id: data.id }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 4. Delete Patient Record from Sheet
+    if (action === "delete_patient") {
+      var pSheet = ss.getSheetByName("PATIENTS");
+      if (pSheet && pSheet.getLastRow() > 1) {
+        var pValues = pSheet.getRange(2, 1, pSheet.getLastRow() - 1, 1).getValues();
+        for (var i = pValues.length - 1; i >= 0; i--) {
+          if (String(pValues[i][0]) === String(data.patientId)) {
+            pSheet.deleteRow(i + 2);
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, result: "deleted" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 

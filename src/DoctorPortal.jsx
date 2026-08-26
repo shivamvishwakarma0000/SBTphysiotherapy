@@ -540,30 +540,100 @@ export default function DoctorPortal({ onClose }) {
   const handleDownloadPDF = (receipt) => {
     if (!receipt || !receipt.patient || !receipt.visit) return;
     const doc = buildReceiptPDF(receipt);
-    doc.save(`Vindhya_Receipt_${receipt.patient.patientId}_Visit${receipt.visit.visitNumber || 1}.pdf`);
+    const fileName = `Vindhya_Receipt_${receipt.patient.name.replace(/\s+/g, "_")}_${receipt.patient.patientId}_Visit${receipt.visit.visitNumber || 1}.pdf`;
+    doc.save(fileName);
+    setShareFeedback(`✅ PDF Receipt downloaded successfully as "${fileName}"`);
   };
 
-  // Direct WhatsApp PDF Sharing Workflow (Always opens WhatsApp directly, avoids macOS Mail interception)
-  const handleWhatsAppDirectShare = (receipt) => {
+  const handleViewPDF = (receipt) => {
+    if (!receipt || !receipt.patient || !receipt.visit) return;
+    const doc = buildReceiptPDF(receipt);
+    const pdfBlob = doc.output("blob");
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    window.open(blobUrl, "_blank");
+  };
+
+  // Direct WhatsApp PDF & Prescription Sharing Workflow
+  const handleWhatsAppDirectShare = async (receipt) => {
     if (!receipt || !receipt.patient || !receipt.visit) return;
     const { patient, visit } = receipt;
     const phoneDigits = String(patient.phone || "").replace(/\D/g, "");
     const patientPhone = phoneDigits.startsWith("91") ? phoneDigits : `91${phoneDigits}`;
 
-    // Clean, professional intro
-    const shortIntro = `Hello *${patient.name}*,\nPlease find your official consultation receipt (ID: *${patient.patientId}*, Visit: *#${visit.visitNumber || 1}*) from *Vindhya Physio & Rehab Center* attached below.`;
+    const fileName = `Vindhya_Receipt_${patient.name.replace(/\s+/g, "_")}_${patient.patientId}_Visit${visit.visitNumber || 1}.pdf`;
+    const doc = buildReceiptPDF(receipt);
+    const pdfBlob = doc.output("blob");
 
-    const fileName = `Vindhya_Receipt_${patient.patientId}_Visit${visit.visitNumber || 1}.pdf`;
+    // Clean, highly professional WhatsApp receipt message without dummy clutter
+    const receiptSummary = 
+`🏥 *VINDHYA PHYSIO & REHAB CENTER*
+*Official Patient Consultation & Clinical Receipt*
+--------------------------------------------
+👤 *Patient Name:* ${patient.name}
+🆔 *Patient ID:* ${patient.patientId}
+📅 *Visit:* #${visit.visitNumber || 1} • ${visit.date} ${visit.time ? `(${visit.time})` : ""}
+🩺 *Reason / Diagnosis:* ${visit.diagnosis || visit.reason || "Physiotherapy Rehabilitation"}
+💊 *Treatment Done:* ${visit.treatmentNotes || "Comprehensive physical evaluation & exercise guidance"}
+🗓️ *Next Follow-up:* ${visit.followUpDate ? visit.followUpDate : "As advised by Consultant Doctor"}
+--------------------------------------------
+👨‍⚕️ *Consultant:* Dr. Satyam Vishwakarma (BPT, DPT, CCYP - BHU)
+📍 *Clinic Address:* Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)
+📞 *Helpline:* +91 9793093316 | WhatsApp: +91 8382024264
+--------------------------------------------
+📄 _Official PDF receipt attached above._`;
 
-    // 1. Download official vector PDF immediately to device
-    handleDownloadPDF(receipt);
-    setShareFeedback(`✅ ${fileName} downloaded! Opening WhatsApp chat for ${patient.name} (+91 ${patient.phone})...`);
+    // 1. Try Native Web Share API if device supports direct file sharing (iPhone/Android/Mac Safari)
+    try {
+      const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        setShareFeedback("📲 Opening share menu — tap WhatsApp to send the PDF file directly!");
+        await navigator.share({
+          files: [pdfFile],
+          title: `Receipt - ${patient.name}`,
+          text: receiptSummary
+        });
+        setShareFeedback("✅ PDF receipt shared successfully!");
+        return;
+      }
+    } catch (shareErr) {
+      if (shareErr.name === "AbortError") return; // User closed share window
+      console.log("Native share fallback to direct chat:", shareErr);
+    }
 
-    // 2. Open WhatsApp chat directly with patient's phone number
-    const whatsappUrl = `https://api.whatsapp.com/send?phone=${patientPhone}&text=${encodeURIComponent(shortIntro)}`;
+    // 2. Desktop / WhatsApp Web workflow:
+    // Download the official PDF receipt
+    doc.save(fileName);
+
+    // Copy formatted receipt text to clipboard
+    try {
+      await navigator.clipboard.writeText(receiptSummary);
+    } catch (e) {}
+
+    setShareFeedback(`✅ "${fileName}" downloaded & receipt copied! Opening WhatsApp for ${patient.name} (+91 ${patient.phone})...`);
+
+    // Open WhatsApp Chat with clean message
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${patientPhone}&text=${encodeURIComponent(receiptSummary)}`;
     setTimeout(() => {
       window.open(whatsappUrl, "_blank");
     }, 400);
+  };
+
+  const handleDeletePatient = async (patientId, patientName) => {
+    if (!confirm(`Are you sure you want to PERMANENTLY delete patient "${patientName}" (${patientId}) and all associated visit records?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api.deletePatient(patientId);
+      if (selectedPatient && selectedPatient.patientId === patientId) {
+        setSelectedPatient(null);
+      }
+      fetchStats();
+      fetchPatients();
+      fetchTodayVisits();
+      alert(`Patient "${patientName}" (${patientId}) has been permanently deleted.`);
+    } catch (err) {
+      alert("Could not delete patient: " + err.message);
+    }
   };
 
   const handleExportCSV = (type = "visits") => {
@@ -1117,6 +1187,14 @@ export default function DoctorPortal({ onClose }) {
                         <button className="table-action-btn primary-action" onClick={() => openPatientProfile(p.patientId)}>
                           Consult / Exit Slip
                         </button>
+                        <button 
+                          className="table-action-btn delete-action" 
+                          style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5", marginLeft: "6px" }}
+                          onClick={() => handleDeletePatient(p.patientId, p.name)}
+                          title="Permanently delete patient record"
+                        >
+                          🗑️ Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1383,6 +1461,14 @@ export default function DoctorPortal({ onClose }) {
                 <button className="primary-btn" onClick={() => setShowAddVisitModal(true)}>
                   ➕ Record New Visit
                 </button>
+                <button 
+                  className="secondary-btn" 
+                  style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5" }}
+                  onClick={() => handleDeletePatient(selectedPatient.patientId, selectedPatient.name)}
+                  title="Permanently Delete Patient"
+                >
+                  🗑️ Delete Patient
+                </button>
                 <button className="secondary-btn close-btn" onClick={() => setSelectedPatient(null)}>
                   ✕
                 </button>
@@ -1541,10 +1627,13 @@ export default function DoctorPortal({ onClose }) {
                 className="whatsapp-share-btn"
                 onClick={() => handleWhatsAppDirectShare(activeReceipt)}
               >
-                💬 Send PDF directly on WhatsApp
+                💬 Send PDF to WhatsApp
               </button>
               <button className="primary-btn" onClick={() => handleDownloadPDF(activeReceipt)}>
                 📥 Download PDF
+              </button>
+              <button className="secondary-btn" onClick={() => handleViewPDF(activeReceipt)}>
+                👁️ View PDF
               </button>
               <button className="secondary-btn" onClick={() => window.print()}>
                 🖨️ Print

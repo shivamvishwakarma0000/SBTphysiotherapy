@@ -52,7 +52,7 @@ function setLocal(key, data) {
   }
 }
 
-// Initial Data Seed if empty
+// Initial Data Seed (Only Auth, NO dummy/previous patient data)
 function initializeLocalDatabase() {
   // Auth
   const auth = getLocal(KEYS.AUTH, null);
@@ -66,82 +66,18 @@ function initializeLocalDatabase() {
     });
   }
 
-  // Sample Patients if completely empty
-  const patients = getLocal(KEYS.PATIENTS, []);
-  if (patients.length === 0) {
-    const samplePatients = [
-      {
-        patientId: "VPR-2026-1001",
-        name: "Ramesh Sharma",
-        age: 48,
-        gender: "Male",
-        phone: "9876543210",
-        altPhone: "9876543211",
-        address: "Civil Lines, Prayagraj, UP",
-        dob: "1978-05-12",
-        emergencyContact: "9876543211",
-        firstVisitReason: "Chronic Lumbar Spondylosis with Sciatica",
-        registrationDate: "2026-08-20",
-        status: "Active",
-        totalVisits: 2,
-        lastVisitDate: "2026-08-24"
-      },
-      {
-        patientId: "VPR-2026-1002",
-        name: "Sunita Verma",
-        age: 36,
-        gender: "Female",
-        phone: "9823456780",
-        altPhone: "",
-        address: "Katra, Prayagraj, UP",
-        dob: "1990-11-23",
-        emergencyContact: "9823456780",
-        firstVisitReason: "Frozen Shoulder (Adhesive Capsulitis - Right)",
-        registrationDate: "2026-08-22",
-        status: "Active",
-        totalVisits: 1,
-        lastVisitDate: "2026-08-22"
-      }
-    ];
-    setLocal(KEYS.PATIENTS, samplePatients);
-
-    const sampleVisits = [
-      {
-        visitId: "VST-1001-1",
-        patientId: "VPR-2026-1001",
-        patientName: "Ramesh Sharma",
-        phone: "9876543210",
-        visitNumber: 1,
-        date: "2026-08-20",
-        time: "10:30 AM",
-        reason: "Severe Lower Back Pain radiating to right calf",
-        complaint: "Unable to bend forward, pain score 8/10",
-        diagnosis: "Lumbar Spondylosis (L4-L5 Disc Bulge)",
-        treatmentNotes: "IFT + Ultrasonic therapy applied for 15 mins. Core isometric exercises taught.",
-        followUpDate: "2026-08-24",
-        status: "Completed",
-        doctor: "Dr. Satyam Vishwakarma"
-      },
-      {
-        visitId: "VST-1001-2",
-        patientId: "VPR-2026-1001",
-        patientName: "Ramesh Sharma",
-        phone: "9876543210",
-        visitNumber: 2,
-        date: "2026-08-24",
-        time: "11:00 AM",
-        reason: "Follow-up session 2",
-        complaint: "Pain reduced to 4/10. Radicular symptoms improved.",
-        diagnosis: "Lumbar Spondylosis (Improving)",
-        treatmentNotes: "Deep tissue release, lumbar traction, spinal stability training.",
-        followUpDate: "2026-08-28",
-        status: "Completed",
-        doctor: "Dr. Satyam Vishwakarma"
-      }
-    ];
-    setLocal(KEYS.VISITS, sampleVisits);
+  // Ensure arrays exist
+  if (!localStorage.getItem(KEYS.PATIENTS)) {
+    setLocal(KEYS.PATIENTS, []);
+  }
+  if (!localStorage.getItem(KEYS.VISITS)) {
+    setLocal(KEYS.VISITS, []);
+  }
+  if (!localStorage.getItem(KEYS.ENQUIRIES)) {
+    setLocal(KEYS.ENQUIRIES, []);
   }
 }
+
 
 // Run init
 initializeLocalDatabase();
@@ -442,6 +378,29 @@ export const api = {
     syncToGoogleSheets("sync_visit", newVisit);
 
     return { ok: true, patient: newPatient, firstVisit: newVisit };
+  },
+
+  async deletePatient(patientId) {
+    const patients = getLocal(KEYS.PATIENTS, []);
+    const visits = getLocal(KEYS.VISITS, []);
+
+    const updatedPatients = patients.filter(p => p.patientId !== patientId);
+    const updatedVisits = visits.filter(v => v.patientId !== patientId);
+
+    setLocal(KEYS.PATIENTS, updatedPatients);
+    setLocal(KEYS.VISITS, updatedVisits);
+
+    // Sync deletion
+    syncToGoogleSheets("delete_patient", { patientId });
+
+    return { ok: true, message: `Patient ${patientId} permanently deleted.` };
+  },
+
+  async deleteVisit(visitId) {
+    const visits = getLocal(KEYS.VISITS, []);
+    const updatedVisits = visits.filter(v => v.visitId !== visitId);
+    setLocal(KEYS.VISITS, updatedVisits);
+    return { ok: true, message: `Visit ${visitId} deleted.` };
   },
 
   // 4. VISITS

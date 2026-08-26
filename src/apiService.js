@@ -27,7 +27,7 @@ export function getWebhookUrl() {
 }
 
 export function setWebhookUrl(url) {
-  if (url) {
+  if (url && url.trim() !== "") {
     localStorage.setItem(KEYS.WEBHOOK_URL, url.trim());
   } else {
     localStorage.removeItem(KEYS.WEBHOOK_URL);

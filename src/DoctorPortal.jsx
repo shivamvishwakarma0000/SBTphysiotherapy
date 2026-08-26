@@ -90,9 +90,20 @@ export default function DoctorPortal({ onClose }) {
   useEffect(() => {
     if (token) {
       api.verifyMe(token)
-        .then(data => {
+        .then(async (data) => {
           if (data.ok) {
             setDoctorInfo(data.doctor);
+            // Auto-pull fresh cloud records from Google Sheets on any device
+            if (getWebhookUrl()) {
+              try {
+                setSyncLoading(true);
+                await restoreFromGoogleSheets();
+              } catch (err) {
+                console.log("Auto-cloud sync on load:", err);
+              } finally {
+                setSyncLoading(false);
+              }
+            }
             fetchStats();
             fetchPatients();
             fetchTodayVisits();
@@ -360,11 +371,31 @@ export default function DoctorPortal({ onClose }) {
     }
   };
 
-  const handleSaveCustomWebhook = (e) => {
+  const handleSaveCustomWebhook = async (e) => {
     e.preventDefault();
-    setWebhookUrl(customWebhookInput);
-    setWebhookSavedMsg("✅ Google Sheets Webhook URL saved successfully!");
-    setTimeout(() => setWebhookSavedMsg(""), 4000);
+    const cleanUrl = (customWebhookInput || "").trim();
+    if (!cleanUrl) {
+      setWebhookUrl("");
+      setWebhookSavedMsg("Webhook URL cleared.");
+      setTimeout(() => setWebhookSavedMsg(""), 3000);
+      return;
+    }
+    setWebhookUrl(cleanUrl);
+    setWebhookSavedMsg("⏳ Connecting to Google Sheets Cloud Database and pulling records...");
+    try {
+      setRestoreLoading(true);
+      const res = await restoreFromGoogleSheets();
+      setWebhookSavedMsg(`✅ Connected! Auto-restored ${res.patientsCount} patients and ${res.visitsCount} visits.`);
+      fetchStats();
+      fetchPatients();
+      fetchTodayVisits();
+      fetchEnquiries();
+    } catch (err) {
+      setWebhookSavedMsg(`⚠️ Webhook saved! (${err.message})`);
+    } finally {
+      setRestoreLoading(false);
+      setTimeout(() => setWebhookSavedMsg(""), 6000);
+    }
   };
 
   const buildReceiptPDF = (receipt) => {
@@ -806,9 +837,19 @@ export default function DoctorPortal({ onClose }) {
         </nav>
 
         <div className="doctor-nav-actions">
-          <button className="sync-badge-btn" onClick={handleManualSync} title="Google Sheets Sync Status">
-            <span className={`sync-dot ${stats.syncStatus === "Connected" ? "green" : "orange"}`}></span>
-            Sheets: {syncLoading ? "Syncing..." : stats.syncStatus}
+          <button
+            className="sync-badge-btn"
+            onClick={() => {
+              if (!getWebhookUrl()) {
+                setActiveTab("settings");
+              } else {
+                handleManualSync();
+              }
+            }}
+            title={getWebhookUrl() ? "Google Sheets Connected (Click to sync)" : "Click to connect Google Sheets Webhook"}
+          >
+            <span className={`sync-dot ${getWebhookUrl() ? "green" : "orange"}`}></span>
+            Sheets: {syncLoading ? "Syncing..." : (getWebhookUrl() ? "Cloud Connected" : "Connect Cloud")}
           </button>
           <button className="logout-btn" onClick={handleLogout} title="Logout">
             Logout
@@ -831,6 +872,34 @@ export default function DoctorPortal({ onClose }) {
         {/* ================= 1. DASHBOARD VIEW ================= */}
         {activeTab === "dashboard" && (
           <div className="dashboard-view">
+            {!getWebhookUrl() && (
+              <div style={{
+                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(2, 132, 199, 0.15))",
+                border: "1px solid rgba(245, 158, 11, 0.4)",
+                borderRadius: "12px",
+                padding: "16px 20px",
+                marginBottom: "20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "16px",
+                flexWrap: "wrap"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "28px" }}>☁️</span>
+                  <div>
+                    <h4 style={{ margin: "0 0 4px 0", color: "#f59e0b", fontSize: "15px", fontWeight: "700" }}>Enable Universal Multi-Device Cloud Sync</h4>
+                    <p style={{ margin: 0, fontSize: "13px", color: "#cbd5e1" }}>
+                      Paste your Google Sheets Webhook URL in Settings once to automatically keep all patient records permanently synchronized across your phone, tablet, and laptop!
+                    </p>
+                  </div>
+                </div>
+                <button className="primary-btn" onClick={() => setActiveTab("settings")} style={{ padding: "8px 18px", fontSize: "13px" }}>
+                  ⚡ Connect Webhook
+                </button>
+              </div>
+            )}
+
             <div className="dashboard-hero">
               <div>
                 <h2>Clinical Operations Dashboard</h2>

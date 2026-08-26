@@ -1254,16 +1254,72 @@ export default function DoctorPortal({ onClose }) {
                       <td><span className="visit-count-tag">{p.totalVisits} Visits</span></td>
                       <td>{p.lastVisitDate}</td>
                       <td className="action-buttons-cell">
-                        <button className="table-action-btn primary-action" onClick={() => openPatientProfile(p.patientId)}>
-                          Consult / Exit Slip
+                        <button className="table-action-btn primary-action" onClick={() => openPatientProfile(p.patientId)} title="Open Full Profile">
+                          👤 Profile
+                        </button>
+                        <button 
+                          className="table-action-btn" 
+                          style={{ background: "#25d366", color: "#fff", marginLeft: "4px", padding: "5px 8px", fontSize: "11.5px", fontWeight: "700" }}
+                          onClick={() => {
+                            handleWhatsAppDirectShare({
+                              patient: p,
+                              visit: {
+                                visitId: `VST-${p.patientId}-1`,
+                                patientId: p.patientId,
+                                patientName: p.name,
+                                phone: p.phone,
+                                visitNumber: 1,
+                                date: p.registrationDate ? String(p.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                                time: "10:00 AM",
+                                reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
+                                complaint: p.firstVisitReason || "Consultation",
+                                diagnosis: p.firstVisitReason || "Under Evaluation",
+                                treatmentNotes: "Physical evaluation & physiotherapy management.",
+                                followUpDate: "As advised by doctor",
+                                status: "Completed",
+                                doctor: "Dr. Satyam Vishwakarma"
+                              }
+                            });
+                          }}
+                          title="Send Receipt PDF to WhatsApp"
+                        >
+                          💬 WhatsApp
+                        </button>
+                        <button 
+                          className="table-action-btn" 
+                          style={{ background: "#0284c7", color: "#fff", marginLeft: "4px", padding: "5px 8px", fontSize: "11.5px" }}
+                          onClick={() => {
+                            handleDownloadPDF({
+                              patient: p,
+                              visit: {
+                                visitId: `VST-${p.patientId}-1`,
+                                patientId: p.patientId,
+                                patientName: p.name,
+                                phone: p.phone,
+                                visitNumber: 1,
+                                date: p.registrationDate ? String(p.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                                time: "10:00 AM",
+                                reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
+                                complaint: p.firstVisitReason || "Consultation",
+                                diagnosis: p.firstVisitReason || "Under Evaluation",
+                                treatmentNotes: "Physical evaluation & physiotherapy management.",
+                                followUpDate: "As advised by doctor",
+                                status: "Completed",
+                                doctor: "Dr. Satyam Vishwakarma"
+                              }
+                            });
+                          }}
+                          title="Download PDF Receipt"
+                        >
+                          📥 PDF
                         </button>
                         <button 
                           className="table-action-btn delete-action" 
-                          style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5", marginLeft: "6px" }}
+                          style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5", marginLeft: "4px", padding: "5px 8px" }}
                           onClick={() => handleDeletePatient(p.patientId, p.name)}
                           title="Permanently delete patient record"
                         >
-                          🗑️ Delete
+                          🗑️
                         </button>
                       </td>
                     </tr>
@@ -1551,6 +1607,104 @@ export default function DoctorPortal({ onClose }) {
             </div>
 
             <div className="profile-body">
+              {/* Quick Patient Receipt & WhatsApp Toolbar */}
+              <div className="quick-receipt-actions-box" style={{
+                background: "linear-gradient(135deg, rgba(37, 211, 102, 0.12), rgba(2, 132, 199, 0.12))",
+                border: "1px solid rgba(37, 211, 102, 0.35)",
+                borderRadius: "10px",
+                padding: "14px",
+                marginBottom: "18px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <strong style={{ color: "#25d366", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    📄 Patient Official Receipt & Prescription Slip
+                  </strong>
+                  <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                    Patient: +91 {selectedPatient.phone}
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    className="whatsapp-share-btn"
+                    style={{ flex: "1 1 200px", minHeight: "42px", fontSize: "13px", padding: "10px 16px", borderRadius: "8px", fontWeight: "700" }}
+                    onClick={() => {
+                      const latestVisit = patientVisits[0] || {
+                        visitId: `VST-${selectedPatient.patientId}-1`,
+                        patientId: selectedPatient.patientId,
+                        patientName: selectedPatient.name,
+                        phone: selectedPatient.phone,
+                        visitNumber: 1,
+                        date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                        time: "10:00 AM",
+                        reason: selectedPatient.firstVisitReason || "Initial Consultation & Assessment",
+                        complaint: selectedPatient.firstVisitReason || "Initial Consultation",
+                        diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
+                        treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
+                        followUpDate: "As advised by doctor",
+                        status: "Completed",
+                        doctor: "Dr. Satyam Vishwakarma"
+                      };
+                      handleWhatsAppDirectShare({ patient: selectedPatient, visit: latestVisit });
+                    }}
+                  >
+                    💬 Send PDF on WhatsApp
+                  </button>
+                  <button
+                    className="primary-btn"
+                    style={{ flex: "1 1 130px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px" }}
+                    onClick={() => {
+                      const latestVisit = patientVisits[0] || {
+                        visitId: `VST-${selectedPatient.patientId}-1`,
+                        patientId: selectedPatient.patientId,
+                        patientName: selectedPatient.name,
+                        phone: selectedPatient.phone,
+                        visitNumber: 1,
+                        date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                        time: "10:00 AM",
+                        reason: selectedPatient.firstVisitReason || "Initial Consultation & Assessment",
+                        complaint: selectedPatient.firstVisitReason || "Initial Consultation",
+                        diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
+                        treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
+                        followUpDate: "As advised by doctor",
+                        status: "Completed",
+                        doctor: "Dr. Satyam Vishwakarma"
+                      };
+                      handleDownloadPDF({ patient: selectedPatient, visit: latestVisit });
+                    }}
+                  >
+                    📥 Download PDF
+                  </button>
+                  <button
+                    className="secondary-btn"
+                    style={{ flex: "1 1 100px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px" }}
+                    onClick={() => {
+                      const latestVisit = patientVisits[0] || {
+                        visitId: `VST-${selectedPatient.patientId}-1`,
+                        patientId: selectedPatient.patientId,
+                        patientName: selectedPatient.name,
+                        phone: selectedPatient.phone,
+                        visitNumber: 1,
+                        date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                        time: "10:00 AM",
+                        reason: selectedPatient.firstVisitReason || "Initial Consultation & Assessment",
+                        complaint: selectedPatient.firstVisitReason || "Initial Consultation",
+                        diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
+                        treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
+                        followUpDate: "As advised by doctor",
+                        status: "Completed",
+                        doctor: "Dr. Satyam Vishwakarma"
+                      };
+                      handleFinalizeAndIssueReceipt(selectedPatient, latestVisit);
+                    }}
+                  >
+                    👁️ View Slip
+                  </button>
+                </div>
+              </div>
+
               <div className="demographics-grid">
                 <div>
                   <label>Alternate Phone</label>
@@ -1566,7 +1720,7 @@ export default function DoctorPortal({ onClose }) {
                 </div>
                 <div>
                   <label>Completed Visits</label>
-                  <span className="visit-count-tag">{selectedPatient.totalVisits || patientVisits.length} Visits</span>
+                  <span className="visit-count-tag">{selectedPatient.totalVisits || (patientVisits.length > 0 ? patientVisits.length : 1)} Visits</span>
                 </div>
               </div>
 
@@ -1605,6 +1759,62 @@ export default function DoctorPortal({ onClose }) {
                     </div>
                   </div>
                 ))}
+                {patientVisits.length === 0 && (
+                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
+                    <p style={{ margin: "0 0 12px 0", color: "#94a3b8", fontSize: "13px" }}>Initial Registration Consultation Record</p>
+                    <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+                      <button
+                        className="receipt-btn finalize-action-btn"
+                        onClick={() => {
+                          const fallbackVisit = {
+                            visitId: `VST-${selectedPatient.patientId}-1`,
+                            patientId: selectedPatient.patientId,
+                            patientName: selectedPatient.name,
+                            phone: selectedPatient.phone,
+                            visitNumber: 1,
+                            date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                            time: "10:00 AM",
+                            reason: selectedPatient.firstVisitReason || "Initial Consultation & Assessment",
+                            complaint: selectedPatient.firstVisitReason || "Initial Consultation",
+                            diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
+                            treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
+                            followUpDate: "As advised by doctor",
+                            status: "Completed",
+                            doctor: "Dr. Satyam Vishwakarma"
+                          };
+                          handleFinalizeAndIssueReceipt(selectedPatient, fallbackVisit);
+                        }}
+                      >
+                        📄 Generate Slip & Send WhatsApp PDF
+                      </button>
+                      <button
+                        className="secondary-btn"
+                        onClick={() => {
+                          const fallbackVisit = {
+                            visitId: `VST-${selectedPatient.patientId}-1`,
+                            patientId: selectedPatient.patientId,
+                            patientName: selectedPatient.name,
+                            phone: selectedPatient.phone,
+                            visitNumber: 1,
+                            date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                            time: "10:00 AM",
+                            reason: selectedPatient.firstVisitReason || "Initial Consultation & Assessment",
+                            complaint: selectedPatient.firstVisitReason || "Initial Consultation",
+                            diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
+                            treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
+                            followUpDate: "As advised by doctor",
+                            status: "Completed",
+                            doctor: "Dr. Satyam Vishwakarma"
+                          };
+                          handleDownloadPDF({ patient: selectedPatient, visit: fallbackVisit });
+                        }}
+                        style={{ padding: "8px 14px", fontSize: "13px" }}
+                      >
+                        📥 Download PDF
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

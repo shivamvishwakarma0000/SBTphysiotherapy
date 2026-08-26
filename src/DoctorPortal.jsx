@@ -635,6 +635,20 @@ _(Saved in patient clinic records)_`;
     window.open(whatsappUrl, "_blank");
   };
 
+  const handleCopyPhoneNumber = async (phone) => {
+    if (!phone) return;
+    let cleanDigits = String(phone).replace(/\D/g, "");
+    if (cleanDigits.startsWith("0")) cleanDigits = cleanDigits.substring(1);
+    const formatted = cleanDigits.startsWith("91") && cleanDigits.length > 10 ? cleanDigits : `91${cleanDigits}`;
+    try {
+      await navigator.clipboard.writeText(formatted);
+      setShareFeedback(`✅ Phone number +${formatted} copied to clipboard!`);
+    } catch {
+      setShareFeedback(`Phone: +${formatted}`);
+    }
+    setTimeout(() => setShareFeedback(""), 3500);
+  };
+
   const handleDeletePatient = async (patientId, patientName) => {
     if (!confirm(`Are you sure you want to PERMANENTLY delete patient "${patientName}" (${patientId}) and all associated visit records?\n\nThis action cannot be undone.`)) {
       return;
@@ -1664,6 +1678,14 @@ _(Saved in patient clinic records)_`;
                   </button>
                   <button
                     className="secondary-btn"
+                    style={{ flex: "1 1 120px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", background: "rgba(2, 132, 199, 0.15)", color: "#38bdf8", borderColor: "#0284c7" }}
+                    onClick={() => handleCopyPhoneNumber(selectedPatient.phone)}
+                    title="Copy Patient Phone Number"
+                  >
+                    📋 Copy Phone
+                  </button>
+                  <button
+                    className="secondary-btn"
                     style={{ flex: "1 1 100px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px" }}
                     onClick={() => {
                       const latestVisit = patientVisits[0] || {
@@ -1910,10 +1932,18 @@ _(Saved in patient clinic records)_`;
                 onClick={() => handleWhatsAppDirectShare(activeReceipt)}
                 title={`Send official PDF prescription & receipt to ${activeReceipt.patient.name} on WhatsApp`}
               >
-                📲 Send PDF Receipt on WhatsApp (+91 {activeReceipt.patient.phone})
+                📲 Send WhatsApp Receipt (+91 {activeReceipt.patient.phone})
               </button>
               <button className="primary-btn" onClick={() => handleDownloadPDF(activeReceipt)}>
                 📥 Download PDF
+              </button>
+              <button
+                className="secondary-btn"
+                style={{ background: "rgba(2, 132, 199, 0.15)", color: "#38bdf8", borderColor: "#0284c7" }}
+                onClick={() => handleCopyPhoneNumber(activeReceipt.patient.phone)}
+                title="Copy Patient WhatsApp Phone Number"
+              >
+                📋 Copy Phone (+91 {activeReceipt.patient.phone})
               </button>
               <button className="secondary-btn" onClick={() => handleViewPDF(activeReceipt)}>
                 👁️ View PDF

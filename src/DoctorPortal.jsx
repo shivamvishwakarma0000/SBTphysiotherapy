@@ -45,9 +45,22 @@ export default function DoctorPortal({ onClose }) {
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [shareFeedback, setShareFeedback] = useState("");
 
-  // Custom Webhook Settings State
-  const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
   const getNowTimeStr = () => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+  const cleanDateOnly = (d) => {
+    if (!d) return new Date().toISOString().slice(0, 10);
+    const s = String(d).trim();
+    if (s.includes("GMT") || s.includes("T") || s.length > 10) {
+      const parsed = new Date(s);
+      if (!isNaN(parsed.getTime())) {
+        const year = parsed.getFullYear();
+        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+        const day = String(parsed.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    }
+    return s.slice(0, 10);
+  };
 
   // Enrollment Form State (Step 1: Patient Intake)
   const [newPatientForm, setNewPatientForm] = useState({
@@ -514,8 +527,8 @@ export default function DoctorPortal({ onClose }) {
     doc.setFontSize(9.5);
     doc.setTextColor(7, 25, 39);
     doc.text(`Patient ID: ${patient.patientId}`, 22, 72);
-    doc.text(`Visit No: #${visit.visitNumber || 1}`, 90, 72);
-    doc.text(`Date & Time: ${visit.date} ${visit.time || ""}`, 140, 72);
+    doc.text(`Visit No: #${visit.visitNumber || 1}`, 85, 72);
+    doc.text(`Date & Time: ${cleanDateOnly(visit.date)} ${visit.time || ""}`, 130, 72);
 
     // Demographics Section Box
     doc.roundedRect(15, 86, 180, 130, 2, 2, "D");
@@ -1495,7 +1508,7 @@ _(Saved in patient clinic records)_`;
                     <th>Primary Concern</th>
                     <th>Total Visits</th>
                     <th>Last Visit</th>
-                    <th>Actions</th>
+                    <th style={{ minWidth: "280px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1508,75 +1521,76 @@ _(Saved in patient clinic records)_`;
                       <td>{p.address || "Vindhyachal"}</td>
                       <td>{p.firstVisitReason}</td>
                       <td><span className="visit-count-tag">{p.totalVisits} Visits</span></td>
-                      <td>{p.lastVisitDate}</td>
-                      <td className="action-buttons-cell">
-                        <button className="table-action-btn primary-action" onClick={() => openPatientProfile(p.patientId)} title="Open Full Profile">
-                          👤 Profile
-                        </button>
-                        <button 
-                          className="table-action-btn" 
-                          style={{ background: "#25d366", color: "#fff", marginLeft: "4px", padding: "5px 8px", fontSize: "11.5px", fontWeight: "700" }}
-                          onClick={() => {
-                            handleWhatsAppDirectShare({
-                              patient: p,
-                              visit: {
-                                visitId: `VST-${p.patientId}-1`,
-                                patientId: p.patientId,
-                                patientName: p.name,
-                                phone: p.phone,
-                                visitNumber: 1,
-                                date: p.registrationDate ? String(p.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
-                                time: "10:00 AM",
-                                reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
-                                complaint: p.firstVisitReason || "Consultation",
-                                diagnosis: p.firstVisitReason || "Under Evaluation",
-                                treatmentNotes: "Physical evaluation & physiotherapy management.",
-                                followUpDate: "As advised by doctor",
-                                status: "Completed",
-                                doctor: "Dr. Satyam Vishwakarma"
-                              }
-                            });
-                          }}
-                          title="Send Receipt PDF to WhatsApp"
-                        >
-                          💬 WhatsApp
-                        </button>
-                        <button 
-                          className="table-action-btn" 
-                          style={{ background: "#0284c7", color: "#fff", marginLeft: "4px", padding: "5px 8px", fontSize: "11.5px" }}
-                          onClick={() => {
-                            handleDownloadPDF({
-                              patient: p,
-                              visit: {
-                                visitId: `VST-${p.patientId}-1`,
-                                patientId: p.patientId,
-                                patientName: p.name,
-                                phone: p.phone,
-                                visitNumber: 1,
-                                date: p.registrationDate ? String(p.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
-                                time: "10:00 AM",
-                                reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
-                                complaint: p.firstVisitReason || "Consultation",
-                                diagnosis: p.firstVisitReason || "Under Evaluation",
-                                treatmentNotes: "Physical evaluation & physiotherapy management.",
-                                followUpDate: "As advised by doctor",
-                                status: "Completed",
-                                doctor: "Dr. Satyam Vishwakarma"
-                              }
-                            });
-                          }}
-                          title="Download PDF Receipt"
-                        >
-                          📥 PDF
-                        </button>
-                        <button 
-                          className="table-action-btn delete-action" 
-                          style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5", marginLeft: "4px", padding: "5px 8px" }}
-                          onClick={() => handleDeletePatient(p.patientId, p.name)}
-                          title="Permanently delete patient record"
-                        >
-                          🗑️
-                        </button>
+                      <td>{cleanDateOnly(p.lastVisitDate || p.registrationDate)}</td>
+                      <td>
+                        <div className="patient-table-actions-grid">
+                          <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)} title="Open Full Profile">
+                            👤 Profile
+                          </button>
+                          <button 
+                            className="table-action-btn btn-whatsapp" 
+                            onClick={() => {
+                              handleWhatsAppDirectShare({
+                                patient: p,
+                                visit: {
+                                  visitId: `VST-${p.patientId}-1`,
+                                  patientId: p.patientId,
+                                  patientName: p.name,
+                                  phone: p.phone,
+                                  visitNumber: 1,
+                                  date: cleanDateOnly(p.registrationDate),
+                                  time: "10:00 AM",
+                                  reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
+                                  complaint: p.firstVisitReason || "Consultation",
+                                  diagnosis: p.firstVisitReason || "Under Evaluation",
+                                  treatmentNotes: "Physical evaluation & physiotherapy management.",
+                                  followUpDate: "As advised by doctor",
+                                  fee: p.lastFee || "₹500",
+                                  status: "Completed",
+                                  doctor: "Dr. Satyam Vishwakarma"
+                                }
+                              });
+                            }}
+                            title="Send Receipt PDF to WhatsApp"
+                          >
+                            💬 WhatsApp
+                          </button>
+                          <button 
+                            className="table-action-btn btn-pdf" 
+                            onClick={() => {
+                              handleDownloadPDF({
+                                patient: p,
+                                visit: {
+                                  visitId: `VST-${p.patientId}-1`,
+                                  patientId: p.patientId,
+                                  patientName: p.name,
+                                  phone: p.phone,
+                                  visitNumber: 1,
+                                  date: cleanDateOnly(p.registrationDate),
+                                  time: "10:00 AM",
+                                  reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
+                                  complaint: p.firstVisitReason || "Consultation",
+                                  diagnosis: p.firstVisitReason || "Under Evaluation",
+                                  treatmentNotes: "Physical evaluation & physiotherapy management.",
+                                  followUpDate: "As advised by doctor",
+                                  fee: p.lastFee || "₹500",
+                                  status: "Completed",
+                                  doctor: "Dr. Satyam Vishwakarma"
+                                }
+                              });
+                            }}
+                            title="Download PDF Receipt"
+                          >
+                            📥 PDF
+                          </button>
+                          <button 
+                            className="table-action-btn btn-delete" 
+                            onClick={() => handleDeletePatient(p.patientId, p.name)}
+                            title="Permanently delete patient record"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

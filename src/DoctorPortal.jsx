@@ -614,43 +614,25 @@ export default function DoctorPortal({ onClose }) {
 📄 *Official Digital Clinical Receipt*
 _(Saved in patient clinic records)_`;
 
-    // 1. First, always trigger download of the official PDF document so doctor has the file ready
+    // 1. Download official PDF document to device
     try {
       doc.save(fileName);
     } catch (e) {
-      console.log("PDF download fallback:", e);
+      console.log("PDF download:", e);
     }
 
-    // 2. Try Native Web Share API if device supports direct file sharing (iPhone/Android Share Sheet)
-    try {
-      const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf", lastModified: Date.now() });
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        setShareFeedback("📲 Opening WhatsApp share menu — tap WhatsApp to send the PDF file!");
-        await navigator.share({
-          files: [pdfFile],
-          title: `Vindhya Physio Receipt - ${patient.name}`,
-          text: receiptSummary
-        });
-        setShareFeedback(`✅ PDF receipt sent to ${patient.name} (+91 ${patient.phone})!`);
-        return;
-      }
-    } catch (shareErr) {
-      if (shareErr.name === "AbortError") return; // User cancelled
-      console.log("Native share fallback to direct chat:", shareErr);
-    }
-
-    // 3. Direct WhatsApp Chat workflow:
+    // 2. Copy receipt summary to clipboard
     try {
       await navigator.clipboard.writeText(receiptSummary);
     } catch (e) {}
 
-    setShareFeedback(`✅ "${fileName}" downloaded! In WhatsApp, tap 📎 (Attach Document) to send the PDF to ${patient.name}!`);
+    setShareFeedback(`✅ Opening direct WhatsApp chat for ${patient.name} (+91 ${patient.phone})...`);
 
-    // Open WhatsApp Chat with pre-filled message
+    // 3. Directly open WhatsApp for that exact patient's phone number
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${patientPhone}&text=${encodeURIComponent(receiptSummary)}`;
-    setTimeout(() => {
-      window.open(whatsappUrl, "_blank");
-    }, 300);
+    
+    // Direct navigation to WhatsApp
+    window.open(whatsappUrl, "_blank");
   };
 
   const handleDeletePatient = async (patientId, patientName) => {

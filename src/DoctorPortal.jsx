@@ -42,8 +42,10 @@ export default function DoctorPortal({ onClose }) {
 
   // Modals & Consultation Flow
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
-  const [activeReceipt, setActiveReceipt] = useState(null);
-  const [shareFeedback, setShareFeedback] = useState("");
+  // Custom Webhook Settings State
+  const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
+  const [webhookSavedMsg, setWebhookSavedMsg] = useState("");
+  const [restoreLoading, setRestoreLoading] = useState(false);
 
   const getNowTimeStr = () => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 
@@ -62,55 +64,103 @@ export default function DoctorPortal({ onClose }) {
     return s.slice(0, 10);
   };
 
-  const translateSymptomsToEnglish = async (rawText) => {
+  // Standalone Comprehensive Clinical Hindi / Hinglish / Raw English Translator
+  const translateSymptomsToEnglish = (rawText) => {
     if (!rawText || !rawText.trim()) return "";
-    const trimmed = rawText.trim();
+    let str = rawText.trim();
 
-    // 1. Try Online Free API Translation (Handles Hindi Unicode & Hinglish)
-    try {
-      const isHindi = /[\u0900-\u097F]/.test(trimmed);
-      const langPair = isHindi ? "hi|en" : "autodetect|en";
-      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmed)}&langpair=${langPair}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.responseData && data.responseData.translatedText) {
-          let text = data.responseData.translatedText;
-          if (!text.toLowerCase().includes("mymemory") && !text.toLowerCase().includes("invalid") && !text.toLowerCase().includes("quota")) {
-            return text.charAt(0).toUpperCase() + text.slice(1);
-          }
-        }
-      }
-    } catch (err) {
-      console.log("Online translation fallback:", err);
-    }
-
-    // 2. Comprehensive Clinical Medical Dictionary / Hinglish Converter
-    let converted = trimmed;
-    const dict = [
-      { patterns: [/kamar (me )?(bahut )?tez dard/gi, /kamar dard/gi, /कमर दर्द/gi, /कमर में दर्द/gi], replace: "Severe lumbar back pain" },
-      { patterns: [/gardan (me )?dard/gi, /gardan dard/gi, /गर्दन दर्द/gi, /गर्दन में दर्द/gi], replace: "Cervical neck pain and stiffness" },
-      { patterns: [/ghutne (me )?dard/gi, /ghutna dard/gi, /घुटना दर्द/gi, /घुटने में दर्द/gi], replace: "Bilateral knee joint pain & stiffness" },
-      { patterns: [/kandha jam/gi, /kandha nahi uth raha/gi, /कंधा जाम/gi], replace: "Frozen shoulder with restricted mobility" },
-      { patterns: [/jhanjhanahat/gi, /jhunjhuni/gi, /झनझनाहट/gi, /झुनझुनी/gi], replace: "Neuropathic tingling and paresthesia" },
-      { patterns: [/sujan/gi, /सूजन/gi], replace: "Localized edema and swelling" },
-      { patterns: [/chalne me dikkat/gi, /chalne me pareshani/gi, /चलने में दिक्कत/gi], replace: "Impaired ambulation and difficulty walking" },
-      { patterns: [/jhukne me dard/gi, /jhukne me dikkat/gi], replace: "Pain aggravated on forward bending" },
-      { patterns: [/lakwa/gi, /लकवा/gi], replace: "Motor weakness / Hemiparesis" },
-      { patterns: [/nas khinch rahi/gi, /nas dab gayi/gi, /नस दब/gi], replace: "Nerve root compression / Sciatic radiculopathy" },
-      { patterns: [/chakkar/gi, /चक्कर/gi], replace: "Cervical vertigo and dizziness" },
-      { patterns: [/subah jakdan/gi, /morning stiffness/gi], replace: "Morning joint stiffness" },
-      { patterns: [/hath nahi uth raha/gi, /haath dard/gi], replace: "Upper limb weakness and movement restriction" },
-      { patterns: [/chot lag gayi/gi, /gir gaye the/gi], replace: "Post-traumatic musculoskeletal strain" },
-      { patterns: [/edhi me dard/gi, /heel pain/gi, /एड़ी दर्द/gi], replace: "Plantar fasciitis / Calcaneal heel pain" }
+    // 1. Convert common Hindi Devanagari phrases
+    const devanagariMap = [
+      { pattern: /कमर\s*(में)?\s*(बहुत\s*)?(तेज़\s*|ज्यादा\s*)?दर्द/gi, text: "severe lumbar lower back pain" },
+      { pattern: /गर्दन\s*(में)?\s*(बहुत\s*)?(तेज़\s*|ज्यादा\s*)?दर्द/gi, text: "cervical neck pain and stiffness" },
+      { pattern: /घुटने?\s*(में)?\s*(बहुत\s*)?(तेज़\s*|ज्यादा\s*)?दर्द/gi, text: "bilateral knee joint pain and arthritis" },
+      { pattern: /कंधा\s*जाम/gi, text: "frozen shoulder (adhesive capsulitis)" },
+      { pattern: /हाथ\s*नहीं\s*उठ\s*रहा/gi, text: "restricted shoulder mobility / upper limb motor weakness" },
+      { pattern: /पैर\s*(में)?\s*झनझनाहट|झनझनाहट|झुनझुनी/gi, text: "lower extremity neuropathic tingling and paresthesia" },
+      { pattern: /हाथ\s*(में)?\s*झनझनाहट/gi, text: "upper limb paresthesia and numbness" },
+      { pattern: /सूजन\s*(है)?/gi, text: "localized joint swelling and edema" },
+      { pattern: /चलने\s*में\s*दिक्कत|चलने\s*में\s*परेशानी/gi, text: "difficulty walking and impaired ambulation" },
+      { pattern: /झुकने\s*पर\s*दर्द|झुकने\s*में\s*दर्द/gi, text: "pain aggravated on forward flexion/bending" },
+      { pattern: /नस\s*दब\s*गई|नस\s*खिंच\s*रही/gi, text: "lumbar nerve root compression / sciatica radiculopathy" },
+      { pattern: /लकवा/gi, text: "motor hemiplegia / neurological weakness" },
+      { pattern: /चक्कर\s*(आता\s*है|आना)?/gi, text: "cervical vertigo and dizziness" },
+      { pattern: /सुबह\s*जकड़न/gi, text: "morning joint stiffness" },
+      { pattern: /एड़ी\s*(में)?\s*दर्द/gi, text: "plantar fasciitis / calcaneal heel pain" },
+      { pattern: /चोट\s*लग\s*गई|गिर\s*गए\s*थे/gi, text: "post-traumatic musculoskeletal strain" },
+      { pattern: /बहुत\s*दिन\s*से|पुराना\s*दर्द/gi, text: "chronic persistent pain" },
+      { pattern: /दर्द/gi, text: "pain" },
+      { pattern: /कमर/gi, text: "lumbar spine" },
+      { pattern: /गर्दन/gi, text: "cervical neck" },
+      { pattern: /घुटना|घुटने/gi, text: "knee" },
+      { pattern: /कंधा/gi, text: "shoulder" },
+      { pattern: /पैर/gi, text: "leg / lower limb" },
+      { pattern: /हाथ/gi, text: "arm / upper limb" },
+      { pattern: /रीढ़/gi, text: "spine" },
+      { pattern: /नस/gi, text: "nerve" },
+      { pattern: /सूजन/gi, text: "swelling" }
     ];
 
-    dict.forEach(({ patterns, replace }) => {
-      patterns.forEach(p => {
-        converted = converted.replace(p, replace);
-      });
+    devanagariMap.forEach(({ pattern, text }) => {
+      str = str.replace(pattern, text);
     });
 
-    return converted.charAt(0).toUpperCase() + converted.slice(1);
+    // 2. Convert common Hinglish & phonetic Hindi expressions
+    const hinglishMap = [
+      { pattern: /kamar\s*(me)?\s*(bahut\s*|bohot\s*)?(tez\s*|jyada\s*)?dard/gi, text: "severe lower back (lumbar) pain" },
+      { pattern: /gardan\s*(me)?\s*(bahut\s*|bohot\s*)?(tez\s*|jyada\s*)?dard/gi, text: "cervical neck pain and stiffness" },
+      { pattern: /ghutne?\s*(me)?\s*(bahut\s*|bohot\s*)?(tez\s*|jyada\s*)?dard/gi, text: "knee joint pain and stiffness" },
+      { pattern: /kandha\s*jam/gi, text: "frozen shoulder (adhesive capsulitis)" },
+      { pattern: /hath\s*nahi\s*uth\s*raha/gi, text: "restricted shoulder mobility and arm weakness" },
+      { pattern: /jhanjhanahat|jhunjhuni|sunn\s*pad\s*jana|sunn/gi, text: "neuropathic tingling, numbness and paresthesia" },
+      { pattern: /sujan|sweling|swelling/gi, text: "localized joint swelling and edema" },
+      { pattern: /chalne\s*me\s*(dikkat|problem|pareshani)/gi, text: "difficulty walking and impaired ambulation" },
+      { pattern: /jhukne\s*me\s*(dikkat|dard|problem)/gi, text: "pain aggravated on forward flexion/bending" },
+      { pattern: /nas\s*(dab\s*gayi|khinch\s*rahi|dab\s*gaya)/gi, text: "nerve root compression / sciatica radiculopathy" },
+      { pattern: /lakwa|paralysis/gi, text: "neurological motor hemiplegia / paralysis" },
+      { pattern: /chakkar\s*(aana|aata\s*hai|aa\s*raha)/gi, text: "cervical vertigo and dizziness" },
+      { pattern: /subah\s*(jakdan|stiffness)/gi, text: "morning joint stiffness" },
+      { pattern: /edhi\s*(me)?\s*dard|heel\s*pain/gi, text: "plantar fasciitis / calcaneal heel pain" },
+      { pattern: /chot\s*lag\s*gayi|gir\s*gaye\s*the/gi, text: "post-traumatic musculoskeletal injury" },
+      { pattern: /bahut\s*tez\s*dard|bohot\s*dard/gi, text: "acute severe pain" },
+      { pattern: /kamar/gi, text: "lumbar back" },
+      { pattern: /gardan/gi, text: "cervical spine / neck" },
+      { pattern: /ghutna|ghutne/gi, text: "knee joint" },
+      { pattern: /kandha/gi, text: "shoulder" },
+      { pattern: /pair|paav/gi, text: "lower limb / leg" },
+      { pattern: /hath|haath/gi, text: "upper limb / arm" },
+      { pattern: /dard/gi, text: "pain" },
+      { pattern: /dikkat|pareshani/gi, text: "discomfort and impairment" },
+      { pattern: /din\s*se/gi, text: "days duration" },
+      { pattern: /mahine\s*se/gi, text: "months duration" }
+    ];
+
+    hinglishMap.forEach(({ pattern, text }) => {
+      str = str.replace(pattern, text);
+    });
+
+    // 3. Fix common English typos & spellings
+    const spellingMap = [
+      { pattern: /\bbak\s*pain\b/gi, text: "back pain" },
+      { pattern: /\bnek\s*pain\b/gi, text: "neck pain" },
+      { pattern: /\bsweling\b/gi, text: "swelling" },
+      { pattern: /\bstifness\b/gi, text: "stiffness" },
+      { pattern: /\btinling\b/gi, text: "tingling" },
+      { pattern: /\bscatica\b/gi, text: "sciatica" },
+      { pattern: /\bsholder\b/gi, text: "shoulder" },
+      { pattern: /\bcant\s*walk\b/gi, text: "unable to ambulate properly" }
+    ];
+
+    spellingMap.forEach(({ pattern, text }) => {
+      str = str.replace(pattern, text);
+    });
+
+    // Clean whitespace and capitalize
+    str = str.replace(/\s+/g, " ").trim();
+    if (str.length > 0) {
+      str = str.charAt(0).toUpperCase() + str.slice(1);
+      if (!str.endsWith(".")) str += ".";
+    }
+    return str;
   };
 
   const [translatingIntake, setTranslatingIntake] = useState(false);
@@ -132,7 +182,6 @@ export default function DoctorPortal({ onClose }) {
     duration: "1 to 2 Weeks",
     complaint: "",
     referredBy: "Self / Walk-in",
-    referredBySelect: "Self / Walk-in",
     visitTime: getNowTimeStr()
   });
   const [enrollLoading, setEnrollLoading] = useState(false);
@@ -453,8 +502,6 @@ export default function DoctorPortal({ onClose }) {
   const handleFinalizeAndIssueReceipt = (patient, visit) => {
     setActiveReceipt({ patient, visit });
   };
-
-  const [restoreLoading, setRestoreLoading] = useState(false);
 
   const handleRestoreFromSheets = async () => {
     if (!confirm("Restore all patient records, visits, and bookings from Google Sheets into the website?")) return;
@@ -1306,45 +1353,14 @@ _(Saved in patient clinic records)_`;
                 </label>
                 <label>
                   Referred By
-                  <select
-                    value={newPatientForm.referredBySelect || "Self / Walk-in"}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setNewPatientForm({
-                        ...newPatientForm,
-                        referredBySelect: val,
-                        referredBy: val === "Custom" ? "" : val
-                      });
-                    }}
-                  >
-                    <option value="Self / Walk-in">Self / Walk-in</option>
-                    <option value="Dr. R.K. Verma (MBBS, MD - Mirzapur)">Dr. R.K. Verma (MBBS, MD - Mirzapur)</option>
-                    <option value="Dr. S.P. Singh (Orthopedic Surgeon)">Dr. S.P. Singh (Orthopedic Surgeon)</option>
-                    <option value="Dr. A.K. Mishra (General Physician)">Dr. A.K. Mishra (General Physician)</option>
-                    <option value="Dr. P. Tiwari (Neurologist)">Dr. P. Tiwari (Neurologist)</option>
-                    <option value="Dr. Amit Gupta (Consultant Physician)">Dr. Amit Gupta (Consultant Physician)</option>
-                    <option value="Hospital / Clinic Reference">Hospital / Clinic Reference</option>
-                    <option value="Friend / Family Recommendation">Friend / Family Recommendation</option>
-                    <option value="Old Patient Referral">Old Patient Referral</option>
-                    <option value="Social Media / Google Search">Social Media / Google Search</option>
-                    <option value="Custom">✏️ Other Doctor / Reference...</option>
-                  </select>
+                  <input
+                    type="text"
+                    value={newPatientForm.referredBy}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, referredBy: e.target.value })}
+                    placeholder="e.g. Self / Walk-in / Dr. Name / Relative"
+                  />
                 </label>
               </div>
-
-              {newPatientForm.referredBySelect === "Custom" && (
-                <div className="form-row-1" style={{ marginTop: "8px" }}>
-                  <label>
-                    Type Doctor / Referrer Name
-                    <input
-                      type="text"
-                      value={newPatientForm.referredBy}
-                      onChange={(e) => setNewPatientForm({ ...newPatientForm, referredBy: e.target.value })}
-                      placeholder="Enter referring doctor / hospital / friend name"
-                    />
-                  </label>
-                </div>
-              )}
 
               <h3 className="form-section-title" style={{ marginTop: "24px" }}>2. Problem, Symptoms & History</h3>
               <div className="form-row-3">
@@ -1417,42 +1433,17 @@ _(Saved in patient clinic records)_`;
                 </div>
               )}
 
-              {/* Automatic Intake / Arrival Time */}
-              <div style={{ marginTop: "16px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "8px", padding: "12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
-                  <label style={{ margin: 0, fontWeight: "700", color: "#38bdf8" }}>
-                    ⏱️ Intake / Arrival Time: <strong>{newPatientForm.visitTime || getNowTimeStr()}</strong>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setNewPatientForm({ ...newPatientForm, visitTime: getNowTimeStr() })}
-                    style={{ background: "#0284c7", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 10px", fontSize: "11.5px", fontWeight: "700", cursor: "pointer" }}
-                  >
-                    🔄 Set to Current Live Time
-                  </button>
-                </div>
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                  <span style={{ fontSize: "12px", color: "#94a3b8" }}>Quick Time:</span>
-                  {["09:30 AM", "10:30 AM", "11:30 AM", "12:30 PM", "04:30 PM", "05:30 PM", "06:30 PM", "07:30 PM"].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setNewPatientForm({ ...newPatientForm, visitTime: t })}
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: "5px",
-                        fontSize: "11.5px",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        border: newPatientForm.visitTime === t ? "1.5px solid #38bdf8" : "1px solid rgba(255,255,255,0.12)",
-                        background: newPatientForm.visitTime === t ? "#082f49" : "rgba(255,255,255,0.05)",
-                        color: newPatientForm.visitTime === t ? "#38bdf8" : "#cbd5e1"
-                      }}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
+              <div className="form-row-1" style={{ marginTop: "12px" }}>
+                <label>
+                  Intake / Arrival Time * <small style={{ color: "#38bdf8", fontWeight: "normal" }}>(Auto-matched to current live clock)</small>
+                  <input
+                    type="text"
+                    required
+                    value={newPatientForm.visitTime || getNowTimeStr()}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, visitTime: e.target.value })}
+                    placeholder="e.g. 02:30 PM"
+                  />
+                </label>
               </div>
 
               {/* Patient's Reported Symptoms with AI Translation Button */}
@@ -1463,17 +1454,15 @@ _(Saved in patient clinic records)_`;
                   </label>
                   <button
                     type="button"
-                    onClick={async () => {
+                    onClick={() => {
                       if (!newPatientForm.complaint.trim()) {
-                        alert("Please type something in Hindi / Hinglish first.");
+                        alert("Please type something in Hindi or Hinglish first.");
                         return;
                       }
-                      setTranslatingIntake(true);
-                      const translated = await translateSymptomsToEnglish(newPatientForm.complaint);
+                      const translated = translateSymptomsToEnglish(newPatientForm.complaint);
                       setNewPatientForm({ ...newPatientForm, complaint: translated });
-                      setTranslatingIntake(false);
                     }}
-                    disabled={translatingIntake || !newPatientForm.complaint}
+                    disabled={!newPatientForm.complaint}
                     style={{
                       background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
                       color: "#ffffff",
@@ -1488,16 +1477,16 @@ _(Saved in patient clinic records)_`;
                       gap: "6px",
                       boxShadow: "0 2px 8px rgba(139, 92, 246, 0.35)"
                     }}
-                    title="Translate Hindi, Hinglish, or rough text to polished medical English"
+                    title="Instant smart translation from Hindi/Hinglish to clinical English"
                   >
-                    {translatingIntake ? "✨ Converting to English..." : "✨ Convert Hindi / Hinglish ➔ English"}
+                    ✨ Convert Hindi / Hinglish ➔ English
                   </button>
                 </div>
                 <textarea
                   rows="3"
                   value={newPatientForm.complaint}
                   onChange={(e) => setNewPatientForm({ ...newPatientForm, complaint: e.target.value })}
-                  placeholder="You can type in Hindi (जैसे: कमर में दर्द है और पैर में झनझनाहट होती है), Hinglish (e.g. kamar dard chalne me dikkat), or English. Click 'Convert' to auto-translate into medical English."
+                  placeholder="Type in Hindi (जैसे: कमर में दर्द है और पैर में झनझनाहट होती है), Hinglish (e.g. kamar dard chalne me dikkat), or English. Click 'Convert' to auto-translate into medical English."
                 />
               </div>
 
@@ -2625,14 +2614,12 @@ _(Saved in patient clinic records)_`;
                   </label>
                   <button
                     type="button"
-                    onClick={async () => {
+                    onClick={() => {
                       if (!consultForm.diagnosis.trim()) return;
-                      setTranslatingConsult(true);
-                      const translated = await translateSymptomsToEnglish(consultForm.diagnosis);
+                      const translated = translateSymptomsToEnglish(consultForm.diagnosis);
                       setConsultForm({ ...consultForm, diagnosis: translated });
-                      setTranslatingConsult(false);
                     }}
-                    disabled={translatingConsult || !consultForm.diagnosis}
+                    disabled={!consultForm.diagnosis}
                     style={{
                       background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
                       color: "#ffffff",
@@ -2647,7 +2634,7 @@ _(Saved in patient clinic records)_`;
                       gap: "4px"
                     }}
                   >
-                    {translatingConsult ? "Translating..." : "✨ AI Convert to Medical English"}
+                    ✨ AI Convert to Medical English
                   </button>
                 </div>
                 <input

@@ -5,7 +5,7 @@
 
 const DEFAULT_DOCTOR_EMAIL = "shivamupsc8@gmail.com";
 const DEFAULT_DOCTOR_PASS = "@Shivam0000";
-const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby5t4c8fNq9T8J5wQ1L0Z7mY2rX4vP9k6j3/exec"; // Will be overridden by env or user settings
+export const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxaUQWab2LHMYA_w97RPNL9A8TuJJy2jR2X3KqcAyihQj_qwvdOGwv23fO9nOFb_WYNRA/exec";
 
 // Keys for localStorage
 const KEYS = {
@@ -23,7 +23,7 @@ export function getWebhookUrl() {
   if (custom && custom.trim() !== "") return custom.trim();
   const envUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
   if (envUrl && envUrl.trim() !== "") return envUrl.trim();
-  return "";
+  return DEFAULT_WEBHOOK_URL;
 }
 
 export function setWebhookUrl(url) {

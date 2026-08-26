@@ -47,7 +47,7 @@ export default function DoctorPortal({ onClose }) {
 
   // Custom Webhook Settings State
   const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
-  const [webhookSavedMsg, setWebhookSavedMsg] = useState("");
+  const getNowTimeStr = () => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 
   // Enrollment Form State (Step 1: Patient Intake)
   const [newPatientForm, setNewPatientForm] = useState({
@@ -65,8 +65,8 @@ export default function DoctorPortal({ onClose }) {
     duration: "1 to 2 Weeks",
     complaint: "",
     referredBy: "Self / Walk-in",
-    visitTime: "10:30 AM",
-    visitTimeSelect: "10:30 AM"
+    visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    visitTimeSelect: "Custom"
   });
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState("");
@@ -75,8 +75,8 @@ export default function DoctorPortal({ onClose }) {
   const [activeConsultPatient, setActiveConsultPatient] = useState(null);
   const [consultForm, setConsultForm] = useState({
     visitDate: new Date().toISOString().slice(0, 10),
-    visitTime: "10:30 AM",
-    visitTimeSelect: "10:30 AM",
+    visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    visitTimeSelect: "Custom",
     reason: "Spine & Back Pain",
     complaint: "",
     duration: "",
@@ -275,9 +275,12 @@ export default function DoctorPortal({ onClose }) {
         emergencyContact: "",
         isFirstTime: "Yes",
         reasonForVisit: "Spine & Back Pain",
+        reasonForVisitSelect: "Spine & Back Pain",
         duration: "1 to 2 Weeks",
         complaint: "",
-        referredBy: "Self / Walk-in"
+        referredBy: "Self / Walk-in",
+        visitTime: getNowTimeStr(),
+        visitTimeSelect: "Custom"
       });
 
       // Switch to Waiting Queue
@@ -295,14 +298,16 @@ export default function DoctorPortal({ onClose }) {
     setActiveConsultPatient(patient);
     setConsultForm({
       visitDate: new Date().toISOString().slice(0, 10),
-      visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+      visitTime: getNowTimeStr(),
+      visitTimeSelect: "Custom",
       reason: patient.firstVisitReason || "Physiotherapy Rehabilitation",
       complaint: patient.complaint || "Initial Pain & Stiffness",
       duration: patient.duration || "1 to 2 Weeks",
       diagnosis: patient.firstVisitReason ? `${patient.firstVisitReason} (Active Rehabilitation)` : "Lumbar Spondylosis (L4-L5 Disc Bulge)",
       treatmentNotes: "Electrotherapy (IFT) + Targeted manual decompression + Isometric strengthening exercises.",
       fee: "500",
-      followUpDate: ""
+      followUpDate: "",
+      followUpTime: ""
     });
   };
 
@@ -488,13 +493,12 @@ export default function DoctorPortal({ onClose }) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(255, 255, 255);
-    doc.text("DR. SATYAM VISHWAKARMA", 196, 16, { align: "right" });
+    doc.text("DR. SATYAM VISHWAKARMA", 196, 18, { align: "right" });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(180, 210, 220);
-    doc.text("Consultant Physiotherapist", 196, 22, { align: "right" });
-    doc.text("BPT, DPT, CCYP (BHU)", 196, 28, { align: "right" });
-    doc.text("Regd. Clinical Practitioner", 196, 34, { align: "right" });
+    doc.text("Consultant Physiotherapist", 196, 25, { align: "right" });
+    doc.text("Regd. Clinical Practitioner", 196, 31, { align: "right" });
 
     // Document Title
     doc.setFont("helvetica", "bold");
@@ -583,7 +587,8 @@ export default function DoctorPortal({ onClose }) {
 
     const feeY = 165 + (splitNotes.length * 5.2);
     
-    // Fee Box inside Section 2
+    // Fee Box inside Section 2 (Using clean "Rs." to avoid font encoding issues in jsPDF)
+    const cleanFeeNum = String(visit.fee || "500").replace(/[^0-9]/g, "");
     doc.setFillColor(240, 249, 255);
     doc.roundedRect(20, feeY, 170, 14, 1.5, 1.5, "F");
     doc.setFont("helvetica", "bold");
@@ -592,7 +597,7 @@ export default function DoctorPortal({ onClose }) {
     doc.text("Consultation & Treatment Fee:", 25, feeY + 9);
     doc.setFontSize(10.5);
     doc.setTextColor(5, 150, 105);
-    doc.text(visit.fee || "₹500", 78, feeY + 9);
+    doc.text(`Rs. ${cleanFeeNum}`, 78, feeY + 9);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(71, 85, 105);
@@ -676,6 +681,8 @@ export default function DoctorPortal({ onClose }) {
       ? `${visit.followUpDate}${visit.followUpTime ? ` (${visit.followUpTime})` : ""}`
       : "None Required (Only Today Consultation Completed / SOS)";
 
+    const cleanFeeDisplay = `₹${String(visit.fee || "500").replace(/[^0-9]/g, "")}`;
+
     // Clean, highly professional WhatsApp receipt message
     const receiptSummary = 
 `🏥 *VINDHYA PHYSIO & REHAB CENTER*
@@ -686,10 +693,10 @@ export default function DoctorPortal({ onClose }) {
 📅 *Visit Date & Time:* ${visit.date} ${visit.time ? `(${visit.time})` : ""}
 🩺 *Reason / Diagnosis:* ${visit.diagnosis || visit.reason || "Physiotherapy Rehabilitation"}
 💊 *Treatment Done:* ${visit.treatmentNotes || "Comprehensive physical evaluation & exercise guidance"}
-💰 *Consultation Fee:* ${visit.fee || "₹500"} (Paid & Settled)
+💰 *Consultation Fee:* ${cleanFeeDisplay} (Paid & Settled)
 🗓️ *Next Follow-up:* ${followUpSummary}
 --------------------------------------------
-👨‍⚕️ *Consultant:* Dr. Satyam Vishwakarma (BPT, DPT, CCYP - BHU)
+👨‍⚕️ *Consultant:* Dr. Satyam Vishwakarma
 📍 *Clinic Address:* Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)
 📞 *Helpline:* +91 9793093316 | WhatsApp: +91 8382024264
 --------------------------------------------
@@ -2227,7 +2234,6 @@ _(Saved in patient clinic records)_`;
                 <div className="receipt-banner-right">
                   <h3>DR. SATYAM VISHWAKARMA</h3>
                   <p className="doctor-sub">Lead Consultant Physiotherapist</p>
-                  <p className="doctor-cred">BPT, DPT, CCYP (BHU)</p>
                   <span className="doctor-badge">Regd. Clinical Practitioner</span>
                 </div>
               </div>

@@ -62,6 +62,60 @@ export default function DoctorPortal({ onClose }) {
     return s.slice(0, 10);
   };
 
+  const translateSymptomsToEnglish = async (rawText) => {
+    if (!rawText || !rawText.trim()) return "";
+    const trimmed = rawText.trim();
+
+    // 1. Try Online Free API Translation (Handles Hindi Unicode & Hinglish)
+    try {
+      const isHindi = /[\u0900-\u097F]/.test(trimmed);
+      const langPair = isHindi ? "hi|en" : "autodetect|en";
+      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmed)}&langpair=${langPair}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.responseData && data.responseData.translatedText) {
+          let text = data.responseData.translatedText;
+          if (!text.toLowerCase().includes("mymemory") && !text.toLowerCase().includes("invalid") && !text.toLowerCase().includes("quota")) {
+            return text.charAt(0).toUpperCase() + text.slice(1);
+          }
+        }
+      }
+    } catch (err) {
+      console.log("Online translation fallback:", err);
+    }
+
+    // 2. Comprehensive Clinical Medical Dictionary / Hinglish Converter
+    let converted = trimmed;
+    const dict = [
+      { patterns: [/kamar (me )?(bahut )?tez dard/gi, /kamar dard/gi, /कमर दर्द/gi, /कमर में दर्द/gi], replace: "Severe lumbar back pain" },
+      { patterns: [/gardan (me )?dard/gi, /gardan dard/gi, /गर्दन दर्द/gi, /गर्दन में दर्द/gi], replace: "Cervical neck pain and stiffness" },
+      { patterns: [/ghutne (me )?dard/gi, /ghutna dard/gi, /घुटना दर्द/gi, /घुटने में दर्द/gi], replace: "Bilateral knee joint pain & stiffness" },
+      { patterns: [/kandha jam/gi, /kandha nahi uth raha/gi, /कंधा जाम/gi], replace: "Frozen shoulder with restricted mobility" },
+      { patterns: [/jhanjhanahat/gi, /jhunjhuni/gi, /झनझनाहट/gi, /झुनझुनी/gi], replace: "Neuropathic tingling and paresthesia" },
+      { patterns: [/sujan/gi, /सूजन/gi], replace: "Localized edema and swelling" },
+      { patterns: [/chalne me dikkat/gi, /chalne me pareshani/gi, /चलने में दिक्कत/gi], replace: "Impaired ambulation and difficulty walking" },
+      { patterns: [/jhukne me dard/gi, /jhukne me dikkat/gi], replace: "Pain aggravated on forward bending" },
+      { patterns: [/lakwa/gi, /लकवा/gi], replace: "Motor weakness / Hemiparesis" },
+      { patterns: [/nas khinch rahi/gi, /nas dab gayi/gi, /नस दब/gi], replace: "Nerve root compression / Sciatic radiculopathy" },
+      { patterns: [/chakkar/gi, /चक्कर/gi], replace: "Cervical vertigo and dizziness" },
+      { patterns: [/subah jakdan/gi, /morning stiffness/gi], replace: "Morning joint stiffness" },
+      { patterns: [/hath nahi uth raha/gi, /haath dard/gi], replace: "Upper limb weakness and movement restriction" },
+      { patterns: [/chot lag gayi/gi, /gir gaye the/gi], replace: "Post-traumatic musculoskeletal strain" },
+      { patterns: [/edhi me dard/gi, /heel pain/gi, /एड़ी दर्द/gi], replace: "Plantar fasciitis / Calcaneal heel pain" }
+    ];
+
+    dict.forEach(({ patterns, replace }) => {
+      patterns.forEach(p => {
+        converted = converted.replace(p, replace);
+      });
+    });
+
+    return converted.charAt(0).toUpperCase() + converted.slice(1);
+  };
+
+  const [translatingIntake, setTranslatingIntake] = useState(false);
+  const [translatingConsult, setTranslatingConsult] = useState(false);
+
   // Enrollment Form State (Step 1: Patient Intake)
   const [newPatientForm, setNewPatientForm] = useState({
     name: "",
@@ -78,8 +132,8 @@ export default function DoctorPortal({ onClose }) {
     duration: "1 to 2 Weeks",
     complaint: "",
     referredBy: "Self / Walk-in",
-    visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
-    visitTimeSelect: "Custom"
+    referredBySelect: "Self / Walk-in",
+    visitTime: getNowTimeStr()
   });
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState("");
@@ -88,7 +142,7 @@ export default function DoctorPortal({ onClose }) {
   const [activeConsultPatient, setActiveConsultPatient] = useState(null);
   const [consultForm, setConsultForm] = useState({
     visitDate: new Date().toISOString().slice(0, 10),
-    visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    visitTime: getNowTimeStr(),
     visitTimeSelect: "Custom",
     reason: "Spine & Back Pain",
     complaint: "",
@@ -978,6 +1032,36 @@ _(Saved in patient clinic records)_`;
         {/* ================= 1. DASHBOARD VIEW ================= */}
         {activeTab === "dashboard" && (
           <div className="dashboard-view">
+            {/* Dedicated Mobile Clinical Command Hub (Phone Only) */}
+            <div className="mobile-clinical-command hide-on-desktop">
+              <div className="mobile-command-header">
+                <span className="live-pulse-dot"></span>
+                <strong>Clinic Mobile Command Hub</strong>
+              </div>
+              <div className="mobile-quick-grid">
+                <button className="mobile-quick-btn intake-btn" onClick={() => setActiveTab("new-patient")}>
+                  <span className="quick-icon">➕</span>
+                  <strong>1. Intake Patient</strong>
+                  <small>Register Arrival</small>
+                </button>
+                <button className="mobile-quick-btn waiting-btn" onClick={() => setActiveTab("waiting")}>
+                  <span className="quick-icon">⏳</span>
+                  <strong>2. Waiting Queue</strong>
+                  <small>{patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length} in queue</small>
+                </button>
+                <button className="mobile-quick-btn patients-btn" onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
+                  <span className="quick-icon">👥</span>
+                  <strong>3. All Patients</strong>
+                  <small>{patients.length} records</small>
+                </button>
+                <button className="mobile-quick-btn today-btn" onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
+                  <span className="quick-icon">📅</span>
+                  <strong>4. Today's Visits</strong>
+                  <small>{todayVisits.length} logged</small>
+                </button>
+              </div>
+            </div>
+
             {!getWebhookUrl() && (
               <div style={{
                 background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(2, 132, 199, 0.15))",
@@ -1222,14 +1306,45 @@ _(Saved in patient clinic records)_`;
                 </label>
                 <label>
                   Referred By
-                  <input
-                    type="text"
-                    value={newPatientForm.referredBy}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, referredBy: e.target.value })}
-                    placeholder="e.g. Dr. Verma / Friend / Self"
-                  />
+                  <select
+                    value={newPatientForm.referredBySelect || "Self / Walk-in"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewPatientForm({
+                        ...newPatientForm,
+                        referredBySelect: val,
+                        referredBy: val === "Custom" ? "" : val
+                      });
+                    }}
+                  >
+                    <option value="Self / Walk-in">Self / Walk-in</option>
+                    <option value="Dr. R.K. Verma (MBBS, MD - Mirzapur)">Dr. R.K. Verma (MBBS, MD - Mirzapur)</option>
+                    <option value="Dr. S.P. Singh (Orthopedic Surgeon)">Dr. S.P. Singh (Orthopedic Surgeon)</option>
+                    <option value="Dr. A.K. Mishra (General Physician)">Dr. A.K. Mishra (General Physician)</option>
+                    <option value="Dr. P. Tiwari (Neurologist)">Dr. P. Tiwari (Neurologist)</option>
+                    <option value="Dr. Amit Gupta (Consultant Physician)">Dr. Amit Gupta (Consultant Physician)</option>
+                    <option value="Hospital / Clinic Reference">Hospital / Clinic Reference</option>
+                    <option value="Friend / Family Recommendation">Friend / Family Recommendation</option>
+                    <option value="Old Patient Referral">Old Patient Referral</option>
+                    <option value="Social Media / Google Search">Social Media / Google Search</option>
+                    <option value="Custom">✏️ Other Doctor / Reference...</option>
+                  </select>
                 </label>
               </div>
+
+              {newPatientForm.referredBySelect === "Custom" && (
+                <div className="form-row-1" style={{ marginTop: "8px" }}>
+                  <label>
+                    Type Doctor / Referrer Name
+                    <input
+                      type="text"
+                      value={newPatientForm.referredBy}
+                      onChange={(e) => setNewPatientForm({ ...newPatientForm, referredBy: e.target.value })}
+                      placeholder="Enter referring doctor / hospital / friend name"
+                    />
+                  </label>
+                </div>
+              )}
 
               <h3 className="form-section-title" style={{ marginTop: "24px" }}>2. Problem, Symptoms & History</h3>
               <div className="form-row-3">
@@ -1302,67 +1417,88 @@ _(Saved in patient clinic records)_`;
                 </div>
               )}
 
-              <div className="form-row-2" style={{ marginTop: "12px" }}>
-                <label>
-                  Intake / Arrival Time *
-                  <select
-                    value={newPatientForm.visitTimeSelect || "10:30 AM"}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setNewPatientForm({
-                        ...newPatientForm,
-                        visitTimeSelect: val,
-                        visitTime: val === "Custom" ? "" : val
-                      });
-                    }}
-                  >
-                    <option value="09:00 AM">09:00 AM</option>
-                    <option value="09:30 AM">09:30 AM</option>
-                    <option value="10:00 AM">10:00 AM</option>
-                    <option value="10:30 AM">10:30 AM</option>
-                    <option value="11:00 AM">11:00 AM</option>
-                    <option value="11:30 AM">11:30 AM</option>
-                    <option value="12:00 PM">12:00 PM</option>
-                    <option value="12:30 PM">12:30 PM</option>
-                    <option value="01:00 PM">01:00 PM</option>
-                    <option value="04:00 PM">04:00 PM</option>
-                    <option value="04:30 PM">04:30 PM</option>
-                    <option value="05:00 PM">05:00 PM</option>
-                    <option value="05:30 PM">05:30 PM</option>
-                    <option value="06:00 PM">06:00 PM</option>
-                    <option value="06:30 PM">06:30 PM</option>
-                    <option value="07:00 PM">07:00 PM</option>
-                    <option value="07:30 PM">07:30 PM</option>
-                    <option value="08:00 PM">08:00 PM</option>
-                    <option value="08:30 PM">08:30 PM</option>
-                    <option value="Custom">✏️ Custom / Other Time...</option>
-                  </select>
-                </label>
-
-                {newPatientForm.visitTimeSelect === "Custom" && (
-                  <label>
-                    Enter Specific Time *
-                    <input
-                      type="text"
-                      required
-                      value={newPatientForm.visitTime}
-                      onChange={(e) => setNewPatientForm({ ...newPatientForm, visitTime: e.target.value })}
-                      placeholder="e.g. 03:45 PM"
-                    />
+              {/* Automatic Intake / Arrival Time */}
+              <div style={{ marginTop: "16px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "8px", padding: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
+                  <label style={{ margin: 0, fontWeight: "700", color: "#38bdf8" }}>
+                    ⏱️ Intake / Arrival Time: <strong>{newPatientForm.visitTime || getNowTimeStr()}</strong>
                   </label>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setNewPatientForm({ ...newPatientForm, visitTime: getNowTimeStr() })}
+                    style={{ background: "#0284c7", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 10px", fontSize: "11.5px", fontWeight: "700", cursor: "pointer" }}
+                  >
+                    🔄 Set to Current Live Time
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                  <span style={{ fontSize: "12px", color: "#94a3b8" }}>Quick Time:</span>
+                  {["09:30 AM", "10:30 AM", "11:30 AM", "12:30 PM", "04:30 PM", "05:30 PM", "06:30 PM", "07:30 PM"].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setNewPatientForm({ ...newPatientForm, visitTime: t })}
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: "5px",
+                        fontSize: "11.5px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        border: newPatientForm.visitTime === t ? "1.5px solid #38bdf8" : "1px solid rgba(255,255,255,0.12)",
+                        background: newPatientForm.visitTime === t ? "#082f49" : "rgba(255,255,255,0.05)",
+                        color: newPatientForm.visitTime === t ? "#38bdf8" : "#cbd5e1"
+                      }}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="form-row-1" style={{ marginTop: "12px" }}>
-                <label>
-                  Patient's Reported Symptoms & Complaints
-                  <textarea
-                    rows="3"
-                    value={newPatientForm.complaint}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, complaint: e.target.value })}
-                    placeholder="Describe specific symptoms: pain severity, tingling in leg/arm, morning stiffness, difficulty bending or walking..."
-                  />
-                </label>
+              {/* Patient's Reported Symptoms with AI Translation Button */}
+              <div className="form-row-1" style={{ marginTop: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "8px" }}>
+                  <label style={{ margin: 0, fontWeight: "700", color: "#f1f5f9" }}>
+                    Patient's Reported Symptoms & Complaints
+                  </label>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!newPatientForm.complaint.trim()) {
+                        alert("Please type something in Hindi / Hinglish first.");
+                        return;
+                      }
+                      setTranslatingIntake(true);
+                      const translated = await translateSymptomsToEnglish(newPatientForm.complaint);
+                      setNewPatientForm({ ...newPatientForm, complaint: translated });
+                      setTranslatingIntake(false);
+                    }}
+                    disabled={translatingIntake || !newPatientForm.complaint}
+                    style={{
+                      background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                      color: "#ffffff",
+                      border: "1px solid #a78bfa",
+                      borderRadius: "6px",
+                      padding: "6px 12px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      boxShadow: "0 2px 8px rgba(139, 92, 246, 0.35)"
+                    }}
+                    title="Translate Hindi, Hinglish, or rough text to polished medical English"
+                  >
+                    {translatingIntake ? "✨ Converting to English..." : "✨ Convert Hindi / Hinglish ➔ English"}
+                  </button>
+                </div>
+                <textarea
+                  rows="3"
+                  value={newPatientForm.complaint}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, complaint: e.target.value })}
+                  placeholder="You can type in Hindi (जैसे: कमर में दर्द है और पैर में झनझनाहट होती है), Hinglish (e.g. kamar dard chalne me dikkat), or English. Click 'Convert' to auto-translate into medical English."
+                />
               </div>
 
               <div className="form-actions-bar">
@@ -1820,6 +1956,32 @@ _(Saved in patient clinic records)_`;
                   title="Import and restore all patient profiles, past visits, and bookings from Google Sheets"
                 >
                   {restoreLoading ? "Restoring from Google Sheets..." : "📥 Restore / Pull All Data from Google Sheets"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-btn full-btn"
+                  style={{ marginTop: "10px", background: "rgba(234, 179, 8, 0.12)", color: "#facc15", borderColor: "rgba(234, 179, 8, 0.4)" }}
+                  onClick={async () => {
+                    const defaultUrl = "https://script.google.com/macros/s/AKfycbxaUQWab2LHMYA_w97RPNL9A8TuJJy2jR2X3KqcAyihQj_qwvdOGwv23fO9nOFb_WYNRA/exec";
+                    setCustomWebhookInput(defaultUrl);
+                    setWebhookUrl(defaultUrl);
+                    setWebhookSavedMsg("⏳ Restoring clinic records from official Google Sheets database...");
+                    setRestoreLoading(true);
+                    try {
+                      const res = await restoreFromGoogleSheets();
+                      setWebhookSavedMsg(`✅ Connected! Synced with official Sheets database.`);
+                      fetchStats();
+                      fetchPatients();
+                      fetchTodayVisits();
+                    } catch (err) {
+                      setWebhookSavedMsg("✅ Official Webhook Configured.");
+                    } finally {
+                      setRestoreLoading(false);
+                      setTimeout(() => setWebhookSavedMsg(""), 5000);
+                    }
+                  }}
+                >
+                  ⚡ Reset to Official Google Sheets Webhook
                 </button>
               </div>
 
@@ -2456,8 +2618,38 @@ _(Saved in patient clinic records)_`;
                 </div>
               )}
 
-              <label>
-                Final Clinical Diagnosis & Assessment *
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "8px" }}>
+                  <label style={{ margin: 0, fontWeight: "700", color: "#f1f5f9" }}>
+                    Final Clinical Diagnosis & Assessment *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!consultForm.diagnosis.trim()) return;
+                      setTranslatingConsult(true);
+                      const translated = await translateSymptomsToEnglish(consultForm.diagnosis);
+                      setConsultForm({ ...consultForm, diagnosis: translated });
+                      setTranslatingConsult(false);
+                    }}
+                    disabled={translatingConsult || !consultForm.diagnosis}
+                    style={{
+                      background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                      color: "#ffffff",
+                      border: "1px solid #a78bfa",
+                      borderRadius: "6px",
+                      padding: "4px 10px",
+                      fontSize: "11.5px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                  >
+                    {translatingConsult ? "Translating..." : "✨ AI Convert to Medical English"}
+                  </button>
+                </div>
                 <input
                   type="text"
                   required
@@ -2465,9 +2657,9 @@ _(Saved in patient clinic records)_`;
                   onChange={(e) => setConsultForm({ ...consultForm, diagnosis: e.target.value })}
                   placeholder="e.g. Lumbar Disc Herniation (L4-L5) with Right Sciatica & Muscle Spasm"
                 />
-              </label>
+              </div>
 
-              <label>
+              <label style={{ marginTop: "12px", display: "block" }}>
                 Therapy & Treatment Administered Today *
                 <textarea
                   rows="3"

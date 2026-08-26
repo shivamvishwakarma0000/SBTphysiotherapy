@@ -2730,6 +2730,108 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5) !important;
 }
 
+/* ================= MOBILE CLINICAL COMMAND HUB (PHONE DASHBOARD) ================= */
+.hide-on-desktop {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .hide-on-desktop {
+    display: block !important;
+  }
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .mobile-clinical-command {
+    background: #082136;
+    border: 1.5px solid rgba(56, 189, 248, 0.3);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+
+  .mobile-command-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13.5px;
+    color: #e2e8f0;
+  }
+
+  .live-pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #10b981;
+    display: inline-block;
+  }
+
+  .mobile-quick-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .mobile-quick-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #04121e;
+    cursor: pointer;
+    transition: all 160ms ease;
+  }
+
+  .mobile-quick-btn:active {
+    transform: scale(0.97);
+  }
+
+  .mobile-quick-btn .quick-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .mobile-quick-btn strong {
+    font-size: 12px;
+    color: #fff;
+    line-height: 1.2;
+  }
+
+  .mobile-quick-btn small {
+    font-size: 10.5px;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  .mobile-quick-btn.intake-btn {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(7, 25, 39, 0.8));
+  }
+
+  .mobile-quick-btn.waiting-btn {
+    border-color: rgba(245, 158, 11, 0.4);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(7, 25, 39, 0.8));
+  }
+
+  .mobile-quick-btn.patients-btn {
+    border-color: rgba(2, 132, 199, 0.4);
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(7, 25, 39, 0.8));
+  }
+
+  .mobile-quick-btn.today-btn {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(7, 25, 39, 0.8));
+  }
+}
+
 @media (max-width: 760px) {
   .waiting-patients-grid {
     grid-template-columns: 1fr;

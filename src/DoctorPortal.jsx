@@ -591,12 +591,11 @@ export default function DoctorPortal({ onClose }) {
     let cleanDigits = String(patient.phone || "").replace(/\D/g, "");
     if (cleanDigits.startsWith("0")) cleanDigits = cleanDigits.substring(1);
     const patientPhone = cleanDigits.startsWith("91") && cleanDigits.length > 10 ? cleanDigits : `91${cleanDigits}`;
-
     const fileName = `Vindhya_Receipt_${patient.name.replace(/\s+/g, "_")}_${patient.patientId}_Visit${visit.visitNumber || 1}.pdf`;
     const doc = buildReceiptPDF(receipt);
     const pdfBlob = doc.output("blob");
 
-    // Clean, highly professional WhatsApp receipt message without dummy clutter
+    // Clean, highly professional WhatsApp receipt message without misleading text
     const receiptSummary = 
 `🏥 *VINDHYA PHYSIO & REHAB CENTER*
 *Official Patient Consultation & Clinical Receipt*
@@ -612,16 +611,24 @@ export default function DoctorPortal({ onClose }) {
 📍 *Clinic Address:* Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)
 📞 *Helpline:* +91 9793093316 | WhatsApp: +91 8382024264
 --------------------------------------------
-📄 _Official PDF receipt attached above._`;
+📄 *Official Digital Clinical Receipt*
+_(Saved in patient clinic records)_`;
 
-    // 1. Try Native Web Share API if device supports direct file sharing (iPhone/Android/Mac Safari)
+    // 1. First, always trigger download of the official PDF document so doctor has the file ready
     try {
-      const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
+      doc.save(fileName);
+    } catch (e) {
+      console.log("PDF download fallback:", e);
+    }
+
+    // 2. Try Native Web Share API if device supports direct file sharing (iPhone/Android Share Sheet)
+    try {
+      const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf", lastModified: Date.now() });
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        setShareFeedback("📲 Opening WhatsApp — sending PDF directly to " + patient.name + "...");
+        setShareFeedback("📲 Opening WhatsApp share menu — tap WhatsApp to send the PDF file!");
         await navigator.share({
           files: [pdfFile],
-          title: `Receipt - ${patient.name}`,
+          title: `Vindhya Physio Receipt - ${patient.name}`,
           text: receiptSummary
         });
         setShareFeedback(`✅ PDF receipt sent to ${patient.name} (+91 ${patient.phone})!`);
@@ -629,19 +636,15 @@ export default function DoctorPortal({ onClose }) {
       }
     } catch (shareErr) {
       if (shareErr.name === "AbortError") return; // User cancelled
-      console.log("Native share fallback:", shareErr);
+      console.log("Native share fallback to direct chat:", shareErr);
     }
 
-    // 2. Desktop / WhatsApp Web workflow:
-    // Download the official PDF receipt
-    doc.save(fileName);
-
-    // Copy formatted receipt text to clipboard
+    // 3. Direct WhatsApp Chat workflow:
     try {
       await navigator.clipboard.writeText(receiptSummary);
     } catch (e) {}
 
-    setShareFeedback(`✅ "${fileName}" downloaded! Opening WhatsApp chat for ${patient.name} (+91 ${patient.phone})...`);
+    setShareFeedback(`✅ "${fileName}" downloaded! In WhatsApp, tap 📎 (Attach Document) to send the PDF to ${patient.name}!`);
 
     // Open WhatsApp Chat with pre-filled message
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${patientPhone}&text=${encodeURIComponent(receiptSummary)}`;

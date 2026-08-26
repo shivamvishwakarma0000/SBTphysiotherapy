@@ -2490,3 +2490,162 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* ================= WAITING QUEUE & BOXY SECTIONAL DESIGN ================= */
+.waiting-queue-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.waiting-patients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 18px;
+}
+
+.waiting-patient-card {
+  background: #082136;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.waiting-patient-card:hover {
+  border-color: #f59e0b;
+  transform: translateY(-2px);
+}
+
+.waiting-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.waiting-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.waiting-time-tag {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.waiting-patient-name {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.waiting-patient-sub {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.waiting-problem-box {
+  background: rgba(2, 132, 199, 0.12);
+  border: 1px solid rgba(2, 132, 199, 0.28);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: #e2e8f0;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.first-time-tag {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.waiting-complaint-snippet {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+}
+
+.waiting-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.consult-start-btn {
+  width: 100%;
+  font-size: 13.5px;
+  font-weight: 800;
+  padding: 12px 14px;
+  min-height: 44px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.consult-start-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+}
+
+.waiting-mini-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.waiting-mini-actions button {
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 8px;
+  min-height: 34px;
+  justify-content: center;
+}
+
+.empty-waiting-card {
+  grid-column: 1 / -1;
+  background: #082136;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.empty-waiting-card h3 {
+  color: #fff;
+  margin: 12px 0 6px;
+  font-size: 18px;
+}
+
+.empty-waiting-card p {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.boxy-consult-card {
+  background: #071c2d !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5) !important;
+}
+
+@media (max-width: 760px) {
+  .waiting-patients-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

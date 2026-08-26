@@ -59,20 +59,31 @@ export default function DoctorPortal({ onClose }) {
     address: "Vindhyachal, Mirzapur",
     dob: "",
     emergencyContact: "",
+    isFirstTime: "Yes",
     reasonForVisit: "Spine & Back Pain",
+    duration: "1 to 2 Weeks",
     complaint: "",
-    diagnosis: "",
-    referredBy: "",
-    visitDate: new Date().toISOString().slice(0, 10),
-    visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
-    treatmentNotes: "Comprehensive physical evaluation, spinal/joint mobilization, and therapeutic exercise guidance.",
-    followUpDate: "",
-    status: "In Consultation"
+    referredBy: "Self / Walk-in"
   });
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState("");
 
-  // Add Visit State (Step 2: Subsequent Consultation)
+  // Doctor Consultation & Treatment Form State (Step 2: Diagnosis & Fee Entry)
+  const [activeConsultPatient, setActiveConsultPatient] = useState(null);
+  const [consultForm, setConsultForm] = useState({
+    visitDate: new Date().toISOString().slice(0, 10),
+    visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    reason: "Spine & Back Pain",
+    complaint: "",
+    duration: "",
+    diagnosis: "Lumbar Spondylosis (L4-L5 Disc Bulge) with Muscle Spasm",
+    treatmentNotes: "IFT + Ultrasonic therapy applied for 15 mins. Core isometric exercises taught.",
+    fee: "500",
+    followUpDate: ""
+  });
+  const [consultLoading, setConsultLoading] = useState(false);
+
+  // Add Subsequent Visit State
   const [newVisitForm, setNewVisitForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
@@ -80,8 +91,9 @@ export default function DoctorPortal({ onClose }) {
     complaint: "",
     diagnosis: "",
     treatmentNotes: "Electrotherapy + manual decompression + targeted postural re-education.",
+    fee: "500",
     followUpDate: "",
-    status: "In Consultation"
+    status: "Completed"
   });
 
   const [syncLoading, setSyncLoading] = useState(false);
@@ -245,9 +257,6 @@ export default function DoctorPortal({ onClose }) {
       fetchPatients();
       fetchTodayVisits();
 
-      openPatientProfile(data.patient.patientId);
-      setActiveTab("patients");
-
       setNewPatientForm({
         name: "",
         age: "",
@@ -257,20 +266,56 @@ export default function DoctorPortal({ onClose }) {
         address: "Vindhyachal, Mirzapur",
         dob: "",
         emergencyContact: "",
+        isFirstTime: "Yes",
         reasonForVisit: "Spine & Back Pain",
+        duration: "1 to 2 Weeks",
         complaint: "",
-        diagnosis: "",
-        referredBy: "",
-        visitDate: new Date().toISOString().slice(0, 10),
-        visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
-        treatmentNotes: "Comprehensive physical evaluation, spinal/joint mobilization, and therapeutic exercise guidance.",
-        followUpDate: "",
-        status: "In Consultation"
+        referredBy: "Self / Walk-in"
       });
+
+      // Switch to Waiting Queue
+      setActiveTab("waiting");
+      setShareFeedback(`✅ Patient ${data.patient.name} (${data.patient.patientId}) enrolled and added to Waiting Queue!`);
+      setTimeout(() => setShareFeedback(""), 4000);
     } catch (err) {
       setEnrollError(err.message);
     } finally {
       setEnrollLoading(false);
+    }
+  };
+
+  const handleOpenConsultationModal = (patient) => {
+    setActiveConsultPatient(patient);
+    setConsultForm({
+      visitDate: new Date().toISOString().slice(0, 10),
+      visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+      reason: patient.firstVisitReason || "Physiotherapy Rehabilitation",
+      complaint: patient.complaint || "Initial Pain & Stiffness",
+      duration: patient.duration || "1 to 2 Weeks",
+      diagnosis: patient.firstVisitReason ? `${patient.firstVisitReason} (Active Rehabilitation)` : "Lumbar Spondylosis (L4-L5 Disc Bulge)",
+      treatmentNotes: "Electrotherapy (IFT) + Targeted manual decompression + Isometric strengthening exercises.",
+      fee: "500",
+      followUpDate: ""
+    });
+  };
+
+  const handleFinalizeConsultationSubmit = async (e) => {
+    e.preventDefault();
+    if (!activeConsultPatient) return;
+    setConsultLoading(true);
+    try {
+      const data = await api.finalizeConsultation(activeConsultPatient.patientId, consultForm);
+      fetchStats();
+      fetchPatients();
+      fetchTodayVisits();
+      setActiveConsultPatient(null);
+      // Immediately open the official receipt modal
+      setActiveReceipt({ patient: data.patient, visit: data.visit });
+      setShareFeedback(`✅ Consultation finalized! Fee: ${data.visit.fee}. Official receipt ready.`);
+    } catch (err) {
+      alert("Error finalizing consultation: " + err.message);
+    } finally {
+      setConsultLoading(false);
     }
   };
 
@@ -816,23 +861,27 @@ _(Saved in patient clinic records)_`;
         </div>
 
         <nav className="doctor-nav-tabs">
-          <button className={activeTab === "dashboard" ? "active" : ""} onClick={() => setActiveTab("dashboard")}>
-            📊 Dashboard
-          </button>
           <button className={activeTab === "new-patient" ? "active" : ""} onClick={() => setActiveTab("new-patient")}>
-            ➕ Intake / Register
+            ➕ 1. Intake Patient
+          </button>
+          <button className={activeTab === "waiting" ? "active" : ""} onClick={() => setActiveTab("waiting")}>
+            ⏳ 2. Waiting Queue {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length > 0 && (
+              <span className="enq-badge" style={{ background: "#f59e0b" }}>
+                {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length}
+              </span>
+            )}
           </button>
           <button className={activeTab === "patients" ? "active" : ""} onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
-            👥 Patient Directory
+            👥 3. All Patients ({patients.length})
           </button>
           <button className={activeTab === "today" ? "active" : ""} onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
-            📅 Today's Visits
+            📅 4. Today's Visits ({todayVisits.length})
           </button>
           <button className={activeTab === "enquiries" ? "active" : ""} onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
-            📩 Online Bookings {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
+            📩 5. Online Bookings {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
           </button>
           <button className={activeTab === "settings" ? "active" : ""} onClick={() => setActiveTab("settings")}>
-            ⚙️ Settings & Sync
+            ⚙️ 6. Cloud Settings
           </button>
         </nav>
 
@@ -1017,20 +1066,20 @@ _(Saved in patient clinic records)_`;
           </div>
         )}
 
-        {/* ================= 2. NEW PATIENT INTAKE ================= */}
+        {/* ================= 1. PATIENT INTAKE (STEP 1) ================= */}
         {activeTab === "new-patient" && (
           <div className="enroll-view">
             <div className="section-header-row">
               <div>
                 <h2>Step 1: Patient Intake & Registration</h2>
-                <p>Register arriving patient details. You will conduct consultation, finalize diagnosis, and issue the discharge slip on exit.</p>
+                <p>Register arriving patient details & problem history. Patient will be placed in the Waiting Queue for Dr. Satyam Vishwakarma.</p>
               </div>
             </div>
 
             {enrollError && <div className="auth-alert error">{enrollError}</div>}
 
             <form onSubmit={handleEnrollPatient} className="enroll-form-card">
-              <h3 className="form-section-title">1. Patient Personal Demographics</h3>
+              <h3 className="form-section-title">1. Patient Personal & Contact Information</h3>
               <div className="form-row-3">
                 <label>
                   Full Name *
@@ -1115,38 +1164,30 @@ _(Saved in patient clinic records)_`;
                   />
                 </label>
                 <label>
-                  Referred By (Doctor / Self / Friend)
+                  Referred By
                   <input
                     type="text"
                     value={newPatientForm.referredBy}
                     onChange={(e) => setNewPatientForm({ ...newPatientForm, referredBy: e.target.value })}
-                    placeholder="e.g. Dr. Verma / Direct"
+                    placeholder="e.g. Dr. Verma / Friend / Self"
                   />
                 </label>
               </div>
 
-              <h3 className="form-section-title" style={{ marginTop: "24px" }}>2. Initial Complaint & Symptoms</h3>
+              <h3 className="form-section-title" style={{ marginTop: "24px" }}>2. Problem, Symptoms & History</h3>
               <div className="form-row-3">
                 <label>
-                  Visit Date *
-                  <input
-                    type="date"
-                    required
-                    value={newPatientForm.visitDate}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, visitDate: e.target.value })}
-                  />
+                  First Time Visiting Clinic? *
+                  <select
+                    value={newPatientForm.isFirstTime}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, isFirstTime: e.target.value })}
+                  >
+                    <option value="Yes">Yes (First Time Patient)</option>
+                    <option value="No">No (Returning Patient)</option>
+                  </select>
                 </label>
                 <label>
-                  Visit Time
-                  <input
-                    type="text"
-                    value={newPatientForm.visitTime}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, visitTime: e.target.value })}
-                    placeholder="e.g. 10:30 AM"
-                  />
-                </label>
-                <label>
-                  Primary Reason for Visit *
+                  Primary Problem / Pain Area *
                   <select
                     value={newPatientForm.reasonForVisit}
                     onChange={(e) => setNewPatientForm({ ...newPatientForm, reasonForVisit: e.target.value })}
@@ -1165,35 +1206,129 @@ _(Saved in patient clinic records)_`;
                     <option value="General Physiotherapy">General Physiotherapy</option>
                   </select>
                 </label>
-              </div>
-
-              <div className="form-row-2">
                 <label>
-                  Chief Complaints
-                  <textarea
-                    rows="2"
-                    value={newPatientForm.complaint}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, complaint: e.target.value })}
-                    placeholder="e.g. Lower back stiffness, radiating nerve pain in leg, difficulty walking."
+                  How Long / How Many Times Occurred? *
+                  <input
+                    type="text"
+                    required
+                    value={newPatientForm.duration}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, duration: e.target.value })}
+                    placeholder="e.g. Since 10 days / Happened 3 times / Chronic 6 months"
                   />
                 </label>
+              </div>
+
+              <div className="form-row-1">
                 <label>
-                  Initial Clinical Diagnosis / Findings
+                  Patient's Reported Symptoms & Complaints
                   <textarea
-                    rows="2"
-                    value={newPatientForm.diagnosis}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, diagnosis: e.target.value })}
-                    placeholder="e.g. Lumbar Disc Bulge (L4-L5), Muscle Spasm, Sciatica"
+                    rows="3"
+                    value={newPatientForm.complaint}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, complaint: e.target.value })}
+                    placeholder="Describe specific symptoms: pain severity, tingling in leg/arm, morning stiffness, difficulty bending or walking..."
                   />
                 </label>
               </div>
 
               <div className="form-actions-bar">
-                <button type="submit" className="primary-btn" disabled={enrollLoading}>
-                  {enrollLoading ? "Registering Patient..." : "Register Patient & Open Consultation Room"}
+                <button type="submit" className="primary-btn" disabled={enrollLoading} style={{ minHeight: "46px", fontSize: "14px", fontWeight: "700" }}>
+                  {enrollLoading ? "Enrolling Patient..." : "📥 Save & Add Patient to Waiting Queue"}
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* ================= 2. WAITING QUEUE / DOCTOR CONSULTATION ROOM ================= */}
+        {activeTab === "waiting" && (
+          <div className="waiting-queue-view">
+            <div className="section-header-row">
+              <div>
+                <h2>Step 2: Patients Awaiting Doctor Consultation</h2>
+                <p>Enrolled patients currently waiting in the clinic. Open a patient to perform examination, enter diagnosis & fee, and issue the official receipt.</p>
+              </div>
+              <button className="primary-btn" onClick={() => setActiveTab("new-patient")}>
+                ➕ 1. Intake New Patient
+              </button>
+            </div>
+
+            <div className="waiting-patients-grid">
+              {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).map(p => (
+                <div className="waiting-patient-card" key={p.patientId}>
+                  <div className="waiting-card-header">
+                    <div className="waiting-badge-row">
+                      <span className="status-pill warning">⏳ Waiting for Doctor</span>
+                      <span className="patient-id-badge">{p.patientId}</span>
+                    </div>
+                    <span className="waiting-time-tag">Reg: {String(p.registrationDate).slice(0, 10)}</span>
+                  </div>
+
+                  <div className="waiting-card-body">
+                    <h3 className="waiting-patient-name">{p.name}</h3>
+                    <p className="waiting-patient-sub">
+                      {p.age} Yrs • {p.gender} • <strong>Phone:</strong> +91 {p.phone}
+                    </p>
+
+                    <div className="waiting-problem-box">
+                      <strong>🩺 Chief Concern:</strong> {p.firstVisitReason}
+                      <br />
+                      <strong>⏱️ Duration / Frequency:</strong> {p.duration || "Initial onset"}
+                      {p.isFirstTime && <span className="first-time-tag"> • First Time Visit</span>}
+                    </div>
+
+                    {p.complaint && (
+                      <p className="waiting-complaint-snippet">
+                        <em>"{p.complaint}"</em>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="waiting-card-actions">
+                    <button
+                      className="primary-btn consult-start-btn"
+                      onClick={() => handleOpenConsultationModal(p)}
+                    >
+                      🩺 Start Doctor Consultation & Issue Receipt
+                    </button>
+                    <div className="waiting-mini-actions">
+                      <button
+                        className="secondary-btn"
+                        onClick={() => handleCopyPhoneNumber(p.phone)}
+                        title="Copy Patient Phone"
+                      >
+                        📋 Copy Phone
+                      </button>
+                      <button
+                        className="secondary-btn"
+                        onClick={() => openPatientProfile(p.patientId)}
+                        title="View Full Profile"
+                      >
+                        👤 Profile
+                      </button>
+                      <button
+                        className="secondary-btn delete-action"
+                        style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5" }}
+                        onClick={() => handleDeletePatient(p.patientId, p.name)}
+                        title="Delete Patient"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length === 0 && (
+                <div className="empty-waiting-card">
+                  <span style={{ fontSize: "40px" }}>🎉</span>
+                  <h3>No Patients Currently in Waiting Queue!</h3>
+                  <p>All enrolled patients have completed their doctor consultations.</p>
+                  <button className="primary-btn" onClick={() => setActiveTab("new-patient")} style={{ marginTop: "12px" }}>
+                    ➕ 1. Intake Arriving Patient
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -2049,6 +2184,24 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
+              <div className="receipt-section">
+                <h4>3. Consultation & Treatment Charges</h4>
+                <div className="receipt-table-grid">
+                  <div className="receipt-cell">
+                    <span className="cell-label">Total Consultation Fee:</span>
+                    <strong className="cell-value highlight text-emerald" style={{ fontSize: "14px" }}>
+                      {activeReceipt.visit.fee || "₹500"}
+                    </strong>
+                  </div>
+                  <div className="receipt-cell">
+                    <span className="cell-label">Payment Status:</span>
+                    <span className="cell-value" style={{ color: "#059669", fontWeight: "700" }}>
+                      ✅ Paid & Settled (Cash / UPI)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Official Signature */}
               <div className="receipt-sign-box">
                 <div className="sign-signature-container">
@@ -2070,6 +2223,120 @@ _(Saved in patient clinic records)_`;
                 <span>For appointments & medical inquiries: Call 9793093316 | WhatsApp: 8382024264 | Amravati Chauraha, Vindhyachal</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= STEP 2: DOCTOR CONSULTATION & FEE DIALOG MODAL ================= */}
+      {activeConsultPatient && (
+        <div className="add-visit-modal-overlay">
+          <div className="add-visit-card boxy-consult-card" style={{ maxWidth: "680px", width: "100%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+              <div>
+                <span className="status-pill warning" style={{ marginBottom: "6px", display: "inline-block" }}>🩺 Doctor Consultation Room</span>
+                <h3 style={{ margin: "4px 0", color: "#fff", fontSize: "18px" }}>
+                  Clinical Diagnosis & Treatment: {activeConsultPatient.name}
+                </h3>
+                <p style={{ margin: 0, color: "#94a3b8", fontSize: "13px" }}>
+                  Patient ID: <strong>{activeConsultPatient.patientId}</strong> • Phone: +91 {activeConsultPatient.phone}
+                </p>
+              </div>
+              <button className="secondary-btn close-btn" onClick={() => setActiveConsultPatient(null)}>✕</button>
+            </div>
+
+            {/* Quick Patient Intake Summary Box */}
+            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "8px", padding: "12px", marginBottom: "16px", fontSize: "13px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "6px" }}>
+                <div><span style={{ color: "#94a3b8" }}>Chief Problem:</span> <strong style={{ color: "#38bdf8" }}>{activeConsultPatient.firstVisitReason}</strong></div>
+                <div><span style={{ color: "#94a3b8" }}>Duration / Frequency:</span> <strong style={{ color: "#f59e0b" }}>{activeConsultPatient.duration || "Initial"}</strong></div>
+              </div>
+              {activeConsultPatient.complaint && (
+                <div style={{ color: "#cbd5e1", marginTop: "4px" }}>
+                  <span style={{ color: "#94a3b8" }}>Reported Symptoms:</span> <em>"{activeConsultPatient.complaint}"</em>
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleFinalizeConsultationSubmit}>
+              <div className="form-row-2">
+                <label>
+                  Consultation Date *
+                  <input
+                    type="date"
+                    required
+                    value={consultForm.visitDate}
+                    onChange={(e) => setConsultForm({ ...consultForm, visitDate: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Consultation Time
+                  <input
+                    type="text"
+                    value={consultForm.visitTime}
+                    onChange={(e) => setConsultForm({ ...consultForm, visitTime: e.target.value })}
+                  />
+                </label>
+              </div>
+
+              <label>
+                Final Clinical Diagnosis & Assessment *
+                <input
+                  type="text"
+                  required
+                  value={consultForm.diagnosis}
+                  onChange={(e) => setConsultForm({ ...consultForm, diagnosis: e.target.value })}
+                  placeholder="e.g. Lumbar Disc Herniation (L4-L5) with Right Sciatica & Spasm"
+                />
+              </label>
+
+              <label>
+                Therapy & Treatment Administered Today *
+                <textarea
+                  rows="3"
+                  required
+                  value={consultForm.treatmentNotes}
+                  onChange={(e) => setConsultForm({ ...consultForm, treatmentNotes: e.target.value })}
+                  placeholder="e.g. IFT + Ultrasonic therapy for 15 mins. Manual spinal decompression + Isometric core stabilization."
+                />
+              </label>
+
+              <div className="form-row-2">
+                <label>
+                  Consultation & Therapy Fee (₹) *
+                  <div className="phone-prefix-input">
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="50"
+                      value={consultForm.fee}
+                      onChange={(e) => setConsultForm({ ...consultForm, fee: e.target.value })}
+                      placeholder="500"
+                    />
+                  </div>
+                </label>
+                <label>
+                  Next Recommended Follow-Up
+                  <input
+                    type="date"
+                    value={consultForm.followUpDate}
+                    onChange={(e) => setConsultForm({ ...consultForm, followUpDate: e.target.value })}
+                  />
+                </label>
+              </div>
+
+              <div className="form-actions-bar" style={{ marginTop: "20px" }}>
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={consultLoading}
+                  style={{ minHeight: "48px", fontSize: "14px", fontWeight: "700", width: "100%", background: "#10b981" }}
+                >
+                  {consultLoading ? "Finalizing Consultation..." : "⚡ Complete Consultation & Issue Official Receipt"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

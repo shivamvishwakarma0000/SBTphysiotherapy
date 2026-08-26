@@ -327,8 +327,6 @@ export const api = {
 
   async createPatient(payload) {
     const patients = getLocal(KEYS.PATIENTS, []);
-    const visits = getLocal(KEYS.VISITS, []);
-
     const newId = `VPR-2026-${1000 + patients.length + 1}`;
     const todayStr = new Date().toISOString().split("T")[0];
 
@@ -342,42 +340,74 @@ export const api = {
       address: (payload.address || "").trim(),
       dob: payload.dob || "",
       emergencyContact: (payload.emergencyContact || "").trim(),
-      firstVisitReason: payload.firstVisitReason || "",
+      firstVisitReason: payload.firstVisitReason || payload.reasonForVisit || "Spine & Back Pain",
+      duration: (payload.duration || "").trim(),
+      isFirstTime: payload.isFirstTime || "Yes",
+      complaint: (payload.complaint || "").trim(),
       registrationDate: todayStr,
-      status: "Active",
-      totalVisits: 1,
+      status: "Waiting for Doctor",
+      totalVisits: 0,
       lastVisitDate: todayStr
     };
 
-    // First visit entry
+    patients.unshift(newPatient);
+    setLocal(KEYS.PATIENTS, patients);
+
+    // Real-time Push to Google Sheets (Non-blocking)
+    syncToGoogleSheets("sync_patient", newPatient);
+
+    return { ok: true, patient: newPatient };
+  },
+
+  async finalizeConsultation(patientId, consultData) {
+    const patients = getLocal(KEYS.PATIENTS, []);
+    const visits = getLocal(KEYS.VISITS, []);
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    const pIndex = patients.findIndex(p => p.patientId === patientId);
+    if (pIndex === -1) throw new Error("Patient not found");
+
+    const patient = patients[pIndex];
+    const existingVisits = visits.filter(v => v.patientId === patientId);
+    const visitNum = existingVisits.length + 1;
+
     const newVisit = {
-      visitId: `VST-${newId.replace("VPR-2026-", "")}-1`,
-      patientId: newId,
-      patientName: newPatient.name,
-      phone: newPatient.phone,
-      visitNumber: 1,
-      date: todayStr,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      reason: payload.firstVisitReason || "Initial Consultation & Assessment",
-      complaint: payload.complaint || "Initial consultation",
-      diagnosis: payload.diagnosis || "Under Evaluation",
-      treatmentNotes: payload.treatmentNotes || "Initial examination and treatment plan drafted.",
-      followUpDate: payload.followUpDate || "",
+      visitId: `VST-${patientId.replace("VPR-2026-", "")}-${visitNum}`,
+      patientId: patientId,
+      patientName: patient.name,
+      phone: patient.phone,
+      visitNumber: visitNum,
+      date: consultData.visitDate || todayStr,
+      time: consultData.visitTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      reason: consultData.reason || patient.firstVisitReason || "Physiotherapy Consultation",
+      complaint: consultData.complaint || patient.complaint || "Pain / Mobility limitation",
+      duration: consultData.duration || patient.duration || "",
+      diagnosis: consultData.diagnosis || "Under Active Physiotherapy Management",
+      treatmentNotes: consultData.treatmentNotes || "Spinal mobilization, targeted stretches, and rehabilitation therapy.",
+      fee: consultData.fee ? `₹${String(consultData.fee).replace(/[^0-9]/g, "")}` : "₹500",
+      followUpDate: consultData.followUpDate || "",
       status: "Completed",
       doctor: "Dr. Satyam Vishwakarma"
     };
 
-    patients.unshift(newPatient);
+    // Update patient status to Active (Consultation complete)
+    patient.status = "Active";
+    patient.totalVisits = visitNum;
+    patient.lastVisitDate = todayStr;
+    patient.lastDiagnosis = newVisit.diagnosis;
+    patient.lastFee = newVisit.fee;
+
+    patients[pIndex] = patient;
     visits.unshift(newVisit);
 
     setLocal(KEYS.PATIENTS, patients);
     setLocal(KEYS.VISITS, visits);
 
-    // Real-time Push to Google Sheets (Non-blocking)
-    syncToGoogleSheets("sync_patient", newPatient);
+    // Sync to Google Sheets
+    syncToGoogleSheets("sync_patient", patient);
     syncToGoogleSheets("sync_visit", newVisit);
 
-    return { ok: true, patient: newPatient, firstVisit: newVisit };
+    return { ok: true, patient, visit: newVisit };
   },
 
   async deletePatient(patientId) {

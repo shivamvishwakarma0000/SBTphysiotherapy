@@ -2282,28 +2282,154 @@ input:focus, select:focus, textarea:focus {
   .doctor-nav-tabs {
     overflow-x: auto;
     padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .doctor-nav-tabs button {
     white-space: nowrap;
     font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  /* Modals on Mobile */
+  .patient-profile-modal-overlay,
+  .receipt-modal-overlay,
+  .add-visit-modal-overlay,
+  .inner-modal-overlay {
+    padding: 10px 8px;
+    align-items: flex-end;
+  }
+
+  .patient-profile-card,
+  .receipt-modal-card,
+  .add-visit-card {
+    width: 100% !important;
+    max-height: 92vh !important;
+    border-radius: 16px 16px 0 0 !important;
+    margin: 0 !important;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .profile-header-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .profile-header-actions button {
+    flex: 1 1 auto;
+    font-size: 12px;
+    padding: 8px 10px;
+    min-height: 38px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .profile-header-actions .close-btn {
+    flex: 0 0 38px;
+    padding: 0;
+  }
+
+  .profile-body {
+    padding: 14px 12px;
   }
 
   .demographics-grid {
     grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .timeline-visit-card {
+    padding: 12px;
+  }
+
+  .timeline-visit-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .timeline-visit-head .finalize-action-btn {
+    width: 100%;
+    text-align: center;
+    min-height: 40px;
+    font-size: 13px;
+    justify-content: center;
+  }
+
+  /* Receipt Modal Toolbar on Mobile */
+  .receipt-modal-card {
+    padding: 14px 10px !important;
+  }
+
+  .receipt-actions-toolbar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .receipt-actions-toolbar .whatsapp-share-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+    font-size: 13.5px;
+    padding: 12px 14px;
+    min-height: 46px;
+    justify-content: center;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+  }
+
+  .receipt-actions-toolbar button {
+    font-size: 12px;
+    padding: 8px 10px;
+    min-height: 38px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .printable-receipt {
+    padding: 12px 10px;
+    border-radius: 8px;
   }
 
   .receipt-header-banner {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 10px;
+    padding: 12px;
   }
 
-  .receipt-grid {
-    grid-template-columns: 1fr;
+  .receipt-banner-left img.receipt-logo {
+    max-height: 36px;
+  }
+
+  .receipt-banner-right {
+    text-align: left;
+    width: 100%;
+  }
+
+  .receipt-id-bar {
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    font-size: 11px;
+  }
+
+  .receipt-table-grid {
+    grid-template-columns: 1fr !important;
   }
 
   .hero {
     padding-top: 32px;
   }
 }
+

@@ -1525,11 +1525,16 @@ export default function DoctorPortal({ onClose }) {
               <div>
                 <span className="patient-id-badge large">{selectedPatient.patientId}</span>
                 <h2>{selectedPatient.name}</h2>
-                <p>{selectedPatient.age} Yrs • {selectedPatient.gender} • Phone: +91 {selectedPatient.phone} • Registered: {selectedPatient.registrationDate}</p>
+                <p>
+                  {selectedPatient.age} Yrs • {selectedPatient.gender} • Phone: +91 {selectedPatient.phone}
+                  {selectedPatient.registrationDate && (
+                    <> • Reg: {String(selectedPatient.registrationDate).slice(0, 10)}</>
+                  )}
+                </p>
               </div>
               <div className="profile-header-actions">
                 <button className="primary-btn" onClick={() => setShowAddVisitModal(true)}>
-                  ➕ Record New Visit
+                  ➕ Record Visit
                 </button>
                 <button 
                   className="secondary-btn" 
@@ -1537,7 +1542,7 @@ export default function DoctorPortal({ onClose }) {
                   onClick={() => handleDeletePatient(selectedPatient.patientId, selectedPatient.name)}
                   title="Permanently Delete Patient"
                 >
-                  🗑️ Delete Patient
+                  🗑️ Delete
                 </button>
                 <button className="secondary-btn close-btn" onClick={() => setSelectedPatient(null)}>
                   ✕
@@ -1560,7 +1565,7 @@ export default function DoctorPortal({ onClose }) {
                   <span>{selectedPatient.emergencyContact || "None"}</span>
                 </div>
                 <div>
-                  <label>Total Completed Visits</label>
+                  <label>Completed Visits</label>
                   <span className="visit-count-tag">{selectedPatient.totalVisits || patientVisits.length} Visits</span>
                 </div>
               </div>
@@ -1570,14 +1575,26 @@ export default function DoctorPortal({ onClose }) {
                 {patientVisits.map(v => (
                   <div className="timeline-visit-card" key={v.visitId}>
                     <div className="timeline-visit-head">
-                      <span className="visit-num-badge">Visit #{v.visitNumber}</span>
-                      <span className="visit-date">{v.date} ({v.time})</span>
-                      <button
-                        className="receipt-btn finalize-action-btn"
-                        onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
-                      >
-                        📄 Generate Discharge Slip & WhatsApp PDF
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <span className="visit-num-badge">Visit #{v.visitNumber}</span>
+                        <span className="visit-date">{String(v.date || "").slice(0, 10)} {v.time ? `(${v.time})` : ""}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        <button
+                          className="receipt-btn finalize-action-btn"
+                          onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
+                        >
+                          📄 Slip & WhatsApp PDF
+                        </button>
+                        <button
+                          className="secondary-btn"
+                          onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
+                          style={{ padding: "6px 12px", minHeight: "36px", fontSize: "12px" }}
+                          title="Instant Download PDF"
+                        >
+                          📥 Download
+                        </button>
+                      </div>
                     </div>
                     <div className="timeline-visit-details">
                       <p><strong>Reason:</strong> {v.reason}</p>

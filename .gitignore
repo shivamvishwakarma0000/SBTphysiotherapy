@@ -7,3 +7,5 @@ dist-ssr
 .env.*
 .vscode
 .idea
+scratch_*.pdf
+

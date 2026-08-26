@@ -1,0 +1,20 @@
+[
+  {
+    "visitId": "VIS-VPR-0001-01",
+    "patientId": "VPR-0001",
+    "patientName": "Shivam Vishwakarma",
+    "phone": "8858496345",
+    "visitNumber": 1,
+    "date": "2026-08-25",
+    "time": "12:42 AM",
+    "reason": "Cup Therapy",
+    "complaint": "cupping therapy",
+    "diagnosis": "cupping therapy on back with 10 cups",
+    "treatmentNotes": "Physical evaluation and exercise guidance.",
+    "referredBy": "",
+    "followUpDate": "0026-09-26",
+    "doctor": "Dr. Satyam Vishwakarma",
+    "syncStatus": "pending",
+    "createdAt": "2026-08-25T19:15:56.969Z"
+  }
+]

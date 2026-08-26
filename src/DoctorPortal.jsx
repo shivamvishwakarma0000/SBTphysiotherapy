@@ -42,6 +42,9 @@ export default function DoctorPortal({ onClose }) {
 
   // Modals & Consultation Flow
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
+  const [activeReceipt, setActiveReceipt] = useState(null);
+  const [shareFeedback, setShareFeedback] = useState("");
+
   // Custom Webhook Settings State
   const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
   const [webhookSavedMsg, setWebhookSavedMsg] = useState("");

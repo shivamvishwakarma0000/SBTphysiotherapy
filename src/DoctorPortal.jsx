@@ -588,8 +588,9 @@ export default function DoctorPortal({ onClose }) {
   const handleWhatsAppDirectShare = async (receipt) => {
     if (!receipt || !receipt.patient || !receipt.visit) return;
     const { patient, visit } = receipt;
-    const phoneDigits = String(patient.phone || "").replace(/\D/g, "");
-    const patientPhone = phoneDigits.startsWith("91") ? phoneDigits : `91${phoneDigits}`;
+    let cleanDigits = String(patient.phone || "").replace(/\D/g, "");
+    if (cleanDigits.startsWith("0")) cleanDigits = cleanDigits.substring(1);
+    const patientPhone = cleanDigits.startsWith("91") && cleanDigits.length > 10 ? cleanDigits : `91${cleanDigits}`;
 
     const fileName = `Vindhya_Receipt_${patient.name.replace(/\s+/g, "_")}_${patient.patientId}_Visit${visit.visitNumber || 1}.pdf`;
     const doc = buildReceiptPDF(receipt);
@@ -617,18 +618,18 @@ export default function DoctorPortal({ onClose }) {
     try {
       const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        setShareFeedback("📲 Opening share menu — tap WhatsApp to send the PDF file directly!");
+        setShareFeedback("📲 Opening WhatsApp — sending PDF directly to " + patient.name + "...");
         await navigator.share({
           files: [pdfFile],
           title: `Receipt - ${patient.name}`,
           text: receiptSummary
         });
-        setShareFeedback("✅ PDF receipt shared successfully!");
+        setShareFeedback(`✅ PDF receipt sent to ${patient.name} (+91 ${patient.phone})!`);
         return;
       }
     } catch (shareErr) {
-      if (shareErr.name === "AbortError") return; // User closed share window
-      console.log("Native share fallback to direct chat:", shareErr);
+      if (shareErr.name === "AbortError") return; // User cancelled
+      console.log("Native share fallback:", shareErr);
     }
 
     // 2. Desktop / WhatsApp Web workflow:
@@ -640,13 +641,13 @@ export default function DoctorPortal({ onClose }) {
       await navigator.clipboard.writeText(receiptSummary);
     } catch (e) {}
 
-    setShareFeedback(`✅ "${fileName}" downloaded & receipt copied! Opening WhatsApp for ${patient.name} (+91 ${patient.phone})...`);
+    setShareFeedback(`✅ "${fileName}" downloaded! Opening WhatsApp chat for ${patient.name} (+91 ${patient.phone})...`);
 
-    // Open WhatsApp Chat with clean message
+    // Open WhatsApp Chat with pre-filled message
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${patientPhone}&text=${encodeURIComponent(receiptSummary)}`;
     setTimeout(() => {
       window.open(whatsappUrl, "_blank");
-    }, 400);
+    }, 300);
   };
 
   const handleDeletePatient = async (patientId, patientName) => {
@@ -1695,8 +1696,9 @@ export default function DoctorPortal({ onClose }) {
               <button
                 className="whatsapp-share-btn"
                 onClick={() => handleWhatsAppDirectShare(activeReceipt)}
+                title={`Send official PDF prescription & receipt to ${activeReceipt.patient.name} on WhatsApp`}
               >
-                💬 Send PDF to WhatsApp
+                📲 Send PDF Receipt on WhatsApp (+91 {activeReceipt.patient.phone})
               </button>
               <button className="primary-btn" onClick={() => handleDownloadPDF(activeReceipt)}>
                 📥 Download PDF

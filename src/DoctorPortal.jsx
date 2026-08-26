@@ -2407,13 +2407,14 @@ _(Saved in patient clinic records)_`;
       {activeReceipt && (
         <div className="receipt-modal-overlay">
           <div className="receipt-modal-card">
-            <div className="receipt-actions-toolbar">
+            <div className="receipt-actions-toolbar sticky-receipt-toolbar">
               <button
-                className="whatsapp-share-btn"
+                className="whatsapp-share-btn main-whatsapp-action"
                 onClick={() => handleWhatsAppDirectShare(activeReceipt)}
                 title={`Send official PDF prescription & receipt to ${activeReceipt.patient.name} on WhatsApp`}
               >
-                📲 Send WhatsApp Receipt (+91 {activeReceipt.patient.phone})
+                <span style={{ fontSize: "18px" }}>💬</span>
+                <span>Send Receipt via WhatsApp (+91 {activeReceipt.patient.phone})</span>
               </button>
               <button className="primary-btn" onClick={() => handleDownloadPDF(activeReceipt)}>
                 📥 Download PDF
@@ -2471,78 +2472,80 @@ _(Saved in patient clinic records)_`;
                 <div><span>Date & Time:</span> <strong>{activeReceipt.visit.date} {activeReceipt.visit.time ? `(${activeReceipt.visit.time})` : ""}</strong></div>
               </div>
 
+              {/* Patient Demographics Box */}
               <div className="receipt-section">
-                <h4>1. Patient Demographics</h4>
+                <h4 className="receipt-sec-header">1. PATIENT DEMOGRAPHICS</h4>
                 <div className="receipt-table-grid">
                   <div className="receipt-cell">
                     <span className="cell-label">Full Name:</span>
                     <strong className="cell-value highlight">{activeReceipt.patient.name}</strong>
                   </div>
                   <div className="receipt-cell">
-                    <span className="cell-label">Age / Gender:</span>
+                    <span className="cell-label">Age & Gender:</span>
                     <span className="cell-value">{activeReceipt.patient.age} Yrs / {activeReceipt.patient.gender}</span>
                   </div>
                   <div className="receipt-cell">
-                    <span className="cell-label">Contact Phone:</span>
+                    <span className="cell-label">Primary Phone:</span>
                     <span className="cell-value">+91 {activeReceipt.patient.phone}</span>
                   </div>
                   <div className="receipt-cell">
-                    <span className="cell-label">Alternate Phone:</span>
+                    <span className="cell-label">Alternate Contact:</span>
                     <span className="cell-value">{activeReceipt.patient.altPhone ? `+91 ${activeReceipt.patient.altPhone}` : "N/A"}</span>
                   </div>
                   <div className="receipt-cell">
-                    <span className="cell-label">Address:</span>
+                    <span className="cell-label">Address / Location:</span>
                     <span className="cell-value">{activeReceipt.patient.address || "Vindhyachal, Mirzapur"}</span>
                   </div>
                   <div className="receipt-cell">
-                    <span className="cell-label">Total Visits to Date:</span>
+                    <span className="cell-label">Clinical History:</span>
                     <strong className="cell-value text-emerald">{activeReceipt.patient.totalVisits || 1} Completed Visit(s)</strong>
                   </div>
                 </div>
               </div>
 
+              {/* Consultation & Clinical Assessment */}
               <div className="receipt-section">
-                <h4>2. Clinical Assessment & Rehabilitation Record</h4>
+                <h4 className="receipt-sec-header">2. CLINICAL DIAGNOSIS & REHABILITATION PLAN</h4>
                 <div className="receipt-table-grid">
-                  <div className="receipt-cell wide-cell">
-                    <span className="cell-label">Reason for Visit:</span>
+                  <div className="receipt-cell full-width">
+                    <span className="cell-label">Chief Clinical Focus:</span>
                     <strong className="cell-value">{activeReceipt.visit.reason || "Physiotherapy Rehabilitation"}</strong>
                   </div>
-                  <div className="receipt-cell wide-cell">
-                    <span className="cell-label">Reported Complaint:</span>
+                  <div className="receipt-cell full-width">
+                    <span className="cell-label">Symptoms & Complaints:</span>
                     <span className="cell-value">{activeReceipt.visit.complaint || "Physical pain / functional limitation"}</span>
                   </div>
-                  <div className="receipt-cell wide-cell">
-                    <span className="cell-label">Clinical Diagnosis:</span>
+                  <div className="receipt-cell full-width">
+                    <span className="cell-label">Final Medical Diagnosis:</span>
                     <strong className="cell-value">{activeReceipt.visit.diagnosis || "Under active physiotherapy management"}</strong>
                   </div>
-                  <div className="receipt-cell wide-cell">
-                    <span className="cell-label">Therapy Provided:</span>
+                  <div className="receipt-cell full-width">
+                    <span className="cell-label">Therapy Administered:</span>
                     <span className="cell-value">{activeReceipt.visit.treatmentNotes || "Mobilization, stretching, and guided exercise therapy."}</span>
                   </div>
-                  <div className="receipt-cell wide-cell">
-                    <span className="cell-label">Next Recommended Follow-Up:</span>
-                    <strong className="cell-value text-emerald">
+                  <div className="receipt-cell">
+                    <span className="cell-label">Follow-Up Advice:</span>
+                    <strong className="cell-value text-orange">
                       {activeReceipt.visit.followUpDate ? `${activeReceipt.visit.followUpDate} (Regular Rehab Session)` : "As advised by Consultant Doctor"}
                     </strong>
+                  </div>
+                  <div className="receipt-cell">
+                    <span className="cell-label">Next Visit Time:</span>
+                    <strong className="cell-value">{activeReceipt.visit.followUpTime || "10:30 AM (Morning Clinic)"}</strong>
                   </div>
                 </div>
               </div>
 
+              {/* Fee and Payment Settlement */}
               <div className="receipt-section">
-                <h4>3. Consultation & Treatment Charges</h4>
-                <div className="receipt-table-grid">
-                  <div className="receipt-cell">
-                    <span className="cell-label">Total Consultation Fee:</span>
-                    <strong className="cell-value highlight text-emerald" style={{ fontSize: "14px" }}>
+                <h4 className="receipt-sec-header">3. CONSULTATION & TREATMENT CHARGES</h4>
+                <div className="receipt-table-grid single-col">
+                  <div className="receipt-cell highlight-fee">
+                    <span className="cell-label">Consultation & Treatment Fee:</span>
+                    <strong className="cell-value fee-amount">
                       {activeReceipt.visit.fee || "₹500"}
                     </strong>
-                  </div>
-                  <div className="receipt-cell">
-                    <span className="cell-label">Payment Status:</span>
-                    <span className="cell-value" style={{ color: "#059669", fontWeight: "700" }}>
-                      ✅ Paid & Settled (Cash / UPI)
-                    </span>
+                    <span className="payment-status-badge">Status: Paid & Settled (Cash / UPI)</span>
                   </div>
                 </div>
               </div>
@@ -2567,6 +2570,17 @@ _(Saved in patient clinic records)_`;
                 <p>Thank you for choosing Vindhya Physio & Rehab Center</p>
                 <span>For appointments & medical inquiries: Call 9793093316 | WhatsApp: 8382024264 | Amravati Chauraha, Vindhyachal</span>
               </div>
+            </div>
+
+            {/* Quick Sticky Bottom WhatsApp Action on Mobile */}
+            <div className="mobile-receipt-bottom-bar hide-on-desktop" style={{ marginTop: "14px" }}>
+              <button
+                className="whatsapp-share-btn main-whatsapp-action"
+                onClick={() => handleWhatsAppDirectShare(activeReceipt)}
+              >
+                <span style={{ fontSize: "18px" }}>💬</span>
+                <span>Send Receipt via WhatsApp (+91 {activeReceipt.patient.phone})</span>
+              </button>
             </div>
           </div>
         </div>
@@ -2705,19 +2719,22 @@ _(Saved in patient clinic records)_`;
                 />
               </div>
 
-              <label style={{ marginTop: "12px", display: "block" }}>
-                Therapy & Treatment Administered Today *
+              <div style={{ marginTop: "14px", marginBottom: "14px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: "700", color: "#f1f5f9" }}>
+                  Therapy & Treatment Administered Today *
+                </label>
                 <textarea
                   rows="3"
                   required
                   value={consultForm.treatmentNotes}
                   onChange={(e) => setConsultForm({ ...consultForm, treatmentNotes: e.target.value })}
                   placeholder="e.g. IFT + Ultrasonic therapy for 15 mins. Manual spinal decompression + Isometric core stabilization."
+                  style={{ display: "block", width: "100%", minHeight: "85px", boxSizing: "border-box" }}
                 />
-              </label>
+              </div>
 
               {/* Fee Entry with Quick Presets */}
-              <div style={{ marginTop: "12px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "8px", padding: "12px" }}>
+              <div style={{ marginTop: "16px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "8px", padding: "14px", clear: "both" }}>
                 <label style={{ margin: "0 0 6px 0", color: "#6ee7b7", fontWeight: "700", display: "block" }}>
                   Consultation & Therapy Fee (₹) *
                 </label>

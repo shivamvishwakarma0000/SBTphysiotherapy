@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import jsPDF from "jspdf";
 import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets";
-
-const API_BASE = "/api";
+import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets } from "./apiService";
 
 export default function DoctorPortal({ onClose }) {
   const [token, setToken] = useState(() => localStorage.getItem("doctor_token") || "");
@@ -46,6 +45,10 @@ export default function DoctorPortal({ onClose }) {
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [shareFeedback, setShareFeedback] = useState("");
 
+  // Custom Webhook Settings State
+  const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
+  const [webhookSavedMsg, setWebhookSavedMsg] = useState("");
+
   // Enrollment Form State (Step 1: Patient Intake)
   const [newPatientForm, setNewPatientForm] = useState({
     name: "",
@@ -69,14 +72,14 @@ export default function DoctorPortal({ onClose }) {
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState("");
 
-  // New Visit Form State
+  // Add Visit State (Step 2: Subsequent Consultation)
   const [newVisitForm, setNewVisitForm] = useState({
-    visitDate: new Date().toISOString().slice(0, 10),
-    visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
-    reasonForVisit: "Follow-up Rehabilitation",
+    date: new Date().toISOString().slice(0, 10),
+    time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    reason: "Physiotherapy Follow-up Treatment",
     complaint: "",
     diagnosis: "",
-    treatmentNotes: "Joint mobilization, cupping therapy, and progressive resistance exercises.",
+    treatmentNotes: "Electrotherapy + manual decompression + targeted postural re-education.",
     followUpDate: "",
     status: "In Consultation"
   });
@@ -84,18 +87,9 @@ export default function DoctorPortal({ onClose }) {
   const [syncLoading, setSyncLoading] = useState(false);
   const receiptPrintRef = useRef(null);
 
-  const authHeaders = useMemo(() => ({
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`
-  }), [token]);
-
   useEffect(() => {
     if (token) {
-      fetch(`${API_BASE}/auth/me`, { headers: authHeaders })
-        .then(res => {
-          if (!res.ok) throw new Error("Unauthorized");
-          return res.json();
-        })
+      api.verifyMe(token)
         .then(data => {
           if (data.ok) {
             setDoctorInfo(data.doctor);
@@ -113,10 +107,8 @@ export default function DoctorPortal({ onClose }) {
   }, [token]);
 
   const fetchStats = async () => {
-    if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/doctor/stats`, { headers: authHeaders });
-      const data = await res.json();
+      const data = await api.getStats();
       if (data.ok) setStats(data.stats);
     } catch (e) {
       console.error(e);
@@ -124,11 +116,8 @@ export default function DoctorPortal({ onClose }) {
   };
 
   const fetchPatients = async (query = "") => {
-    if (!token) return;
     try {
-      const url = query ? `${API_BASE}/doctor/patients?search=${encodeURIComponent(query)}` : `${API_BASE}/doctor/patients`;
-      const res = await fetch(url, { headers: authHeaders });
-      const data = await res.json();
+      const data = await api.getPatients(query);
       if (data.ok) setPatients(data.patients);
     } catch (e) {
       console.error(e);
@@ -136,10 +125,8 @@ export default function DoctorPortal({ onClose }) {
   };
 
   const fetchTodayVisits = async () => {
-    if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/doctor/today-visits`, { headers: authHeaders });
-      const data = await res.json();
+      const data = await api.getTodayVisits();
       if (data.ok) setTodayVisits(data.visits);
     } catch (e) {
       console.error(e);
@@ -147,10 +134,8 @@ export default function DoctorPortal({ onClose }) {
   };
 
   const fetchEnquiries = async () => {
-    if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/doctor/enquiries`, { headers: authHeaders });
-      const data = await res.json();
+      const data = await api.getEnquiries();
       if (data.ok) setEnquiries(data.enquiries);
     } catch (e) {
       console.error(e);
@@ -162,18 +147,16 @@ export default function DoctorPortal({ onClose }) {
     setAuthError("");
     setAuthLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(loginForm)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Login failed");
+      const data = await api.login(loginForm);
       setToken(data.token);
       localStorage.setItem("doctor_token", data.token);
       setDoctorInfo(data.doctor);
+      fetchStats();
+      fetchPatients();
+      fetchTodayVisits();
+      fetchEnquiries();
     } catch (err) {
-      setAuthError(err.message);
+      setAuthError(err.message || "Invalid credentials");
     } finally {
       setAuthLoading(false);
     }
@@ -191,13 +174,7 @@ export default function DoctorPortal({ onClose }) {
     e.preventDefault();
     setForgotStatus({ message: "Generating reset token...", token: "", isError: false });
     try {
-      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
+      const data = await api.forgotPassword(forgotEmail);
       setForgotStatus({
         message: `Reset token created. Enter it below to set your new password.`,
         token: data.resetToken,
@@ -212,18 +189,11 @@ export default function DoctorPortal({ onClose }) {
   const handleResetSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_BASE}/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: forgotEmail,
-          resetToken: resetTokenInput,
-          newPassword: newPasswordInput
-        })
+      const data = await api.resetPassword({
+        token: resetTokenInput,
+        newPassword: newPasswordInput
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Reset failed");
-      alert("Password reset successfully! Please log in with your new password.");
+      alert(data.message || "Password reset successfully! Please log in with your new password.");
       setShowForgotModal(false);
       setLoginForm({ email: forgotEmail, password: newPasswordInput });
     } catch (err) {
@@ -239,17 +209,11 @@ export default function DoctorPortal({ onClose }) {
       return;
     }
     try {
-      const res = await fetch(`${API_BASE}/auth/change-password`, {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword
-        })
+      const data = await api.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not change password");
-      setPasswordMsg({ text: "Password changed successfully!", isError: false });
+      setPasswordMsg({ text: data.message || "Password changed successfully!", isError: false });
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
       if (doctorInfo) {
         setDoctorInfo({ ...doctorInfo, isTemporaryPassword: false });
@@ -264,13 +228,7 @@ export default function DoctorPortal({ onClose }) {
     setEnrollError("");
     setEnrollLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/doctor/patients`, {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify(newPatientForm)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to enroll patient");
+      const data = await api.createPatient(newPatientForm);
       
       fetchStats();
       fetchPatients();
@@ -330,8 +288,7 @@ export default function DoctorPortal({ onClose }) {
 
   const openPatientProfile = async (patientId) => {
     try {
-      const res = await fetch(`${API_BASE}/doctor/patients/${patientId}`, { headers: authHeaders });
-      const data = await res.json();
+      const data = await api.getPatientDetails(patientId);
       if (data.ok) {
         setSelectedPatient(data.patient);
         setPatientVisits(data.visits);
@@ -345,13 +302,8 @@ export default function DoctorPortal({ onClose }) {
     e.preventDefault();
     if (!selectedPatient) return;
     try {
-      const res = await fetch(`${API_BASE}/doctor/patients/${selectedPatient.patientId}/visits`, {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify(newVisitForm)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to add visit");
+      const data = await api.createVisit(selectedPatient.patientId, newVisitForm);
+      if (!data.ok) throw new Error("Failed to add visit");
       
       setShowAddVisitModal(false);
       openPatientProfile(selectedPatient.patientId);
@@ -373,9 +325,7 @@ export default function DoctorPortal({ onClose }) {
     if (!confirm("Restore all patient records, visits, and bookings from Google Sheets into the website?")) return;
     setRestoreLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/doctor/restore`, { method: "POST", headers: authHeaders });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Restore failed");
+      const data = await restoreFromGoogleSheets();
       alert(data.message || "Data restored successfully from Google Sheets!");
       fetchStats();
       fetchPatients();
@@ -391,9 +341,15 @@ export default function DoctorPortal({ onClose }) {
   const handleManualSync = async () => {
     setSyncLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/doctor/sync`, { method: "POST", headers: authHeaders });
-      const data = await res.json();
-      alert(data.message || "Sync completed.");
+      const webhookUrl = getWebhookUrl();
+      if (!webhookUrl) {
+        alert("Please configure your Google Sheets Webhook URL below in settings first.");
+        return;
+      }
+      // Trigger sync for all current patients and visits
+      patients.forEach(p => syncToGoogleSheets("sync_patient", p));
+      todayVisits.forEach(v => syncToGoogleSheets("sync_visit", v));
+      alert("All records sent to Google Sheets!");
       fetchStats();
       fetchPatients();
       fetchEnquiries();
@@ -402,6 +358,13 @@ export default function DoctorPortal({ onClose }) {
     } finally {
       setSyncLoading(false);
     }
+  };
+
+  const handleSaveCustomWebhook = (e) => {
+    e.preventDefault();
+    setWebhookUrl(customWebhookInput);
+    setWebhookSavedMsg("✅ Google Sheets Webhook URL saved successfully!");
+    setTimeout(() => setWebhookSavedMsg(""), 4000);
   };
 
   const buildReceiptPDF = (receipt) => {
@@ -604,7 +567,7 @@ export default function DoctorPortal({ onClose }) {
   };
 
   const handleExportCSV = (type = "visits") => {
-    window.open(`${API_BASE}/doctor/export?type=${type}`, "_blank");
+    api.exportCSV(type);
   };
 
   // ==========================================
@@ -1346,13 +1309,34 @@ export default function DoctorPortal({ onClose }) {
                     <span>{stats.pendingSyncCount || 0} records</span>
                   </div>
                 </div>
+
+                <form onSubmit={handleSaveCustomWebhook} style={{ marginTop: "15px" }}>
+                  <label>
+                    Google Sheets Webhook URL
+                    <input
+                      type="url"
+                      placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+                      value={customWebhookInput}
+                      onChange={(e) => setCustomWebhookInput(e.target.value)}
+                      style={{ fontSize: "12px" }}
+                    />
+                  </label>
+                  {webhookSavedMsg && (
+                    <div style={{ color: "#10b981", fontSize: "12px", marginBottom: "8px", fontWeight: "600" }}>
+                      {webhookSavedMsg}
+                    </div>
+                  )}
+                  <button type="submit" className="secondary-btn full-btn" style={{ marginBottom: "10px" }}>
+                    💾 Save Webhook URL
+                  </button>
+                </form>
+
                 <button
                   className="secondary-btn full-btn"
-                  style={{ marginTop: "15px" }}
                   onClick={handleManualSync}
                   disabled={syncLoading}
                 >
-                  {syncLoading ? "Syncing to Google Sheets..." : "🔄 Push Pending Records to Sheets"}
+                  {syncLoading ? "Syncing to Google Sheets..." : "🔄 Push All Records to Google Sheets"}
                 </button>
                 <button
                   className="primary-btn full-btn"

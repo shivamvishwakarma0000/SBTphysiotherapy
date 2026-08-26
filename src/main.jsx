@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import DoctorPortal from "./DoctorPortal";
+import { api } from "./apiService";
 
 const phonePrimary = "9793093316";
 const phoneWhatsApp = "8382024264";
@@ -409,14 +410,8 @@ function Assessment() {
     };
 
     try {
-      // Direct Server & Real-time Google Sheets Cloud Sync
-      const res = await fetch("/api/enquiries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      
-      if (!res.ok) throw new Error("Failed to save enquiry");
+      // Direct Cloud & Google Sheets Sync Engine
+      await api.createEnquiry(payload);
 
       setStatus("success");
       setForm({ name: "", phone: "", appointmentDate: "", concern: "" });

@@ -1356,14 +1356,41 @@ _(Saved in patient clinic records)_`;
                 </label>
                 <label>
                   Referred By
-                  <input
-                    type="text"
-                    value={newPatientForm.referredBy}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, referredBy: e.target.value })}
-                    placeholder="e.g. Self / Walk-in / Dr. Name / Relative"
-                  />
+                  <select
+                    value={newPatientForm.referredBySelect || "Self / Walk-in"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewPatientForm({
+                        ...newPatientForm,
+                        referredBySelect: val,
+                        referredBy: val === "Custom" ? "" : val
+                      });
+                    }}
+                  >
+                    <option value="Self / Walk-in">Self / Walk-in</option>
+                    <option value="Friend / Relative Referral">Friend / Relative Referral</option>
+                    <option value="Old Patient Reference">Old Patient Reference</option>
+                    <option value="Hospital / Clinic Reference">Hospital / Clinic Reference</option>
+                    <option value="Google / Social Media / Online">Google / Social Media / Online</option>
+                    <option value="Custom">✏️ Other / Custom Referrer...</option>
+                  </select>
                 </label>
               </div>
+
+              {newPatientForm.referredBySelect === "Custom" && (
+                <div className="form-row-1" style={{ marginTop: "8px" }}>
+                  <label>
+                    Type Referrer / Doctor Name
+                    <input
+                      type="text"
+                      required
+                      value={newPatientForm.referredBy}
+                      onChange={(e) => setNewPatientForm({ ...newPatientForm, referredBy: e.target.value })}
+                      placeholder="Enter referrer name (doctor, hospital, relative, etc.)"
+                    />
+                  </label>
+                </div>
+              )}
 
               <h3 className="form-section-title" style={{ marginTop: "24px" }}>2. Problem, Symptoms & History</h3>
               <div className="form-row-3">
@@ -1411,15 +1438,44 @@ _(Saved in patient clinic records)_`;
 
                 <label>
                   How Long / How Many Times Occurred? *
-                  <input
-                    type="text"
-                    required
-                    value={newPatientForm.duration}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, duration: e.target.value })}
-                    placeholder="e.g. Since 10 days / Happened 3 times / Chronic 6 months"
-                  />
+                  <select
+                    value={newPatientForm.durationSelect || "1 to 2 Weeks"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewPatientForm({
+                        ...newPatientForm,
+                        durationSelect: val,
+                        duration: val === "Custom" ? "" : val
+                      });
+                    }}
+                  >
+                    <option value="Less than 1 Week (Acute)">Less than 1 Week (Acute)</option>
+                    <option value="1 to 2 Weeks">1 to 2 Weeks</option>
+                    <option value="2 to 4 Weeks (1 Month)">2 to 4 Weeks (1 Month)</option>
+                    <option value="1 to 3 Months">1 to 3 Months</option>
+                    <option value="3 to 6 Months (Sub-acute)">3 to 6 Months (Sub-acute)</option>
+                    <option value="6 Months to 1 Year (Chronic)">6 Months to 1 Year (Chronic)</option>
+                    <option value="More than 1 Year / Recurring">More than 1 Year / Recurring</option>
+                    <option value="Happened 2-3 times earlier">Happened 2-3 times earlier</option>
+                    <option value="Custom">✏️ Other / Custom Duration...</option>
+                  </select>
                 </label>
               </div>
+
+              {newPatientForm.durationSelect === "Custom" && (
+                <div className="form-row-1" style={{ marginTop: "8px" }}>
+                  <label>
+                    Type Custom Duration / Frequency *
+                    <input
+                      type="text"
+                      required
+                      value={newPatientForm.duration}
+                      onChange={(e) => setNewPatientForm({ ...newPatientForm, duration: e.target.value })}
+                      placeholder="e.g. Happened 3 times after gym / Chronic 2 years"
+                    />
+                  </label>
+                </div>
+              )}
 
               {newPatientForm.reasonForVisitSelect === "Custom" && (
                 <div className="form-row-1" style={{ marginTop: "8px" }}>

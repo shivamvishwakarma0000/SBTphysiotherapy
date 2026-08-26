@@ -61,9 +61,12 @@ export default function DoctorPortal({ onClose }) {
     emergencyContact: "",
     isFirstTime: "Yes",
     reasonForVisit: "Spine & Back Pain",
+    reasonForVisitSelect: "Spine & Back Pain",
     duration: "1 to 2 Weeks",
     complaint: "",
-    referredBy: "Self / Walk-in"
+    referredBy: "Self / Walk-in",
+    visitTime: "10:30 AM",
+    visitTimeSelect: "10:30 AM"
   });
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState("");
@@ -72,27 +75,31 @@ export default function DoctorPortal({ onClose }) {
   const [activeConsultPatient, setActiveConsultPatient] = useState(null);
   const [consultForm, setConsultForm] = useState({
     visitDate: new Date().toISOString().slice(0, 10),
-    visitTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    visitTime: "10:30 AM",
+    visitTimeSelect: "10:30 AM",
     reason: "Spine & Back Pain",
     complaint: "",
     duration: "",
     diagnosis: "Lumbar Spondylosis (L4-L5 Disc Bulge) with Muscle Spasm",
     treatmentNotes: "IFT + Ultrasonic therapy applied for 15 mins. Core isometric exercises taught.",
     fee: "500",
-    followUpDate: ""
+    followUpDate: "",
+    followUpTime: ""
   });
   const [consultLoading, setConsultLoading] = useState(false);
 
   // Add Subsequent Visit State
   const [newVisitForm, setNewVisitForm] = useState({
     date: new Date().toISOString().slice(0, 10),
-    time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    time: "10:30 AM",
+    timeSelect: "10:30 AM",
     reason: "Physiotherapy Follow-up Treatment",
     complaint: "",
     diagnosis: "",
     treatmentNotes: "Electrotherapy + manual decompression + targeted postural re-education.",
     fee: "500",
     followUpDate: "",
+    followUpTime: "",
     status: "Completed"
   });
 
@@ -574,11 +581,36 @@ export default function DoctorPortal({ onClose }) {
     const splitNotes = doc.splitTextToSize(visit.treatmentNotes || "Mobilization, targeted stretches, strengthening exercises, and home care protocol.", 125);
     doc.text(splitNotes, 60, 165);
 
-    const nextY = 165 + (splitNotes.length * 5.5);
+    const feeY = 165 + (splitNotes.length * 5.2);
+    
+    // Fee Box inside Section 2
+    doc.setFillColor(240, 249, 255);
+    doc.roundedRect(20, feeY, 170, 14, 1.5, 1.5, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(3, 105, 161);
+    doc.text("Consultation & Treatment Fee:", 25, feeY + 9);
+    doc.setFontSize(10.5);
+    doc.setTextColor(5, 150, 105);
+    doc.text(visit.fee || "₹500", 78, feeY + 9);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text("Status: Paid & Settled (Cash / UPI)", 118, feeY + 9);
+
+    const nextY = feeY + 20;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
     doc.text("Next Follow-up:", 20, nextY);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(16, 185, 129);
-    doc.text(visit.followUpDate ? `${visit.followUpDate} (Regular Rehab Session)` : "As advised by Consultant Doctor", 60, nextY);
+    if (visit.followUpDate) {
+      doc.setTextColor(16, 185, 129);
+      doc.text(`${visit.followUpDate} ${visit.followUpTime ? `(${visit.followUpTime})` : "(Regular Session)"}`, 60, nextY);
+    } else {
+      doc.setTextColor(100, 116, 139);
+      doc.text("None Required / SOS (Only Today Consultation Completed)", 60, nextY);
+    }
 
     // Doctor Official Signature & Sign-off Box
     try {
@@ -640,17 +672,22 @@ export default function DoctorPortal({ onClose }) {
     const doc = buildReceiptPDF(receipt);
     const pdfBlob = doc.output("blob");
 
-    // Clean, highly professional WhatsApp receipt message without misleading text
+    const followUpSummary = visit.followUpDate
+      ? `${visit.followUpDate}${visit.followUpTime ? ` (${visit.followUpTime})` : ""}`
+      : "None Required (Only Today Consultation Completed / SOS)";
+
+    // Clean, highly professional WhatsApp receipt message
     const receiptSummary = 
 `🏥 *VINDHYA PHYSIO & REHAB CENTER*
 *Official Patient Consultation & Clinical Receipt*
 --------------------------------------------
 👤 *Patient Name:* ${patient.name}
 🆔 *Patient ID:* ${patient.patientId}
-📅 *Visit:* #${visit.visitNumber || 1} • ${visit.date} ${visit.time ? `(${visit.time})` : ""}
+📅 *Visit Date & Time:* ${visit.date} ${visit.time ? `(${visit.time})` : ""}
 🩺 *Reason / Diagnosis:* ${visit.diagnosis || visit.reason || "Physiotherapy Rehabilitation"}
 💊 *Treatment Done:* ${visit.treatmentNotes || "Comprehensive physical evaluation & exercise guidance"}
-🗓️ *Next Follow-up:* ${visit.followUpDate ? visit.followUpDate : "As advised by Consultant Doctor"}
+💰 *Consultation Fee:* ${visit.fee || "₹500"} (Paid & Settled)
+🗓️ *Next Follow-up:* ${followUpSummary}
 --------------------------------------------
 👨‍⚕️ *Consultant:* Dr. Satyam Vishwakarma (BPT, DPT, CCYP - BHU)
 📍 *Clinic Address:* Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)
@@ -1186,13 +1223,23 @@ _(Saved in patient clinic records)_`;
                     <option value="No">No (Returning Patient)</option>
                   </select>
                 </label>
+
                 <label>
                   Primary Problem / Pain Area *
                   <select
-                    value={newPatientForm.reasonForVisit}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, reasonForVisit: e.target.value })}
+                    value={newPatientForm.reasonForVisitSelect || newPatientForm.reasonForVisit}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewPatientForm({
+                        ...newPatientForm,
+                        reasonForVisitSelect: val,
+                        reasonForVisit: val === "Custom" ? "" : val
+                      });
+                    }}
                   >
                     <option value="Spine & Back Pain">Spine & Back Pain</option>
+                    <option value="Knee & Joint Arthritis">Knee & Joint Arthritis</option>
+                    <option value="Neck & Cervical Spondylosis">Neck & Cervical Spondylosis</option>
                     <option value="Cup Therapy">Cup Therapy / Cupping</option>
                     <option value="Neuro Rehabilitation">Neuro Rehabilitation</option>
                     <option value="Paralysis Rehabilitation">Paralysis Rehabilitation</option>
@@ -1200,12 +1247,14 @@ _(Saved in patient clinic records)_`;
                     <option value="CP (Child) Therapy">CP (Child) Therapy / Cerebral Palsy</option>
                     <option value="Sports Injury Rehab">Sports Injury Rehab</option>
                     <option value="Post-Surgical Rehab">Post-Surgical Rehab</option>
-                    <option value="Knee & Joint Arthritis">Knee & Joint Arthritis</option>
-                    <option value="Neck & Cervical Spondylosis">Neck & Cervical Spondylosis</option>
                     <option value="Frozen Shoulder">Frozen Shoulder</option>
+                    <option value="Sciatica & Nerve Pain">Sciatica & Nerve Pain</option>
+                    <option value="Bell's Palsy / Facial Palsy">Bell's Palsy / Facial Palsy</option>
                     <option value="General Physiotherapy">General Physiotherapy</option>
+                    <option value="Custom">✏️ Other / Custom Problem...</option>
                   </select>
                 </label>
+
                 <label>
                   How Long / How Many Times Occurred? *
                   <input
@@ -1218,7 +1267,73 @@ _(Saved in patient clinic records)_`;
                 </label>
               </div>
 
-              <div className="form-row-1">
+              {newPatientForm.reasonForVisitSelect === "Custom" && (
+                <div className="form-row-1" style={{ marginTop: "8px" }}>
+                  <label>
+                    Type Custom Problem / Pain Area *
+                    <input
+                      type="text"
+                      required
+                      value={newPatientForm.reasonForVisit}
+                      onChange={(e) => setNewPatientForm({ ...newPatientForm, reasonForVisit: e.target.value })}
+                      placeholder="e.g. Ankle Ligament Tear, Plantar Fasciitis, Tennis Elbow, Heel Spur..."
+                    />
+                  </label>
+                </div>
+              )}
+
+              <div className="form-row-2" style={{ marginTop: "12px" }}>
+                <label>
+                  Intake / Arrival Time *
+                  <select
+                    value={newPatientForm.visitTimeSelect || "10:30 AM"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewPatientForm({
+                        ...newPatientForm,
+                        visitTimeSelect: val,
+                        visitTime: val === "Custom" ? "" : val
+                      });
+                    }}
+                  >
+                    <option value="09:00 AM">09:00 AM</option>
+                    <option value="09:30 AM">09:30 AM</option>
+                    <option value="10:00 AM">10:00 AM</option>
+                    <option value="10:30 AM">10:30 AM</option>
+                    <option value="11:00 AM">11:00 AM</option>
+                    <option value="11:30 AM">11:30 AM</option>
+                    <option value="12:00 PM">12:00 PM</option>
+                    <option value="12:30 PM">12:30 PM</option>
+                    <option value="01:00 PM">01:00 PM</option>
+                    <option value="04:00 PM">04:00 PM</option>
+                    <option value="04:30 PM">04:30 PM</option>
+                    <option value="05:00 PM">05:00 PM</option>
+                    <option value="05:30 PM">05:30 PM</option>
+                    <option value="06:00 PM">06:00 PM</option>
+                    <option value="06:30 PM">06:30 PM</option>
+                    <option value="07:00 PM">07:00 PM</option>
+                    <option value="07:30 PM">07:30 PM</option>
+                    <option value="08:00 PM">08:00 PM</option>
+                    <option value="08:30 PM">08:30 PM</option>
+                    <option value="Custom">✏️ Custom / Other Time...</option>
+                  </select>
+                </label>
+
+                {newPatientForm.visitTimeSelect === "Custom" && (
+                  <label>
+                    Enter Specific Time *
+                    <input
+                      type="text"
+                      required
+                      value={newPatientForm.visitTime}
+                      onChange={(e) => setNewPatientForm({ ...newPatientForm, visitTime: e.target.value })}
+                      placeholder="e.g. 03:45 PM"
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div className="form-row-1" style={{ marginTop: "12px" }}>
                 <label>
                   Patient's Reported Symptoms & Complaints
                   <textarea
@@ -2268,15 +2383,58 @@ _(Saved in patient clinic records)_`;
                     onChange={(e) => setConsultForm({ ...consultForm, visitDate: e.target.value })}
                   />
                 </label>
+
                 <label>
-                  Consultation Time
-                  <input
-                    type="text"
-                    value={consultForm.visitTime}
-                    onChange={(e) => setConsultForm({ ...consultForm, visitTime: e.target.value })}
-                  />
+                  Consultation Time *
+                  <select
+                    value={consultForm.visitTimeSelect || "10:30 AM"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setConsultForm({
+                        ...consultForm,
+                        visitTimeSelect: val,
+                        visitTime: val === "Custom" ? "" : val
+                      });
+                    }}
+                  >
+                    <option value="09:00 AM">09:00 AM</option>
+                    <option value="09:30 AM">09:30 AM</option>
+                    <option value="10:00 AM">10:00 AM</option>
+                    <option value="10:30 AM">10:30 AM</option>
+                    <option value="11:00 AM">11:00 AM</option>
+                    <option value="11:30 AM">11:30 AM</option>
+                    <option value="12:00 PM">12:00 PM</option>
+                    <option value="12:30 PM">12:30 PM</option>
+                    <option value="01:00 PM">01:00 PM</option>
+                    <option value="04:00 PM">04:00 PM</option>
+                    <option value="04:30 PM">04:30 PM</option>
+                    <option value="05:00 PM">05:00 PM</option>
+                    <option value="05:30 PM">05:30 PM</option>
+                    <option value="06:00 PM">06:00 PM</option>
+                    <option value="06:30 PM">06:30 PM</option>
+                    <option value="07:00 PM">07:00 PM</option>
+                    <option value="07:30 PM">07:30 PM</option>
+                    <option value="08:00 PM">08:00 PM</option>
+                    <option value="08:30 PM">08:30 PM</option>
+                    <option value="Custom">✏️ Custom / Other Time...</option>
+                  </select>
                 </label>
               </div>
+
+              {consultForm.visitTimeSelect === "Custom" && (
+                <div className="form-row-1" style={{ marginTop: "6px" }}>
+                  <label>
+                    Enter Specific Consultation Time *
+                    <input
+                      type="text"
+                      required
+                      value={consultForm.visitTime}
+                      onChange={(e) => setConsultForm({ ...consultForm, visitTime: e.target.value })}
+                      placeholder="e.g. 03:15 PM"
+                    />
+                  </label>
+                </div>
+              )}
 
               <label>
                 Final Clinical Diagnosis & Assessment *
@@ -2285,7 +2443,7 @@ _(Saved in patient clinic records)_`;
                   required
                   value={consultForm.diagnosis}
                   onChange={(e) => setConsultForm({ ...consultForm, diagnosis: e.target.value })}
-                  placeholder="e.g. Lumbar Disc Herniation (L4-L5) with Right Sciatica & Spasm"
+                  placeholder="e.g. Lumbar Disc Herniation (L4-L5) with Right Sciatica & Muscle Spasm"
                 />
               </label>
 
@@ -2300,30 +2458,92 @@ _(Saved in patient clinic records)_`;
                 />
               </label>
 
-              <div className="form-row-2">
-                <label>
+              {/* Fee Entry with Quick Presets */}
+              <div style={{ marginTop: "12px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "8px", padding: "12px" }}>
+                <label style={{ margin: "0 0 6px 0", color: "#6ee7b7", fontWeight: "700", display: "block" }}>
                   Consultation & Therapy Fee (₹) *
-                  <div className="phone-prefix-input">
-                    <span>₹</span>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="50"
-                      value={consultForm.fee}
-                      onChange={(e) => setConsultForm({ ...consultForm, fee: e.target.value })}
-                      placeholder="500"
-                    />
-                  </div>
                 </label>
-                <label>
-                  Next Recommended Follow-Up
+                <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+                  {["300", "500", "700", "1000", "1200"].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setConsultForm({ ...consultForm, fee: amt })}
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: "6px",
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        border: consultForm.fee === amt ? "2px solid #10b981" : "1px solid rgba(255,255,255,0.15)",
+                        background: consultForm.fee === amt ? "#10b981" : "rgba(255,255,255,0.05)",
+                        color: "#fff"
+                      }}
+                    >
+                      ₹{amt}
+                    </button>
+                  ))}
+                </div>
+                <div className="phone-prefix-input" style={{ maxWidth: "200px" }}>
+                  <span>₹</span>
                   <input
-                    type="date"
-                    value={consultForm.followUpDate}
-                    onChange={(e) => setConsultForm({ ...consultForm, followUpDate: e.target.value })}
+                    type="number"
+                    required
+                    min="0"
+                    step="50"
+                    value={consultForm.fee}
+                    onChange={(e) => setConsultForm({ ...consultForm, fee: e.target.value })}
+                    placeholder="500"
                   />
-                </label>
+                </div>
+              </div>
+
+              {/* Follow-up Section (Optional) */}
+              <div style={{ marginTop: "14px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <label style={{ margin: 0, color: "#94a3b8", fontWeight: "700" }}>
+                    🗓️ Next Follow-Up Session <span style={{ color: "#f59e0b", fontSize: "12px" }}>(Optional - Leave blank if only today's session completed)</span>
+                  </label>
+                  {consultForm.followUpDate && (
+                    <button
+                      type="button"
+                      onClick={() => setConsultForm({ ...consultForm, followUpDate: "", followUpTime: "" })}
+                      style={{ background: "none", border: "none", color: "#f87171", fontSize: "12px", cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      Clear / No Follow-up
+                    </button>
+                  )}
+                </div>
+                <div className="form-row-2">
+                  <label>
+                    Follow-Up Date
+                    <input
+                      type="date"
+                      value={consultForm.followUpDate}
+                      onChange={(e) => setConsultForm({ ...consultForm, followUpDate: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    Follow-Up Time
+                    <select
+                      value={consultForm.followUpTime || "10:30 AM"}
+                      onChange={(e) => setConsultForm({ ...consultForm, followUpTime: e.target.value })}
+                      disabled={!consultForm.followUpDate}
+                    >
+                      <option value="10:00 AM">10:00 AM</option>
+                      <option value="10:30 AM">10:30 AM</option>
+                      <option value="11:00 AM">11:00 AM</option>
+                      <option value="11:30 AM">11:30 AM</option>
+                      <option value="12:00 PM">12:00 PM</option>
+                      <option value="04:00 PM">04:00 PM</option>
+                      <option value="04:30 PM">04:30 PM</option>
+                      <option value="05:00 PM">05:00 PM</option>
+                      <option value="05:30 PM">05:30 PM</option>
+                      <option value="06:00 PM">06:00 PM</option>
+                      <option value="07:00 PM">07:00 PM</option>
+                    </select>
+                  </label>
+                </div>
               </div>
 
               <div className="form-actions-bar" style={{ marginTop: "20px" }}>

@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 import DoctorPortal from "./DoctorPortal";
 import { api } from "./apiService";
+import { useTheme } from "./useTheme";
+import ThemeToggle from "./ThemeToggle";
 
 const phonePrimary = "9793093316";
 const phoneWhatsApp = "8382024264";
@@ -120,11 +122,11 @@ const testimonials = [
   ["Vikram Srivastava", "Cervical Spondylosis & Neck Pain", "Tech neck and radiating arm pain disappeared completely after 6 therapy sessions. Highly recommended!", "5"]
 ];
 
-function ClinicLogo() {
+function ClinicLogo({ isDark = false }) {
   return (
     <div className="clinic-logo-wrap">
       <img
-        src="/vindhya-logo-transparent.png"
+        src={isDark ? "/vindhya-logo-transparent.png" : "/vindhya-logo-light.png"}
         alt="Vindhya Physio & Rehab Center"
         className="clinic-logo-img"
       />
@@ -169,11 +171,12 @@ function WhatsAppIcon() {
   );
 }
 
-function Header({ onOpenDoctorPortal }) {
+function Header({ onOpenDoctorPortal, themeProps }) {
+  const { themePreference, setTheme, isDark } = themeProps;
   return (
     <header className="site-header">
       <a className="brand" href="#home" aria-label="Vindhya Physio & Rehab Center home">
-        <ClinicLogo />
+        <ClinicLogo isDark={isDark} />
       </a>
       <nav aria-label="Primary navigation">
         {navItems.map(([label, href]) => (
@@ -181,6 +184,10 @@ function Header({ onOpenDoctorPortal }) {
         ))}
       </nav>
       <div className="header-actions-group">
+        <ThemeToggle
+          themePreference={themePreference}
+          setTheme={setTheme}
+        />
         <button
           className="doctor-portal-pill-btn"
           onClick={onOpenDoctorPortal}
@@ -614,12 +621,12 @@ function Testimonials() {
   );
 }
 
-function Footer({ onOpenDoctorPortal }) {
+function Footer({ onOpenDoctorPortal, isDark = false }) {
   return (
     <footer id="contact" className="footer">
       <div>
         <div className="footer-brand">
-          <ClinicLogo />
+          <ClinicLogo isDark={isDark} />
           <h2>DR. SATYAM VISHWAKARMA</h2>
         </div>
         <p>Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</p>
@@ -664,10 +671,7 @@ function Footer({ onOpenDoctorPortal }) {
 
 function App() {
   const [showDoctorPortal, setShowDoctorPortal] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", "dark");
-  }, []);
+  const themeProps = useTheme();
 
   useEffect(() => {
     const checkHash = () => {
@@ -681,8 +685,11 @@ function App() {
   }, []);
 
   return (
-    <div className="app-root dark">
-      <Header onOpenDoctorPortal={() => setShowDoctorPortal(true)} />
+    <div className={`app-root ${themeProps.resolvedTheme}`}>
+      <Header
+        onOpenDoctorPortal={() => setShowDoctorPortal(true)}
+        themeProps={themeProps}
+      />
       <main>
         <Hero />
         <Treatments />
@@ -692,11 +699,17 @@ function App() {
         <Assessment />
         <Testimonials />
       </main>
-      <Footer onOpenDoctorPortal={() => setShowDoctorPortal(true)} />
+      <Footer
+        onOpenDoctorPortal={() => setShowDoctorPortal(true)}
+        isDark={themeProps.isDark}
+      />
 
       {/* Doctor Portal Modal / View */}
       {showDoctorPortal && (
-        <DoctorPortal onClose={() => setShowDoctorPortal(false)} />
+        <DoctorPortal
+          onClose={() => setShowDoctorPortal(false)}
+          themeProps={themeProps}
+        />
       )}
     </div>
   );

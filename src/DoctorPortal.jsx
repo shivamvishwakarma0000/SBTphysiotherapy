@@ -2,8 +2,13 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import jsPDF from "jspdf";
 import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets";
 import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets } from "./apiService";
+import ThemeToggle from "./ThemeToggle";
+import { useTheme } from "./useTheme";
 
-export default function DoctorPortal({ onClose }) {
+export default function DoctorPortal({ onClose, themeProps }) {
+  const fallbackTheme = useTheme();
+  const theme = themeProps || fallbackTheme;
+  const { themePreference, setTheme, isDark } = theme;
   const [token, setToken] = useState(() => localStorage.getItem("doctor_token") || "");
   const [doctorInfo, setDoctorInfo] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard", "new-patient", "patients", "today", "enquiries", "settings"
@@ -884,8 +889,15 @@ _(Saved in patient clinic records)_`;
     return (
       <div className="doctor-portal-modal-overlay">
         <div className="doctor-login-card">
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+            <ThemeToggle themePreference={themePreference} setTheme={setTheme} compact={true} />
+          </div>
           <div className="login-header">
-            <img src="/vindhya-logo-transparent.png" alt="Vindhya Physio & Rehab Center" className="login-logo-img" />
+            <img
+              src={isDark ? "/vindhya-logo-transparent.png" : "/vindhya-logo-light.png"}
+              alt="Vindhya Physio & Rehab Center"
+              className="login-logo-img"
+            />
             <h2>Doctor Portal Login</h2>
             <p>Authorized access for Dr. Satyam Vishwakarma</p>
           </div>
@@ -1014,7 +1026,11 @@ _(Saved in patient clinic records)_`;
     <div className="doctor-portal-fullscreen">
       <header className="doctor-navbar">
         <div className="doctor-nav-brand">
-          <img src="/vindhya-logo-transparent.png" alt="Vindhya Physio & Rehab Center" className="doctor-nav-logo" />
+          <img
+            src={isDark ? "/vindhya-logo-transparent.png" : "/vindhya-logo-light.png"}
+            alt="Vindhya Physio & Rehab Center"
+            className="doctor-nav-logo"
+          />
           <div className="doctor-nav-title">
             <strong>DR. SATYAM VISHWAKARMA</strong>
             <span>Consultant Physiotherapist</span>
@@ -1047,6 +1063,7 @@ _(Saved in patient clinic records)_`;
         </nav>
 
         <div className="doctor-nav-actions">
+          <ThemeToggle themePreference={themePreference} setTheme={setTheme} compact={true} />
           <button
             className="sync-badge-btn"
             onClick={() => {
@@ -1128,8 +1145,8 @@ _(Saved in patient clinic records)_`;
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <span style={{ fontSize: "28px" }}>☁️</span>
                   <div>
-                    <h4 style={{ margin: "0 0 4px 0", color: "#f59e0b", fontSize: "15px", fontWeight: "700" }}>Enable Universal Multi-Device Cloud Sync</h4>
-                    <p style={{ margin: 0, fontSize: "13px", color: "#cbd5e1" }}>
+                    <h4 style={{ margin: "0 0 4px 0", color: "var(--gold)", fontSize: "15px", fontWeight: "700" }}>Enable Universal Multi-Device Cloud Sync</h4>
+                    <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
                       Paste your Google Sheets Webhook URL in Settings once to automatically keep all patient records permanently synchronized across your phone, tablet, and laptop!
                     </p>
                   </div>
@@ -1508,7 +1525,7 @@ _(Saved in patient clinic records)_`;
               {/* Patient's Reported Symptoms with AI Translation Button */}
               <div className="form-row-1" style={{ marginTop: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "8px" }}>
-                  <label style={{ margin: 0, fontWeight: "700", color: "#f1f5f9" }}>
+                  <label style={{ margin: 0, fontWeight: "700", color: "var(--heading)" }}>
                     Patient's Reported Symptoms & Complaints
                   </label>
                   <button
@@ -2248,8 +2265,8 @@ _(Saved in patient clinic records)_`;
                   </div>
                 ))}
                 {patientVisits.length === 0 && (
-                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
-                    <p style={{ margin: "0 0 12px 0", color: "#94a3b8", fontSize: "13px" }}>Initial Registration Consultation Record</p>
+                  <div style={{ background: "var(--panel)", border: "1px dashed var(--line)", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
+                    <p style={{ margin: "0 0 12px 0", color: "var(--muted)", fontSize: "13px" }}>Initial Registration Consultation Record</p>
                     <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
                       <button
                         className="receipt-btn finalize-action-btn"

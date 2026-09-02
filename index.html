@@ -3,8 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0B1A24" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#04101a" />
     <link rel="icon" type="image/png" href="/favicon.png" />
+    
+    <!-- Anti-Flash Early Theme Initializer -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('vindhya_physio_theme');
+          var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var resolved = saved === 'light' ? 'light' : (saved === 'dark' ? 'dark' : (systemDark ? 'dark' : 'light'));
+          document.documentElement.setAttribute('data-theme', resolved);
+          document.documentElement.classList.add(resolved);
+          var metaColor = document.querySelector('meta[name="theme-color"]');
+          if (metaColor) {
+            metaColor.setAttribute('content', resolved === 'dark' ? '#04101a' : '#f8fafc');
+          }
+        } catch (e) {}
+      })();
+    </script>
     
     <!-- Primary Meta Tags -->
     <title>Vindhya Physio & Rehab Center | Dr. Satyam Vishwakarma | Vindhyachal, Mirzapur</title>

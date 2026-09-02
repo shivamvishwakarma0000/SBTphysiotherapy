@@ -1,30 +1,185 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap");
 
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap");
+
 /* ================= VINDHYA PHYSIO & REHAB CENTER — CLINICAL DESIGN SYSTEM ================= */
+
+/* Global Default Tokens (Light Mode as Accessible Baseline) */
 :root {
+  color-scheme: light dark;
+  
+  /* Brand Constants */
+  --emerald: #059669;
+  --emerald-hover: #047857;
+  --emerald-light: #10b981;
+  --emerald-bg: rgba(5, 150, 105, 0.08);
+  --emerald-border: rgba(5, 150, 105, 0.28);
+  --teal: #0d9488;
+  --cyan: #0284c7;
+  --cyan-bg: rgba(2, 132, 199, 0.08);
+  --cyan-border: rgba(2, 132, 199, 0.28);
+  --gold: #b45309;
+  --gold-bg: rgba(245, 158, 11, 0.1);
+  --gold-border: rgba(217, 119, 6, 0.35);
+  --amber: #d97706;
+  --navy: #0f172a;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-border: #fca5a5;
+  --success: #16a34a;
+  --radius: 10px;
+
+  /* Surfaces & Typography (Default Light Mode) */
+  --bg: #f8fafc;
+  --bg-2: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-card-alt: #f1f5f9;
+  --panel: rgba(15, 23, 42, 0.04);
+  --panel-strong: rgba(15, 23, 42, 0.08);
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --text: #334155;
+  --text-secondary: #475569;
+  --heading: #0f172a;
+  --muted: #64748b;
+  --header-bg: rgba(255, 255, 255, 0.94);
+  --header-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-focus-border: #059669;
+  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 48px rgba(15, 23, 42, 0.12);
+  --hero-overlay: linear-gradient(90deg, rgba(248, 250, 252, 0.97) 20%, rgba(241, 245, 249, 0.88) 60%, rgba(248, 250, 252, 0.97) 100%);
+  --treatment-card-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.98));
+  --badge-gold-bg: rgba(245, 158, 11, 0.12);
+  --badge-gold-border: rgba(217, 119, 6, 0.35);
+  --badge-gold-text: #b45309;
+  --table-header-bg: #f1f5f9;
+  --table-row-zebra: #f8fafc;
+  --table-row-hover: #f1f5f9;
+  --table-border: #e2e8f0;
+  --doctor-bg: #f8fafc;
+  --doctor-nav-bg: #ffffff;
+  --doctor-card-bg: #ffffff;
+  --doctor-panel-bg: #f1f5f9;
+  --doctor-input-bg: #ffffff;
+}
+
+/* Explicit Light Mode */
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --bg-2: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-card-alt: #f1f5f9;
+  --panel: rgba(15, 23, 42, 0.04);
+  --panel-strong: rgba(15, 23, 42, 0.08);
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --text: #334155;
+  --text-secondary: #475569;
+  --heading: #0f172a;
+  --muted: #64748b;
+  --emerald: #059669;
+  --emerald-hover: #047857;
+  --emerald-light: #10b981;
+  --emerald-bg: rgba(5, 150, 105, 0.08);
+  --emerald-border: rgba(5, 150, 105, 0.28);
+  --cyan: #0284c7;
+  --cyan-bg: rgba(2, 132, 199, 0.08);
+  --cyan-border: rgba(2, 132, 199, 0.28);
+  --gold: #b45309;
+  --gold-bg: rgba(245, 158, 11, 0.1);
+  --gold-border: rgba(217, 119, 6, 0.35);
+  --amber: #d97706;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-border: #fca5a5;
+  --success: #16a34a;
+  --header-bg: rgba(255, 255, 255, 0.94);
+  --header-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-focus-border: #059669;
+  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 48px rgba(15, 23, 42, 0.12);
+  --hero-overlay: linear-gradient(90deg, rgba(248, 250, 252, 0.97) 20%, rgba(241, 245, 249, 0.88) 60%, rgba(248, 250, 252, 0.97) 100%);
+  --treatment-card-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.98));
+  --badge-gold-bg: rgba(245, 158, 11, 0.12);
+  --badge-gold-border: rgba(217, 119, 6, 0.35);
+  --badge-gold-text: #b45309;
+  --table-header-bg: #f1f5f9;
+  --table-row-zebra: #f8fafc;
+  --table-row-hover: #f1f5f9;
+  --table-border: #e2e8f0;
+  --doctor-bg: #f8fafc;
+  --doctor-nav-bg: #ffffff;
+  --doctor-card-bg: #ffffff;
+  --doctor-panel-bg: #f1f5f9;
+  --doctor-input-bg: #ffffff;
+}
+
+/* Explicit Dark Mode */
+[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #04101a;
   --bg-2: #071927;
+  --bg-surface: #082134;
   --bg-card: #082134;
   --bg-card-hover: #0b2c45;
+  --bg-card-alt: #071927;
   --panel: rgba(255, 255, 255, 0.06);
   --panel-strong: rgba(255, 255, 255, 0.1);
   --line: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.2);
   --text: #f8fafc;
+  --text-secondary: #cbd5e1;
   --heading: #ffffff;
   --muted: #94a3b8;
   --emerald: #10b981;
-  --teal: #0d9488;
+  --emerald-hover: #059669;
+  --emerald-light: #34d399;
+  --emerald-bg: rgba(16, 185, 129, 0.12);
+  --emerald-border: rgba(16, 185, 129, 0.35);
   --cyan: #38bdf8;
+  --cyan-bg: rgba(56, 189, 248, 0.12);
+  --cyan-border: rgba(56, 189, 248, 0.35);
   --gold: #f59e0b;
+  --gold-bg: rgba(245, 158, 11, 0.15);
+  --gold-border: rgba(245, 158, 11, 0.4);
   --amber: #eab308;
-  --navy: #0b2c45;
   --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-border: rgba(239, 68, 68, 0.4);
   --success: #10b981;
-  --radius: 10px;
-  --shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   --header-bg: rgba(4, 16, 26, 0.94);
+  --header-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   --input-bg: rgba(255, 255, 255, 0.05);
   --input-border: rgba(255, 255, 255, 0.14);
+  --input-focus-border: #10b981;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6);
+  --hero-overlay: linear-gradient(90deg, rgba(4, 16, 26, 0.97) 20%, rgba(4, 16, 26, 0.82) 55%, rgba(4, 16, 26, 0.97) 100%);
+  --treatment-card-overlay: linear-gradient(180deg, rgba(6, 25, 40, 0.88), rgba(4, 18, 30, 0.96));
+  --badge-gold-bg: rgba(245, 158, 11, 0.15);
+  --badge-gold-border: rgba(245, 158, 11, 0.4);
+  --badge-gold-text: #f59e0b;
+  --table-header-bg: #071927;
+  --table-row-zebra: #082136;
+  --table-row-hover: #0c3352;
+  --table-border: rgba(255, 255, 255, 0.1);
+  --doctor-bg: #04101a;
+  --doctor-nav-bg: #04121e;
+  --doctor-card-bg: #082136;
+  --doctor-panel-bg: #071927;
+  --doctor-input-bg: rgba(255, 255, 255, 0.05);
 }
 
 * {
@@ -45,7 +200,73 @@ body {
   background:
     radial-gradient(circle at 12% 0%, rgba(16, 185, 129, 0.14), transparent 30%),
     radial-gradient(circle at 88% 12%, rgba(245, 158, 11, 0.1), transparent 28%),
-    linear-gradient(180deg, var(--bg), #061624 45%, #04101a);
+    linear-gradient(180deg, var(--bg), var(--bg-2) 45%, var(--bg));
+}
+
+[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(5, 150, 105, 0.07), transparent 32%),
+    radial-gradient(circle at 88% 12%, rgba(217, 119, 6, 0.05), transparent 30%),
+    linear-gradient(180deg, var(--bg), var(--bg-2) 45%, var(--bg));
+}
+
+/* Smooth Theme Transitions */
+body,
+.site-header,
+.doctor-card,
+.treatment-card,
+.new-body-card,
+.program-stack article,
+.timeline article div,
+.assessment-card,
+.testimonial-card,
+.feedback-form,
+.footer,
+.doctor-portal-fullscreen,
+.doctor-navbar,
+.doctor-login-card,
+.dash-panel,
+.enroll-form-card,
+.settings-card,
+.patient-dir-view,
+.today-visits-view,
+.waiting-patient-card,
+.patient-profile-card,
+.receipt-modal-card,
+.metric-card,
+.contact-panel a,
+.location-badge-box {
+  transition: background-color 0.22s ease, color 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .site-header,
+  .doctor-card,
+  .treatment-card,
+  .new-body-card,
+  .program-stack article,
+  .timeline article div,
+  .assessment-card,
+  .testimonial-card,
+  .feedback-form,
+  .footer,
+  .doctor-portal-fullscreen,
+  .doctor-navbar,
+  .doctor-login-card,
+  .dash-panel,
+  .enroll-form-card,
+  .settings-card,
+  .patient-dir-view,
+  .today-visits-view,
+  .waiting-patient-card,
+  .patient-profile-card,
+  .receipt-modal-card,
+  .metric-card,
+  .contact-panel a,
+  .location-badge-box {
+    transition: none !important;
+  }
 }
 
 section,
@@ -66,6 +287,7 @@ textarea {
 }
 
 /* ================= HEADER & BRAND ================= */
+/* ================= HEADER & BRAND ================= */
 .site-header {
   position: sticky;
   top: 0;
@@ -78,7 +300,7 @@ textarea {
   background: var(--header-bg);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(20px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--header-shadow);
 }
 
 .brand,
@@ -114,6 +336,7 @@ nav {
 
 nav a {
   white-space: nowrap;
+  color: var(--text-secondary);
   transition: color 150ms ease;
 }
 
@@ -124,17 +347,77 @@ nav a:hover {
 .header-actions-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+}
+
+/* ================= THEME TOGGLE CONTROL ================= */
+.theme-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 3px;
+  gap: 2px;
+  box-sizing: border-box;
+}
+
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 10px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 160ms ease;
+  line-height: 1;
+}
+
+.theme-btn:hover {
+  color: var(--heading);
+  background: var(--panel-strong);
+}
+
+.theme-btn:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 1px;
+}
+
+.theme-btn.active {
+  background: var(--bg-card);
+  color: var(--emerald);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.theme-toggle-group.compact .theme-btn-text {
+  display: none;
+}
+
+.theme-toggle-group.compact .theme-btn {
+  padding: 5px 8px;
 }
 
 .doctor-portal-pill-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 40px;
-  padding: 0 16px;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  height: 38px;
+  padding: 0 14px;
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
   border-radius: 20px;
   color: var(--emerald);
   font-size: 12.5px;
@@ -156,11 +439,11 @@ nav a:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
+  min-height: 38px;
   padding: 0 18px;
   border-radius: var(--radius);
   font-weight: 800;
-  font-size: 13.5px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 180ms ease;
   border: none;
@@ -181,13 +464,14 @@ nav a:hover {
 }
 
 .secondary-btn {
-  color: var(--text);
+  color: var(--heading);
   background: var(--panel);
   border: 1px solid var(--line);
 }
 
 .secondary-btn:hover {
   background: var(--panel-strong);
+  color: var(--heading);
 }
 
 /* ================= LIVE STATUS BAR ================= */
@@ -196,11 +480,12 @@ nav a:hover {
   align-items: center;
   gap: 8px;
   padding: 7px 18px;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
   border-radius: 20px;
-  color: var(--text);
+  color: var(--heading);
   font-size: 12.5px;
+  font-weight: 600;
   margin-bottom: 24px;
 }
 
@@ -224,7 +509,7 @@ nav a:hover {
   min-height: calc(100vh - 73px);
   padding: 48px clamp(16px, 4vw, 64px) 36px;
   background:
-    linear-gradient(90deg, rgba(4, 16, 26, 0.97) 20%, rgba(4, 16, 26, 0.82) 55%, rgba(4, 16, 26, 0.97) 100%),
+    var(--hero-overlay),
     url("/hero-bg.jpg");
   background-position: center;
   background-size: cover;
@@ -325,7 +610,7 @@ h3 {
   overflow: hidden;
   position: relative;
   border-bottom: 1px solid var(--line);
-  background: #020c14;
+  background: var(--bg-2);
 }
 
 .doctor-photo {
@@ -369,11 +654,12 @@ h3 {
 .mini-tags strong,
 .credential-row span {
   padding: 6px 10px;
-  color: var(--text);
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: var(--heading);
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
   border-radius: 6px;
   font-size: 11px;
+  font-weight: 700;
 }
 
 .stats-strip {
@@ -441,7 +727,7 @@ h3 {
   padding: 24px;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(6, 25, 40, 0.88), rgba(4, 18, 30, 0.96)),
+    var(--treatment-card-overlay),
     var(--treatment-image);
   background-position: center;
   background-size: cover;
@@ -458,7 +744,7 @@ h3 {
 .treatment-card:hover {
   transform: translateY(-6px);
   border-color: var(--emerald);
-  box-shadow: 0 18px 40px rgba(16, 185, 129, 0.15);
+  box-shadow: var(--shadow);
 }
 
 .card-badge {
@@ -466,9 +752,9 @@ h3 {
   top: 14px;
   right: 14px;
   padding: 3px 8px;
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: var(--gold);
+  background: var(--badge-gold-bg);
+  border: 1px solid var(--badge-gold-border);
+  color: var(--badge-gold-text);
   border-radius: 4px;
   font-size: 10.5px;
   font-weight: 800;
@@ -492,7 +778,7 @@ h3 {
 }
 
 .treatment-card p {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 13.5px;
   line-height: 1.5;
 }
@@ -531,14 +817,14 @@ h3 {
   flex: 0 0 52%;
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: var(--bg-2);
 }
 
 .card-image-box img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.88;
+  opacity: 0.92;
 }
 
 .placeholder-img {
@@ -564,7 +850,7 @@ h3 {
   flex: 1;
   margin: 0 0 14px 0;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--text-secondary);
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -591,22 +877,24 @@ h3 {
 
 .explore-btn {
   color: var(--gold);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid var(--badge-gold-border);
+  background: var(--badge-gold-bg);
 }
 
 .explore-btn:hover {
-  background: rgba(245, 158, 11, 0.2);
+  background: var(--gold-bg);
+  border-color: var(--gold);
 }
 
 .book-btn {
   color: var(--emerald);
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid var(--emerald-border);
+  background: var(--emerald-bg);
 }
 
 .book-btn:hover {
   background: rgba(16, 185, 129, 0.2);
+  border-color: var(--emerald);
 }
 
 /* ================= PROGRAMS & HERITAGE ================= */
@@ -723,14 +1011,14 @@ h3 {
 
 .contact-panel a {
   padding: 12px 16px;
-  background: var(--panel);
+  background: var(--bg-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   font-weight: 800;
   display: flex;
   align-items: center;
   transition: all 180ms ease;
-  color: var(--text);
+  color: var(--heading);
 }
 
 .contact-panel a:hover {
@@ -741,8 +1029,8 @@ h3 {
 .location-badge-box {
   margin-top: 18px;
   padding: 12px 16px;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.22);
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
   border-radius: var(--radius);
   font-size: 13px;
 }
@@ -770,7 +1058,7 @@ h3 {
 label {
   display: grid;
   gap: 6px;
-  color: var(--text);
+  color: var(--heading);
   font-size: 13px;
   font-weight: 700;
 }
@@ -779,7 +1067,7 @@ input, select, textarea {
   width: 100%;
   min-height: 46px;
   padding: 0 14px;
-  color: var(--text);
+  color: var(--heading);
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: var(--radius);
@@ -816,6 +1104,7 @@ input:focus, select:focus, textarea:focus {
   place-items: center;
   color: var(--emerald);
   border-right: 1px solid var(--input-border);
+  background: var(--panel);
   font-weight: 800;
   font-size: 13px;
 }
@@ -824,6 +1113,7 @@ input:focus, select:focus, textarea:focus {
   border: 0;
   border-radius: 0;
   background: transparent;
+  color: var(--heading);
 }
 
 .phone-input input:focus {
@@ -952,7 +1242,7 @@ input:focus, select:focus, textarea:focus {
   grid-template-columns: 1.2fr 0.85fr 0.85fr 1fr;
   gap: 34px;
   padding: 60px clamp(18px, 4vw, 64px);
-  background: var(--bg-card);
+  background: var(--bg-card-alt);
   border-top: 1px solid var(--line);
 }
 
@@ -1007,8 +1297,8 @@ input:focus, select:focus, textarea:focus {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: #04101a;
-  color: #f1f5f9;
+  background: var(--doctor-bg);
+  color: var(--text);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -1023,9 +1313,10 @@ input:focus, select:focus, textarea:focus {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 18px;
-  background: #04121e;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--doctor-nav-bg);
+  border-bottom: 1px solid var(--line);
   backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-sm);
 }
 
 .doctor-nav-brand {
@@ -1044,7 +1335,7 @@ input:focus, select:focus, textarea:focus {
 .doctor-nav-title strong {
   display: block;
   font-size: 13.5px;
-  color: #fff;
+  color: var(--heading);
   letter-spacing: -0.2px;
 }
 
@@ -1063,10 +1354,10 @@ input:focus, select:focus, textarea:focus {
 
 .doctor-nav-tabs button {
   padding: 8px 12px;
-  background: #082136;
-  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
   border-radius: 8px;
-  color: #cbd5e1;
+  color: var(--text);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -1076,14 +1367,14 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
   text-align: center;
 }
 
 .doctor-nav-tabs button:hover {
-  color: #fff;
-  border-color: #38bdf8;
-  background: #0c3352;
+  color: var(--heading);
+  border-color: var(--cyan);
+  background: var(--panel-strong);
 }
 
 .doctor-nav-tabs button.active {
@@ -1113,7 +1404,7 @@ input:focus, select:focus, textarea:focus {
   justify-content: center;
   gap: 3px;
   white-space: nowrap;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--line);
   cursor: pointer;
   box-sizing: border-box;
 }
@@ -1137,9 +1428,9 @@ input:focus, select:focus, textarea:focus {
 }
 
 .patient-table-actions-grid .btn-delete {
-  background: #fee2e2;
-  color: #dc2626;
-  border-color: #fca5a5;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-color: var(--danger-border);
 }
 
 .enq-badge {
@@ -1163,10 +1454,10 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 16px;
-  color: #e2e8f0;
+  color: var(--text);
   font-size: 12px;
   cursor: pointer;
 }
@@ -1190,20 +1481,21 @@ input:focus, select:focus, textarea:focus {
 }
 
 .logout-btn {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
 }
 
 .close-portal-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--heading);
 }
 
 .temp-password-banner {
-  background: #f59e0b;
-  color: #000;
+  background: var(--badge-gold-bg);
+  border-bottom: 1px solid var(--badge-gold-border);
+  color: var(--badge-gold-text);
   padding: 8px 24px;
   font-size: 13px;
   font-weight: 700;
@@ -1213,8 +1505,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .temp-password-banner button {
-  background: #000;
-  color: #fff;
+  background: var(--heading);
+  color: var(--bg);
   border: none;
   padding: 4px 10px;
   border-radius: 4px;
@@ -1235,7 +1527,7 @@ input:focus, select:focus, textarea:focus {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(2, 10, 18, 0.9);
+  background: rgba(2, 10, 18, 0.75);
   backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
@@ -1245,11 +1537,12 @@ input:focus, select:focus, textarea:focus {
 
 .doctor-login-card {
   width: min(440px, 100%);
-  background: #071c2d;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 32px 28px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
 }
 
 .login-header {
@@ -1266,24 +1559,24 @@ input:focus, select:focus, textarea:focus {
 .login-header h2 {
   font-size: 22px;
   margin-bottom: 4px;
-  color: #fff;
+  color: var(--heading);
 }
 
 .login-header p {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
   margin: 0;
 }
 
 .login-form label {
   margin-bottom: 14px;
-  color: #e2e8f0;
+  color: var(--heading);
 }
 
 .login-form input {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--heading);
 }
 
 .full-btn {
@@ -1324,10 +1617,11 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   gap: 16px;
   padding: 20px;
-  background: #082136;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
   border-radius: 10px;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
   transition: transform 160ms ease, border-color 160ms ease;
 }
 
@@ -1344,13 +1638,13 @@ input:focus, select:focus, textarea:focus {
   margin: 0;
   font-size: 26px;
   font-family: "Outfit", sans-serif;
-  color: #fff;
+  color: var(--heading);
 }
 
 .metric-card p {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 /* Dashboard Hero */
@@ -1359,20 +1653,20 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  background: linear-gradient(135deg, #09243a, #061827);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-card-alt);
+  border: 1px solid var(--line);
   border-radius: 10px;
 }
 
 .dashboard-hero h2 {
   margin: 0 0 4px;
   font-size: 22px;
-  color: #fff;
+  color: var(--heading);
 }
 
 .dashboard-hero p {
   margin: 0;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
 }
 
@@ -1390,10 +1684,11 @@ input:focus, select:focus, textarea:focus {
 }
 
 .dash-panel {
-  background: #082136;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 20px;
+  box-shadow: var(--shadow-sm);
 }
 
 .panel-header {
@@ -1406,7 +1701,7 @@ input:focus, select:focus, textarea:focus {
 .panel-header h3 {
   margin: 0;
   font-size: 16px;
-  color: #fff;
+  color: var(--heading);
 }
 
 /* Doctor Tables */
@@ -1424,24 +1719,34 @@ input:focus, select:focus, textarea:focus {
 .doctor-table th {
   text-align: left;
   padding: 10px 12px;
-  color: #94a3b8;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--heading);
+  background: var(--table-header-bg);
+  border-bottom: 2px solid var(--line);
   font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-weight: 700;
 }
 
 .doctor-table td {
   padding: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  color: #e2e8f0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+
+.doctor-table tbody tr:nth-child(even) {
+  background: var(--table-row-zebra);
+}
+
+.doctor-table tbody tr:hover {
+  background: var(--table-row-hover);
 }
 
 .patient-id-badge {
   display: inline-block;
   padding: 3px 8px;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
   border-radius: 4px;
   color: var(--emerald);
   font-family: monospace;
@@ -1457,10 +1762,10 @@ input:focus, select:focus, textarea:focus {
 .visit-count-tag {
   display: inline-block;
   padding: 3px 8px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--badge-gold-bg);
+  border: 1px solid var(--badge-gold-border);
   border-radius: 4px;
-  color: var(--gold);
+  color: var(--badge-gold-text);
   font-weight: 700;
   font-size: 11px;
 }
@@ -1468,25 +1773,25 @@ input:focus, select:focus, textarea:focus {
 .condition-tag {
   display: inline-block;
   padding: 3px 8px;
-  background: rgba(13, 148, 136, 0.2);
-  border: 1px solid rgba(13, 148, 136, 0.4);
+  background: var(--panel);
+  border: 1px solid var(--emerald-border);
   border-radius: 4px;
-  color: #2dd4bf;
+  color: var(--emerald);
   font-size: 11.5px;
   font-weight: 700;
 }
 
 .phone-link {
-  color: #38bdf8;
+  color: var(--cyan);
   font-weight: 700;
 }
 
 .table-action-btn {
   padding: 5px 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 4px;
-  color: #fff;
+  color: var(--heading);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -1495,17 +1800,18 @@ input:focus, select:focus, textarea:focus {
 .table-action-btn:hover {
   background: var(--emerald);
   color: #fff;
+  border-color: var(--emerald);
 }
 
 .table-action-btn.primary-action {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.4);
+  background: var(--emerald-bg);
+  border-color: var(--emerald-border);
   color: var(--emerald);
 }
 
 .empty-cell {
   text-align: center;
-  color: #64748b;
+  color: var(--muted);
   padding: 24px !important;
 }
 
@@ -1519,19 +1825,20 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   cursor: pointer;
+  transition: all 150ms ease;
 }
 
 .today-visit-item:hover {
-  background: rgba(16, 185, 129, 0.08);
+  background: var(--panel-strong);
 }
 
 .visit-time-box {
   padding: 5px 8px;
-  background: #04101a;
+  background: var(--bg-card);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 800;
@@ -1546,13 +1853,13 @@ input:focus, select:focus, textarea:focus {
 .visit-item-info strong {
   display: block;
   font-size: 13px;
-  color: #fff;
+  color: var(--heading);
 }
 
 .visit-item-info p {
   margin: 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .visit-badge {
@@ -1562,29 +1869,32 @@ input:focus, select:focus, textarea:focus {
 }
 
 .visit-badge.green {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  border: 1px solid var(--emerald-border);
 }
 
 .visit-badge.orange {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
+  background: var(--badge-gold-bg);
+  color: var(--badge-gold-text);
+  border: 1px solid var(--badge-gold-border);
 }
 
 /* Enrollment Form Card */
 .enroll-form-card {
-  background: #082136;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 28px;
   margin-top: 18px;
+  box-shadow: var(--shadow);
 }
 
 .form-section-title {
   margin: 0 0 16px;
   font-size: 15px;
   color: var(--emerald);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--line);
   padding-bottom: 8px;
 }
 
@@ -1616,9 +1926,9 @@ input:focus, select:focus, textarea:focus {
   border-radius: 8px !important;
   font-size: 13.5px !important;
   line-height: normal !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  color: #fff !important;
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--heading) !important;
   width: 100% !important;
 }
 
@@ -1629,9 +1939,9 @@ input:focus, select:focus, textarea:focus {
   padding: 10px 12px !important;
   border-radius: 8px !important;
   font-size: 13.5px !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  color: #fff !important;
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--heading) !important;
   width: 100% !important;
   min-height: 80px !important;
 }
@@ -1639,8 +1949,8 @@ input:focus, select:focus, textarea:focus {
 .phone-prefix-input {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: var(--radius);
   overflow: hidden;
 }
@@ -1650,13 +1960,14 @@ input:focus, select:focus, textarea:focus {
   color: var(--emerald);
   font-weight: 800;
   font-size: 13px;
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-right: 1px solid var(--input-border);
+  background: var(--panel);
 }
 
 .phone-prefix-input input {
   border: none;
-  background: transparent;
-  color: #fff;
+  background: transparent !important;
+  color: var(--heading) !important;
 }
 
 .form-actions-bar {
@@ -1675,9 +1986,11 @@ input:focus, select:focus, textarea:focus {
 .search-input {
   flex: 1;
   min-height: 44px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--heading);
+  border-radius: 8px;
+  padding: 0 14px;
 }
 
 /* Settings View */
@@ -1689,36 +2002,38 @@ input:focus, select:focus, textarea:focus {
 }
 
 .settings-card {
-  background: #082136;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 24px;
+  box-shadow: var(--shadow);
 }
 
 .settings-card h3 {
   margin: 0 0 8px;
   font-size: 16px;
-  color: #fff;
+  color: var(--heading);
 }
 
 .settings-card p {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
 }
 
 .settings-card label {
   margin-bottom: 12px;
-  color: #e2e8f0;
+  color: var(--heading);
 }
 
 .settings-card input {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--heading);
 }
 
 .sync-status-indicator {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 12px;
   margin-top: 12px;
@@ -1742,7 +2057,7 @@ input:focus, select:focus, textarea:focus {
   position: fixed;
   inset: 0;
   z-index: 1100;
-  background: rgba(2, 10, 18, 0.92);
+  background: rgba(2, 10, 18, 0.75);
   backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
@@ -1754,9 +2069,10 @@ input:focus, select:focus, textarea:focus {
 .patient-profile-card {
   width: min(840px, 100%);
   max-height: 90vh;
-  background: #071c2d;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
   border-radius: 12px;
+  box-shadow: var(--shadow-lg);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -1767,19 +2083,19 @@ input:focus, select:focus, textarea:focus {
   align-items: flex-start;
   justify-content: space-between;
   padding: 24px;
-  background: #09253d;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card-alt);
+  border-bottom: 1px solid var(--line);
 }
 
 .profile-header h2 {
   margin: 6px 0 2px;
   font-size: 22px;
-  color: #fff;
+  color: var(--heading);
 }
 
 .profile-header p {
   margin: 0;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
 }
 
@@ -1803,28 +2119,28 @@ input:focus, select:focus, textarea:focus {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   margin-bottom: 24px;
 }
 
 .demographics-grid label {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--muted);
   margin-bottom: 2px;
 }
 
 .demographics-grid span {
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--heading);
 }
 
 .section-subtitle {
   font-size: 15px;
   margin-bottom: 14px;
-  color: #fff;
+  color: var(--heading);
 }
 
 .visit-timeline {
@@ -1833,8 +2149,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .timeline-visit-card {
-  background: #0a253c;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--bg-card-alt);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px;
 }
@@ -1856,15 +2172,15 @@ input:focus, select:focus, textarea:focus {
 }
 
 .visit-date {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 12px;
 }
 
 .finalize-action-btn {
   margin-left: auto;
   padding: 6px 12px;
-  background: rgba(16, 185, 129, 0.2);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
   border-radius: 4px;
   color: var(--emerald);
   font-size: 12px;
@@ -1881,11 +2197,11 @@ input:focus, select:focus, textarea:focus {
 .timeline-visit-details p {
   margin: 4px 0;
   font-size: 13px;
-  color: #e2e8f0;
+  color: var(--text);
 }
 
 .timeline-visit-details strong {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -1893,21 +2209,22 @@ input:focus, select:focus, textarea:focus {
 .add-visit-card,
 .inner-modal-card {
   width: min(540px, 100%);
-  background: #082136;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 28px;
+  box-shadow: var(--shadow-lg);
 }
 
 .add-visit-card h3,
 .inner-modal-card h3 {
   margin: 0 0 4px;
-  color: #fff;
+  color: var(--heading);
 }
 
 .add-visit-card p,
 .inner-modal-card p {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
   margin: 0 0 18px;
 }
@@ -1915,24 +2232,26 @@ input:focus, select:focus, textarea:focus {
 .add-visit-card label,
 .inner-modal-card label {
   margin-bottom: 12px;
-  color: #e2e8f0;
+  color: var(--heading);
 }
 
 .add-visit-card input,
 .add-visit-card select,
-.add-visit-card textarea {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.14);
-  color: #fff;
+.add-visit-card textarea,
+.inner-modal-card input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--heading);
 }
 
 /* ================= PREMIUM OFFICIAL RECEIPT & SLIP ================= */
 .receipt-modal-card {
   width: min(740px, 100%);
-  background: #061928;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
   border-radius: 14px;
   padding: 22px;
+  box-shadow: var(--shadow-lg);
   max-height: 94vh;
   overflow-y: auto;
 }
@@ -2463,10 +2782,10 @@ input:focus, select:focus, textarea:focus {
     font-size: 11px !important;
     font-weight: 700 !important;
     padding: 8px 4px !important;
-    border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
-    background: #082136 !important;
+    border: 1.5px solid var(--line) !important;
+    background: var(--bg-card) !important;
     border-radius: 8px !important;
-    color: #f1f5f9 !important;
+    color: var(--text) !important;
     text-align: center !important;
     white-space: normal !important;
     line-height: 1.2 !important;
@@ -2476,7 +2795,7 @@ input:focus, select:focus, textarea:focus {
     justify-content: center !important;
     gap: 3px !important;
     min-height: 40px !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: var(--shadow-sm) !important;
   }
 
   .doctor-nav-tabs button.active {
@@ -2565,10 +2884,10 @@ input:focus, select:focus, textarea:focus {
     position: sticky !important;
     top: 0 !important;
     z-index: 100 !important;
-    background: #082136 !important;
+    background: var(--bg-card) !important;
     padding: 8px 0 12px !important;
     margin-bottom: 12px !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-bottom: 1px solid var(--line) !important;
   }
 
   .main-whatsapp-action {
@@ -2598,9 +2917,9 @@ input:focus, select:focus, textarea:focus {
     position: sticky !important;
     bottom: 0 !important;
     z-index: 100 !important;
-    background: #071c2d !important;
+    background: var(--bg-card-alt) !important;
     padding: 10px 0 !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-top: 1px solid var(--line) !important;
   }
 
   /* Receipt Modal Toolbar on Mobile */
@@ -2715,6 +3034,18 @@ input:focus, select:focus, textarea:focus {
   .hero {
     padding-top: 32px;
   }
+
+  /* Compact Theme Toggle on mobile header */
+  .theme-toggle-group .theme-btn-text {
+    display: none !important;
+  }
+  .theme-toggle-group {
+    padding: 2px !important;
+  }
+  .theme-btn {
+    padding: 4px 6px !important;
+    height: 30px !important;
+  }
 }
 
 /* ================= WAITING QUEUE & BOXY SECTIONAL DESIGN ================= */
@@ -2731,19 +3062,19 @@ input:focus, select:focus, textarea:focus {
 }
 
 .waiting-patient-card {
-  background: #082136;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--bg-card);
+  border: 1px solid var(--badge-gold-border);
   border-radius: 12px;
   padding: 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .waiting-patient-card:hover {
-  border-color: #f59e0b;
+  border-color: var(--gold);
   transform: translateY(-2px);
 }
 
@@ -2753,7 +3084,7 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--line);
 }
 
 .waiting-badge-row {
@@ -2764,46 +3095,46 @@ input:focus, select:focus, textarea:focus {
 
 .waiting-time-tag {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .waiting-patient-name {
   margin: 0 0 4px;
   font-size: 18px;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--heading);
 }
 
 .waiting-patient-sub {
   margin: 0 0 12px;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .waiting-problem-box {
-  background: rgba(2, 132, 199, 0.12);
-  border: 1px solid rgba(2, 132, 199, 0.28);
+  background: var(--cyan-bg);
+  border: 1px solid var(--cyan-border);
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 12.5px;
-  color: #e2e8f0;
+  color: var(--text);
   margin-bottom: 10px;
   line-height: 1.5;
 }
 
 .first-time-tag {
-  color: #38bdf8;
+  color: var(--cyan);
   font-weight: 700;
 }
 
 .waiting-complaint-snippet {
   margin: 0 0 16px;
   font-size: 12.5px;
-  color: #cbd5e1;
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  background: var(--panel);
   padding: 8px 10px;
   border-radius: 6px;
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--gold);
 }
 
 .waiting-card-actions {
@@ -2845,16 +3176,16 @@ input:focus, select:focus, textarea:focus {
 
 .empty-waiting-card {
   grid-column: 1 / -1;
-  background: #082136;
-  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: var(--bg-card);
+  border: 1px dashed var(--line);
   border-radius: 12px;
   padding: 40px 20px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .empty-waiting-card h3 {
-  color: #fff;
+  color: var(--heading);
   margin: 12px 0 6px;
   font-size: 18px;
 }
@@ -2865,9 +3196,9 @@ input:focus, select:focus, textarea:focus {
 }
 
 .boxy-consult-card {
-  background: #071c2d !important;
-  border: 1px solid rgba(16, 185, 129, 0.4) !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5) !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--emerald-border) !important;
+  box-shadow: var(--shadow-lg) !important;
 }
 
 /* ================= MOBILE CLINICAL COMMAND HUB (PHONE DASHBOARD) ================= */
@@ -2884,12 +3215,12 @@ input:focus, select:focus, textarea:focus {
   }
 
   .mobile-clinical-command {
-    background: #082136;
-    border: 1.5px solid rgba(56, 189, 248, 0.3);
+    background: var(--bg-card);
+    border: 1.5px solid var(--line);
     border-radius: 12px;
     padding: 14px;
     margin-bottom: 16px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-sm);
   }
 
   .mobile-command-header {
@@ -2898,7 +3229,7 @@ input:focus, select:focus, textarea:focus {
     gap: 8px;
     margin-bottom: 12px;
     font-size: 13.5px;
-    color: #e2e8f0;
+    color: var(--heading);
   }
 
   .live-pulse-dot {
@@ -2924,8 +3255,8 @@ input:focus, select:focus, textarea:focus {
     text-align: center;
     padding: 12px 8px;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: #04121e;
+    border: 1px solid var(--line);
+    background: var(--panel);
     cursor: pointer;
     transition: all 160ms ease;
   }
@@ -2941,34 +3272,34 @@ input:focus, select:focus, textarea:focus {
 
   .mobile-quick-btn strong {
     font-size: 12px;
-    color: #fff;
+    color: var(--heading);
     line-height: 1.2;
   }
 
   .mobile-quick-btn small {
     font-size: 10.5px;
-    color: #94a3b8;
+    color: var(--muted);
     margin-top: 2px;
   }
 
   .mobile-quick-btn.intake-btn {
-    border-color: rgba(16, 185, 129, 0.4);
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(7, 25, 39, 0.8));
+    border-color: var(--emerald-border);
+    background: var(--emerald-bg);
   }
 
   .mobile-quick-btn.waiting-btn {
-    border-color: rgba(245, 158, 11, 0.4);
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(7, 25, 39, 0.8));
+    border-color: var(--badge-gold-border);
+    background: var(--badge-gold-bg);
   }
 
   .mobile-quick-btn.patients-btn {
-    border-color: rgba(2, 132, 199, 0.4);
-    background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(7, 25, 39, 0.8));
+    border-color: var(--cyan-border);
+    background: var(--cyan-bg);
   }
 
   .mobile-quick-btn.today-btn {
     border-color: rgba(139, 92, 246, 0.4);
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(7, 25, 39, 0.8));
+    background: rgba(139, 92, 246, 0.1);
   }
 }
 

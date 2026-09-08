@@ -808,6 +808,22 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
   );
 }
 
+function WhatsAppFloating() {
+  return (
+    <a
+      href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I would like to book a physiotherapy consultation.")}`}
+      target="_blank"
+      rel="noreferrer"
+      className="whatsapp-floating-btn"
+      aria-label="Chat on WhatsApp with Dr. Satyam Vishwakarma"
+      title="Chat on WhatsApp with Dr. Satyam Vishwakarma"
+    >
+      <WhatsAppIcon />
+      <span className="whatsapp-floating-label">WhatsApp</span>
+    </a>
+  );
+}
+
 function App() {
   const [showDoctorPortal, setShowDoctorPortal] = useState(false);
   const [showPatientPortal, setShowPatientPortal] = useState(() => {

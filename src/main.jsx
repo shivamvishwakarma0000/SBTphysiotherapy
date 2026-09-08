@@ -1195,7 +1195,7 @@ function App() {
       />
 
       <AppDownloadModal
-        isOpen={showDownloadModal && canShowDownloadBtn}
+        isOpen={showDownloadModal && canShowDownloadBtn && !showDoctorPortal && !showPatientPortal}
         onClose={handleDismissDownload}
         deferredPrompt={deferredPrompt}
         onInstalled={() => setIsAppInstalled(true)}

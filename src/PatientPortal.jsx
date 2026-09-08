@@ -54,6 +54,72 @@ export default function PatientPortal({ onClose, themeProps }) {
   const [showMoreSheet, setShowMoreSheet] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
+  // Phone hardware/browser back button navigation handling
+  useEffect(() => {
+    // Initial history anchor for patient portal
+    if (!window.history.state || window.history.state.portal !== "patient") {
+      window.history.replaceState({ portal: "patient", tab: "dashboard" }, "");
+    }
+
+    const handlePopState = (event) => {
+      // 1. If receipt preview modal is open, close it
+      if (previewReceipt) {
+        setPreviewReceipt(null);
+        return;
+      }
+      // 2. If contact modal is open, close it
+      if (showContactModal) {
+        setShowContactModal(false);
+        return;
+      }
+      // 3. If more action sheet is open, close it
+      if (showMoreSheet) {
+        setShowMoreSheet(false);
+        return;
+      }
+      // 4. If on another tab, return to dashboard
+      if (activeTab !== "dashboard") {
+        setActiveTab("dashboard");
+        return;
+      }
+      // 5. If already on dashboard and onClose is passed, exit to site
+      if (onClose) {
+        onClose();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [previewReceipt, showContactModal, showMoreSheet, activeTab, onClose]);
+
+  // Tab navigation with history push
+  const selectTab = (tab) => {
+    if (tab !== activeTab) {
+      window.history.pushState({ portal: "patient", tab }, "");
+      setActiveTab(tab);
+    }
+    setShowMoreSheet(false);
+  };
+
+  const toggleMoreSheet = () => {
+    if (!showMoreSheet) {
+      window.history.pushState({ portal: "patient", sheet: "more" }, "");
+      setShowMoreSheet(true);
+    } else {
+      setShowMoreSheet(false);
+    }
+  };
+
+  const openContact = () => {
+    window.history.pushState({ portal: "patient", modal: "contact" }, "");
+    setShowContactModal(true);
+  };
+
+  const openReceiptPreview = (receipt) => {
+    window.history.pushState({ portal: "patient", modal: "receipt" }, "");
+    setPreviewReceipt(receipt);
+  };
+
   // Auto load profile and records if logged in
   useEffect(() => {
     if (patientToken) {
@@ -376,13 +442,29 @@ export default function PatientPortal({ onClose, themeProps }) {
         {/* ================================================================= */}
         {activeTab === "dashboard" && (
           <div className="tab-pane dashboard-pane mobile-app-home-view">
-            {/* 1. Dynamic Greeting & Patient Identity */}
+            {/* 1. Dynamic Greeting & Patient Identity (Matching Image 3 Reference) */}
             <div className="mobile-app-greeting-card">
+              <div className="mobile-hero-brand">
+                {CLINIC_LOGO_B64 && (
+                  <img
+                    src={CLINIC_LOGO_B64}
+                    alt="Vindhya Physio & Rehab Center"
+                    className="mobile-hero-logo"
+                  />
+                )}
+                <div className="mobile-hero-brand-text">
+                  <span className="brand-name">VINDHYA</span>
+                  <span className="brand-dept">PHYSIO & REHAB CENTER</span>
+                  <span className="brand-motto">MOVE BETTER • FEEL BETTER • LIVE BETTER</span>
+                </div>
+              </div>
+
               <div className="greeting-text-col">
-                <span className="greeting-salutation">👋 Hello, {patientFirstName}!</span>
+                <span className="greeting-salutation">Hello, {patientFirstName}!</span>
                 <h2 className="greeting-headline">Take Charge of Your Recovery!</h2>
                 <p className="greeting-sub">Your personalized rehabilitation & clinic care</p>
               </div>
+
               <div className="patient-id-badge-pill">
                 <span className="id-label">PATIENT ID</span>
                 <strong className="id-code">{patientProfile?.patientId || "VPR"}</strong>
@@ -401,7 +483,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                     <h4>{cleanDateOnly(recordsData.appointments[0].date)} • {cleanTimeOnly(recordsData.appointments[0].time)}</h4>
                     <p>{recordsData.appointments[0].reason || "Physiotherapy & Rehabilitation Session"}</p>
                   </div>
-                  <button className="status-action-btn" onClick={() => setActiveTab("appointments")}>
+                  <button className="status-action-btn" onClick={() => selectTab("appointments")}>
                     View Appointment →
                   </button>
                 </div>
@@ -416,7 +498,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                     <h4>{latestVisit.diagnosis || "Active Clinical Rehabilitation"}</h4>
                     <p>✓ {latestVisit.status || "Completed"} • Follow-up: {latestVisit.followUpDate || "As advised"}</p>
                   </div>
-                  <button className="status-action-btn" onClick={() => setActiveTab("visits")}>
+                  <button className="status-action-btn" onClick={() => selectTab("visits")}>
                     View Visit Details →
                   </button>
                 </div>
@@ -430,16 +512,16 @@ export default function PatientPortal({ onClose, themeProps }) {
                     <h4>Active Clinic Rehabilitation</h4>
                     <p>Consultant: Dr. Satyam Vishwakarma (B.P.T.)</p>
                   </div>
-                  <button className="status-action-btn" onClick={() => setShowContactModal(true)}>
+                  <button className="status-action-btn" onClick={openContact}>
                     Contact Clinic →
                   </button>
                 </div>
               )}
             </div>
 
-            {/* 3. EXACTLY SIX PROMINENT FEATURE BOXES (2x3 Touch Grid) */}
+            {/* 3. EXACTLY SIX PROMINENT FEATURE BOXES (2x3 Touch Grid Matching Image 3) */}
             <div className="mobile-app-grid-6">
-              <button className="mobile-app-card" onClick={() => setActiveTab("appointments")}>
+              <button className="mobile-app-card" onClick={() => selectTab("appointments")}>
                 <div className="card-icon-bubble blue">
                   <span>📅</span>
                 </div>
@@ -451,7 +533,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </span>
               </button>
 
-              <button className="mobile-app-card" onClick={() => setActiveTab("visits")}>
+              <button className="mobile-app-card" onClick={() => selectTab("visits")}>
                 <div className="card-icon-bubble green">
                   <span>📋</span>
                 </div>
@@ -463,7 +545,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </span>
               </button>
 
-              <button className="mobile-app-card" onClick={() => setActiveTab("receipts")}>
+              <button className="mobile-app-card" onClick={() => selectTab("receipts")}>
                 <div className="card-icon-bubble emerald">
                   <span>🧾</span>
                 </div>
@@ -471,7 +553,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <span className="card-caption">View receipts</span>
               </button>
 
-              <button className="mobile-app-card" onClick={() => setActiveTab("exercises")}>
+              <button className="mobile-app-card" onClick={() => selectTab("exercises")}>
                 <div className="card-icon-bubble cyan">
                   <span>🏃</span>
                 </div>
@@ -479,7 +561,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <span className="card-caption">Recovery exercises</span>
               </button>
 
-              <button className="mobile-app-card" onClick={() => setActiveTab("security")}>
+              <button className="mobile-app-card" onClick={() => selectTab("security")}>
                 <div className="card-icon-bubble purple">
                   <span>👤</span>
                 </div>
@@ -487,7 +569,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <span className="card-caption">Personal details</span>
               </button>
 
-              <button className="mobile-app-card" onClick={() => setShowContactModal(true)}>
+              <button className="mobile-app-card" onClick={openContact}>
                 <div className="card-icon-bubble green-phone">
                   <span>📞</span>
                 </div>
@@ -1194,7 +1276,7 @@ export default function PatientPortal({ onClose, themeProps }) {
 
         <button
           className={`nav-item-4 ${activeTab === "visits" && !showMoreSheet ? "active" : ""}`}
-          onClick={() => { setActiveTab("visits"); setShowMoreSheet(false); }}
+          onClick={() => selectTab("visits")}
         >
           <span className="nav-icon-4">🩺</span>
           <span className="nav-label-4">Visits</span>
@@ -1205,7 +1287,7 @@ export default function PatientPortal({ onClose, themeProps }) {
 
         <button
           className={`nav-item-4 ${showMoreSheet ? "active" : ""}`}
-          onClick={() => setShowMoreSheet(prev => !prev)}
+          onClick={toggleMoreSheet}
         >
           <span className="nav-icon-4">☰</span>
           <span className="nav-label-4">More</span>
@@ -1213,37 +1295,28 @@ export default function PatientPortal({ onClose, themeProps }) {
       </nav>
 
       {/* ================================================================= */}
-      {/* "MORE" SECONDARY FEATURES SHEET */}
+      {/* "MORE" SECONDARY ESSENTIAL FEATURES SHEET */}
       {/* ================================================================= */}
       {showMoreSheet && (
         <div className="app-more-sheet-overlay" onClick={() => setShowMoreSheet(false)}>
           <div className="app-more-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="more-sheet-handle"></div>
             <div className="more-sheet-head">
-              <h3>More Features & Settings</h3>
+              <div>
+                <h3>More Features & Settings</h3>
+                <p className="more-sheet-sub">Essential recovery tools & security</p>
+              </div>
               <button className="more-sheet-close" onClick={() => setShowMoreSheet(false)}>✕</button>
             </div>
 
             <div className="more-sheet-list">
               <button
                 className="more-sheet-item"
-                onClick={() => { setActiveTab("receipts"); setShowMoreSheet(false); }}
-              >
-                <span className="more-item-icon emerald">🧾</span>
-                <div className="more-item-text">
-                  <strong>My Receipts</strong>
-                  <span>Download & view official clinic consultation slips</span>
-                </div>
-                <span className="more-arrow">›</span>
-              </button>
-
-              <button
-                className="more-sheet-item"
-                onClick={() => { setActiveTab("treatment"); setShowMoreSheet(false); }}
+                onClick={() => selectTab("treatment")}
               >
                 <span className="more-item-icon blue">📋</span>
                 <div className="more-item-text">
-                  <strong>Treatment Plan</strong>
+                  <strong>Treatment Plan & Clinical Diagnosis</strong>
                   <span>Doctor recommendations, diagnosis & staging</span>
                 </div>
                 <span className="more-arrow">›</span>
@@ -1251,19 +1324,7 @@ export default function PatientPortal({ onClose, themeProps }) {
 
               <button
                 className="more-sheet-item"
-                onClick={() => { setActiveTab("exercises"); setShowMoreSheet(false); }}
-              >
-                <span className="more-item-icon cyan">🏃</span>
-                <div className="more-item-text">
-                  <strong>Recovery Exercises</strong>
-                  <span>Home rehabilitation routines & video instructions</span>
-                </div>
-                <span className="more-arrow">›</span>
-              </button>
-
-              <button
-                className="more-sheet-item"
-                onClick={() => { setActiveTab("security"); setShowMoreSheet(false); }}
+                onClick={() => selectTab("security")}
               >
                 <span className="more-item-icon purple">🔐</span>
                 <div className="more-item-text">
@@ -1275,25 +1336,35 @@ export default function PatientPortal({ onClose, themeProps }) {
 
               <button
                 className="more-sheet-item"
-                onClick={() => { setShowContactModal(true); setShowMoreSheet(false); }}
+                onClick={() => { setShowMoreSheet(false); openContact(); }}
               >
                 <span className="more-item-icon green-phone">📞</span>
                 <div className="more-item-text">
-                  <strong>Contact Clinic</strong>
+                  <strong>Contact Clinic & Doctor</strong>
                   <span>WhatsApp direct message & reception phone</span>
                 </div>
                 <span className="more-arrow">›</span>
               </button>
 
               <button
-                className="more-sheet-item logout-item"
+                className="more-sheet-item"
+                onClick={() => { setShowMoreSheet(false); if (onClose) onClose(); }}
+              >
+                <span className="more-item-icon cyan">🚪</span>
+                <div className="more-item-text">
+                  <strong>Exit to Clinic Website</strong>
+                  <span>Return to public clinic home page</span>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              {/* Styled Dedicated Logout Button */}
+              <button
+                className="more-sheet-logout-btn"
                 onClick={() => { setShowMoreSheet(false); handleLogout(); }}
               >
-                <span className="more-item-icon red">🚪</span>
-                <div className="more-item-text">
-                  <strong>Sign Out</strong>
-                  <span>Exit your patient recovery account</span>
-                </div>
+                <span className="logout-icon">🔒</span>
+                <span>Logout Patient Session</span>
               </button>
             </div>
           </div>

@@ -371,6 +371,64 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   }, [token]);
 
+  // Phone hardware/browser back button navigation handling for Doctor Portal
+  useEffect(() => {
+    if (!window.history.state || window.history.state.portal !== "doctor") {
+      window.history.replaceState({ portal: "doctor", tab: "dashboard" }, "");
+    }
+
+    const handlePopState = () => {
+      // 1. If Doctor More sheet is open, close it
+      if (showDoctorMore) {
+        setShowDoctorMore(false);
+        return;
+      }
+      // 2. If Add visit modal or receipt modal is open, close it
+      if (showAddVisitModal) {
+        setShowAddVisitModal(false);
+        return;
+      }
+      if (activeReceipt) {
+        setActiveReceipt(null);
+        return;
+      }
+      // 3. If Patient profile modal is open, close it
+      if (selectedPatient) {
+        setSelectedPatient(null);
+        return;
+      }
+      // 4. If on another tab, return to dashboard
+      if (activeTab !== "dashboard") {
+        setActiveTab("dashboard");
+        return;
+      }
+      // 5. If already on dashboard, exit portal to site
+      if (onClose) {
+        onClose();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [showDoctorMore, showAddVisitModal, activeReceipt, selectedPatient, activeTab, onClose]);
+
+  const selectDoctorTab = (tab) => {
+    if (tab !== activeTab) {
+      window.history.pushState({ portal: "doctor", tab }, "");
+      setActiveTab(tab);
+    }
+    setShowDoctorMore(false);
+  };
+
+  const toggleDoctorMore = () => {
+    if (!showDoctorMore) {
+      window.history.pushState({ portal: "doctor", sheet: "more" }, "");
+      setShowDoctorMore(true);
+    } else {
+      setShowDoctorMore(false);
+    }
+  };
+
   const fetchStats = async () => {
     try {
       const data = await api.getStats();
@@ -1143,6 +1201,19 @@ _(Saved in patient clinic records)_`;
           <div className="dashboard-view">
             {/* Mobile App Doctor Greeting */}
             <div className="mobile-app-greeting-card doctor-greeting">
+              <div className="mobile-hero-brand">
+                <img
+                  src={CLINIC_LOGO_B64}
+                  alt="Vindhya Physio & Rehab Center"
+                  className="mobile-hero-logo"
+                />
+                <div className="mobile-hero-brand-text">
+                  <span className="brand-name">VINDHYA</span>
+                  <span className="brand-dept">PHYSIO & REHAB CENTER</span>
+                  <span className="brand-motto">MOVE BETTER • FEEL BETTER • LIVE BETTER</span>
+                </div>
+              </div>
+
               <div className="greeting-text">
                 <span className="greeting-wave">👋</span>
                 <div>
@@ -1152,7 +1223,7 @@ _(Saved in patient clinic records)_`;
               </div>
               <button 
                 className="doctor-intake-primary-action" 
-                onClick={() => setActiveTab("new-patient")}
+                onClick={() => selectDoctorTab("new-patient")}
               >
                 <span className="action-plus">➕</span>
                 <span>Intake New Patient</span>
@@ -1161,7 +1232,7 @@ _(Saved in patient clinic records)_`;
 
             {/* 6 Primary Live-Count Cards Grid */}
             <div className="mobile-app-grid-6">
-              <div className="mobile-app-card" onClick={() => setActiveTab("new-patient")}>
+              <div className="mobile-app-card" onClick={() => selectDoctorTab("new-patient")}>
                 <div className="card-icon-bubble blue">➕</div>
                 <div className="card-content">
                   <h3 className="card-title">Intake Patient</h3>
@@ -1169,7 +1240,7 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              <div className="mobile-app-card" onClick={() => setActiveTab("waiting")}>
+              <div className="mobile-app-card" onClick={() => selectDoctorTab("waiting")}>
                 <div className="card-icon-bubble amber">⏳</div>
                 <div className="card-content">
                   <div className="card-header-row">
@@ -1182,7 +1253,7 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              <div className="mobile-app-card" onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
+              <div className="mobile-app-card" onClick={() => { selectDoctorTab("patients"); fetchPatients(); }}>
                 <div className="card-icon-bubble teal">👥</div>
                 <div className="card-content">
                   <div className="card-header-row">
@@ -1193,7 +1264,7 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              <div className="mobile-app-card" onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
+              <div className="mobile-app-card" onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}>
                 <div className="card-icon-bubble green">📅</div>
                 <div className="card-content">
                   <div className="card-header-row">
@@ -1204,7 +1275,7 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              <div className="mobile-app-card" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
+              <div className="mobile-app-card" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
                 <div className="card-icon-bubble purple">📩</div>
                 <div className="card-content">
                   <div className="card-header-row">
@@ -1215,7 +1286,7 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              <div className="mobile-app-card" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
+              <div className="mobile-app-card" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
                 <div className="card-icon-bubble cyan">🌐</div>
                 <div className="card-content">
                   <div className="card-header-row">
@@ -3393,19 +3464,19 @@ _(Saved in patient clinic records)_`;
         </div>
       )}
 
-      {/* 4-Item Doctor Mobile Bottom Nav */}
+      {/* 4-Item Doctor Mobile Bottom Nav (Matching Image 3) */}
       <nav className="mobile-bottom-nav-4 doctor-bottom-nav">
         <button 
-          className={`nav-item-4 ${activeTab === "dashboard" ? "active" : ""}`}
-          onClick={() => setActiveTab("dashboard")}
+          className={`nav-item-4 ${activeTab === "dashboard" && !showDoctorMore ? "active" : ""}`}
+          onClick={() => selectDoctorTab("dashboard")}
         >
           <span className="nav-icon-4">🏠</span>
           <span className="nav-label-4">Home</span>
         </button>
 
         <button 
-          className={`nav-item-4 ${activeTab === "patients" ? "active" : ""}`}
-          onClick={() => { setActiveTab("patients"); fetchPatients(); }}
+          className={`nav-item-4 ${activeTab === "patients" && !showDoctorMore ? "active" : ""}`}
+          onClick={() => { selectDoctorTab("patients"); fetchPatients(); }}
         >
           <span className="nav-icon-4">👥</span>
           <span className="nav-label-4">Patients</span>
@@ -3413,8 +3484,8 @@ _(Saved in patient clinic records)_`;
         </button>
 
         <button 
-          className={`nav-item-4 ${activeTab === "today" ? "active" : ""}`}
-          onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}
+          className={`nav-item-4 ${activeTab === "today" && !showDoctorMore ? "active" : ""}`}
+          onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}
         >
           <span className="nav-icon-4">📅</span>
           <span className="nav-label-4">Visits</span>
@@ -3423,7 +3494,7 @@ _(Saved in patient clinic records)_`;
 
         <button 
           className={`nav-item-4 ${showDoctorMore ? "active" : ""}`}
-          onClick={() => setShowDoctorMore(true)}
+          onClick={toggleDoctorMore}
         >
           <span className="nav-icon-4">☰</span>
           <span className="nav-label-4">More</span>
@@ -3444,36 +3515,31 @@ _(Saved in patient clinic records)_`;
               <button className="close-sheet-btn" onClick={() => setShowDoctorMore(false)}>✕</button>
             </div>
             <div className="more-sheet-grid">
-              <button className="more-sheet-item" onClick={() => { setActiveTab("new-patient"); setShowDoctorMore(false); }}>
-                <span className="sheet-icon blue">➕</span>
-                <div className="sheet-info">
-                  <strong>Intake New Patient</strong>
-                  <span>Register patient & medical intake</span>
-                </div>
-              </button>
-
-              <button className="more-sheet-item" onClick={() => { setActiveTab("waiting"); setShowDoctorMore(false); }}>
+              <button className="more-sheet-item" onClick={() => selectDoctorTab("waiting")}>
                 <span className="sheet-icon amber">⏳</span>
                 <div className="sheet-info">
                   <strong>Waiting Queue ({patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length})</strong>
-                  <span>Patients in clinic waiting area</span>
+                  <span>Patients currently in waiting area</span>
                 </div>
+                <span className="more-arrow">›</span>
               </button>
 
-              <button className="more-sheet-item" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); setShowDoctorMore(false); }}>
+              <button className="more-sheet-item" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
                 <span className="sheet-icon purple">📩</span>
                 <div className="sheet-info">
-                  <strong>Online Bookings ({enquiries.length})</strong>
-                  <span>Website appointments & leads</span>
+                  <strong>Online Bookings & Enquiries ({enquiries.length})</strong>
+                  <span>Website appointments & patient leads</span>
                 </div>
+                <span className="more-arrow">›</span>
               </button>
 
-              <button className="more-sheet-item" onClick={() => { setActiveTab("settings"); setShowDoctorMore(false); }}>
+              <button className="more-sheet-item" onClick={() => selectDoctorTab("settings")}>
                 <span className="sheet-icon teal">⚙️</span>
                 <div className="sheet-info">
                   <strong>Cloud Settings & Backup</strong>
                   <span>Security & Google Sheets sync</span>
                 </div>
+                <span className="more-arrow">›</span>
               </button>
 
               <button className="more-sheet-item" onClick={() => { handleManualSync(); setShowDoctorMore(false); }}>
@@ -3482,22 +3548,22 @@ _(Saved in patient clinic records)_`;
                   <strong>Force Google Sheets Sync</strong>
                   <span>Trigger full cloud sync now</span>
                 </div>
+                <span className="more-arrow">›</span>
               </button>
 
               <button className="more-sheet-item" onClick={() => { onExit(); setShowDoctorMore(false); }}>
                 <span className="sheet-icon cyan">🚪</span>
                 <div className="sheet-info">
-                  <strong>Exit to Website</strong>
+                  <strong>Exit to Clinic Website</strong>
                   <span>Return to public clinic page</span>
                 </div>
+                <span className="more-arrow">›</span>
               </button>
 
-              <button className="more-sheet-item danger" onClick={() => { handleDoctorLogout(); setShowDoctorMore(false); }}>
-                <span className="sheet-icon red">🔒</span>
-                <div className="sheet-info">
-                  <strong>Logout Doctor Session</strong>
-                  <span>Lock clinic clinical console</span>
-                </div>
+              {/* Styled Dedicated Logout Button */}
+              <button className="more-sheet-logout-btn" onClick={() => { handleDoctorLogout(); setShowDoctorMore(false); }}>
+                <span className="logout-icon">🔒</span>
+                <span>Logout Doctor Session</span>
               </button>
             </div>
           </div>

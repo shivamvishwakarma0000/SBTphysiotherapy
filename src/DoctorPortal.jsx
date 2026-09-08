@@ -52,6 +52,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [shareFeedback, setShareFeedback] = useState("");
+  const [showDoctorMore, setShowDoctorMore] = useState(false);
 
   // Custom Webhook Settings State
   const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
@@ -1041,10 +1042,13 @@ _(Saved in patient clinic records)_`;
               alt="Vindhya Physio & Rehab Center"
               className="doctor-nav-logo"
             />
+            <div className="doctor-brand-text">
+              <strong>Dr. Satyam Vishwakarma</strong>
+              <span>Consultant Physiotherapist (B.P.T.)</span>
+            </div>
           </div>
 
           <div className="doctor-nav-actions">
-            <ThemeToggle themePreference={themePreference} setTheme={setTheme} compact={true} />
             {(() => {
               const isInstalledApp = typeof window !== "undefined" && (
                 window.matchMedia("(display-mode: standalone)").matches ||
@@ -1137,136 +1141,127 @@ _(Saved in patient clinic records)_`;
         {/* ================= 1. DASHBOARD VIEW ================= */}
         {activeTab === "dashboard" && (
           <div className="dashboard-view">
-            {/* 4 Equal, Short Metric Boxes directly below navigation */}
-            <div className="metrics-grid">
-              <div className="metric-card" onClick={() => { setActiveTab("patients"); fetchPatients(); }} title="View All Patients">
-                <span className="metric-icon">👥</span>
+            {/* Mobile App Doctor Greeting */}
+            <div className="mobile-app-greeting-card doctor-greeting">
+              <div className="greeting-text">
+                <span className="greeting-wave">👋</span>
                 <div>
-                  <h3>{stats.totalPatients}</h3>
-                  <p>All Patients</p>
+                  <h1 className="greeting-title">Hello, Dr. Satyam!</h1>
+                  <p className="greeting-subtitle">Clinical Operations • Vindhya Physio & Rehab Center</p>
+                </div>
+              </div>
+              <button 
+                className="doctor-intake-primary-action" 
+                onClick={() => setActiveTab("new-patient")}
+              >
+                <span className="action-plus">➕</span>
+                <span>Intake New Patient</span>
+              </button>
+            </div>
+
+            {/* 6 Primary Live-Count Cards Grid */}
+            <div className="mobile-app-grid-6">
+              <div className="mobile-app-card" onClick={() => setActiveTab("new-patient")}>
+                <div className="card-icon-bubble blue">➕</div>
+                <div className="card-content">
+                  <h3 className="card-title">Intake Patient</h3>
+                  <p className="card-desc">Register new case</p>
                 </div>
               </div>
 
-              <div className="metric-card" onClick={() => setActiveTab("waiting")} title="View Waiting Queue">
-                <span className="metric-icon">⏳</span>
-                <div>
-                  <h3>{patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length}</h3>
-                  <p>Waiting Queue</p>
+              <div className="mobile-app-card" onClick={() => setActiveTab("waiting")}>
+                <div className="card-icon-bubble amber">⏳</div>
+                <div className="card-content">
+                  <div className="card-header-row">
+                    <h3 className="card-title">Waiting Queue</h3>
+                    <span className="card-count-badge amber">
+                      {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length}
+                    </span>
+                  </div>
+                  <p className="card-desc">Awaiting consult</p>
                 </div>
               </div>
 
-              <div className="metric-card" onClick={() => { setActiveTab("today"); fetchTodayVisits(); }} title="View Today's Visits">
-                <span className="metric-icon">📅</span>
-                <div>
-                  <h3>{stats.todayVisitsCount}</h3>
-                  <p>Today's Visits</p>
+              <div className="mobile-app-card" onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
+                <div className="card-icon-bubble teal">👥</div>
+                <div className="card-content">
+                  <div className="card-header-row">
+                    <h3 className="card-title">All Patients</h3>
+                    <span className="card-count-badge teal">{stats.totalPatients || patients.length}</span>
+                  </div>
+                  <p className="card-desc">Full patient registry</p>
                 </div>
               </div>
 
-              <div className="metric-card" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }} title="View Online Bookings">
-                <span className="metric-icon">📩</span>
-                <div>
-                  <h3>{stats.totalEnquiriesCount || enquiries.length}</h3>
-                  <p>Online Bookings</p>
+              <div className="mobile-app-card" onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
+                <div className="card-icon-bubble green">📅</div>
+                <div className="card-content">
+                  <div className="card-header-row">
+                    <h3 className="card-title">Today's Visits</h3>
+                    <span className="card-count-badge green">{stats.todayVisitsCount || todayVisits.length}</span>
+                  </div>
+                  <p className="card-desc">Scheduled sessions</p>
+                </div>
+              </div>
+
+              <div className="mobile-app-card" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
+                <div className="card-icon-bubble purple">📩</div>
+                <div className="card-content">
+                  <div className="card-header-row">
+                    <h3 className="card-title">Online Bookings</h3>
+                    <span className="card-count-badge purple">{stats.totalEnquiriesCount || enquiries.length}</span>
+                  </div>
+                  <p className="card-desc">Web appointment leads</p>
+                </div>
+              </div>
+
+              <div className="mobile-app-card" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
+                <div className="card-icon-bubble cyan">🌐</div>
+                <div className="card-content">
+                  <div className="card-header-row">
+                    <h3 className="card-title">Website Enquiries</h3>
+                    <span className="card-count-badge cyan">
+                      {enquiries.filter(e => e.status !== "Resolved").length || enquiries.length}
+                    </span>
+                  </div>
+                  <p className="card-desc">Pending questions</p>
                 </div>
               </div>
             </div>
 
             {!getWebhookUrl() && (
-              <div style={{
-                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(2, 132, 199, 0.15))",
-                border: "1px solid rgba(245, 158, 11, 0.4)",
-                borderRadius: "12px",
-                padding: "16px 20px",
-                marginBottom: "20px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "16px",
-                flexWrap: "wrap"
-              }}>
+              <div className="cloud-sync-banner-card">
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <span style={{ fontSize: "28px" }}>☁️</span>
+                  <span style={{ fontSize: "24px" }}>☁️</span>
                   <div>
-                    <h4 style={{ margin: "0 0 4px 0", color: "var(--gold)", fontSize: "15px", fontWeight: "700" }}>Enable Universal Multi-Device Cloud Sync</h4>
-                    <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
-                      Paste your Google Sheets Webhook URL in Settings once to automatically keep all patient records permanently synchronized across your phone, tablet, and laptop!
+                    <h4 style={{ margin: "0 0 4px 0", color: "#f59e0b", fontSize: "14px", fontWeight: "700" }}>Enable Multi-Device Cloud Sync</h4>
+                    <p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)" }}>
+                      Connect Google Sheets Webhook to sync patient records across phone & desktop.
                     </p>
                   </div>
                 </div>
-                <button className="primary-btn" onClick={() => setActiveTab("settings")} style={{ padding: "8px 18px", fontSize: "13px" }}>
-                  ⚡ Connect Webhook
+                <button className="primary-btn" onClick={() => setActiveTab("settings")} style={{ padding: "6px 14px", fontSize: "12px", whiteSpace: "nowrap" }}>
+                  Connect
                 </button>
               </div>
             )}
 
-            <div className="dashboard-hero">
-              <div>
-                <h2>Clinical Operations Dashboard</h2>
-                <p>Vindhya Physio & Rehab Center • Amravati Chauraha, Vindhyachal, Mirzapur</p>
-              </div>
-              <div className="hero-quick-buttons">
-                <button className="primary-btn" onClick={() => setActiveTab("new-patient")}>
-                  ➕ Intake New Patient
-                </button>
-                <button className="secondary-btn" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
-                  📩 Website Bookings ({enquiries.length})
-                </button>
-              </div>
-            </div>
-
+            {/* Split view: Today's Queue & Recent Patients */}
             <div className="dashboard-split">
-              <div className="dash-panel">
+              <div className="dash-panel today-queue-compact-card">
                 <div className="panel-header">
-                  <h3>Recent Patients</h3>
-                  <button className="text-link-btn" onClick={() => { setActiveTab("patients"); fetchPatients(); }}>View All</button>
-                </div>
-                <div className="table-responsive">
-                  <table className="doctor-table">
-                    <thead>
-                      <tr>
-                        <th>Patient ID</th>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Total Visits</th>
-                        <th>Last Visit</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {patients.slice(0, 5).map(p => (
-                        <tr key={p.patientId}>
-                          <td><span className="patient-id-badge">{p.patientId}</span></td>
-                          <td><strong>{p.name}</strong> ({p.age}y/{p.gender[0]})</td>
-                          <td>+91 {p.phone}</td>
-                          <td><span className="visit-count-tag">{p.totalVisits} visits</span></td>
-                          <td>{cleanDateOnly(p.lastVisitDate || p.registrationDate)}</td>
-                          <td>
-                            <button className="table-action-btn" onClick={() => openPatientProfile(p.patientId)}>Consult & Slip</button>
-                          </td>
-                        </tr>
-                      ))}
-                      {patients.length === 0 && (
-                        <tr>
-                          <td colSpan="6" className="empty-cell">No patients enrolled yet. Click "+ Intake New Patient" to start.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="dash-panel">
-                <div className="panel-header">
-                  <h3>Today's Patient Queue</h3>
-                  <button className="text-link-btn" onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>View All</button>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "700" }}>Today's Patient Queue</h3>
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{todayVisits.length} visits registered today</span>
+                  </div>
+                  <button className="text-link-btn" onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>View All →</button>
                 </div>
                 <div className="today-visits-list">
-                  {todayVisits.slice(0, 5).map(v => (
+                  {todayVisits.slice(0, 4).map(v => (
                     <div className="today-visit-item" key={v.visitId} onClick={() => openPatientProfile(v.patientId)}>
                       <div className="visit-time-box">{v.time || "Today"}</div>
                       <div className="visit-item-info">
-                        <strong>{v.patientName}</strong> ({v.patientId})
+                        <strong>{v.patientName}</strong> <span className="text-muted">({v.patientId})</span>
                         <p>{v.reason} • Visit #{v.visitNumber}</p>
                       </div>
                       <span className={`visit-badge ${v.status === "Completed" ? "green" : "orange"}`}>
@@ -1275,8 +1270,47 @@ _(Saved in patient clinic records)_`;
                     </div>
                   ))}
                   {todayVisits.length === 0 && (
-                    <p className="empty-state">No visits recorded for today yet.</p>
+                    <p className="empty-state" style={{ padding: "16px 0", textAlign: "center" }}>No visits recorded for today yet.</p>
                   )}
+                </div>
+              </div>
+
+              <div className="dash-panel">
+                <div className="panel-header">
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "700" }}>Recent Patients</h3>
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{patients.length} total enrolled</span>
+                  </div>
+                  <button className="text-link-btn" onClick={() => { setActiveTab("patients"); fetchPatients(); }}>View All →</button>
+                </div>
+                <div className="table-responsive">
+                  <table className="doctor-table">
+                    <thead>
+                      <tr>
+                        <th>Patient ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {patients.slice(0, 5).map(p => (
+                        <tr key={p.patientId}>
+                          <td><span className="patient-id-badge">{p.patientId}</span></td>
+                          <td><strong>{p.name}</strong> ({p.age}y/{p.gender?.[0] || ""})</td>
+                          <td>+91 {p.phone}</td>
+                          <td>
+                            <button className="table-action-btn" onClick={() => openPatientProfile(p.patientId)}>Consult & Slip</button>
+                          </td>
+                        </tr>
+                      ))}
+                      {patients.length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="empty-cell">No patients enrolled yet. Click "+ Intake New Patient" to start.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -3355,6 +3389,117 @@ _(Saved in patient clinic records)_`;
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4-Item Doctor Mobile Bottom Nav */}
+      <nav className="mobile-bottom-nav-4 doctor-bottom-nav">
+        <button 
+          className={`nav-item-4 ${activeTab === "dashboard" ? "active" : ""}`}
+          onClick={() => setActiveTab("dashboard")}
+        >
+          <span className="nav-icon-4">🏠</span>
+          <span className="nav-label-4">Home</span>
+        </button>
+
+        <button 
+          className={`nav-item-4 ${activeTab === "patients" ? "active" : ""}`}
+          onClick={() => { setActiveTab("patients"); fetchPatients(); }}
+        >
+          <span className="nav-icon-4">👥</span>
+          <span className="nav-label-4">Patients</span>
+          {stats.totalPatients > 0 && <span className="bottom-nav-badge">{stats.totalPatients}</span>}
+        </button>
+
+        <button 
+          className={`nav-item-4 ${activeTab === "today" ? "active" : ""}`}
+          onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}
+        >
+          <span className="nav-icon-4">📅</span>
+          <span className="nav-label-4">Visits</span>
+          {todayVisits.length > 0 && <span className="bottom-nav-badge green">{todayVisits.length}</span>}
+        </button>
+
+        <button 
+          className={`nav-item-4 ${showDoctorMore ? "active" : ""}`}
+          onClick={() => setShowDoctorMore(true)}
+        >
+          <span className="nav-icon-4">☰</span>
+          <span className="nav-label-4">More</span>
+          {enquiries.length > 0 && <span className="bottom-nav-badge orange">{enquiries.length}</span>}
+        </button>
+      </nav>
+
+      {/* Doctor More Action Sheet */}
+      {showDoctorMore && (
+        <div className="app-more-sheet-overlay" onClick={() => setShowDoctorMore(false)}>
+          <div className="app-more-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="more-sheet-handle"></div>
+            <div className="more-sheet-header">
+              <div>
+                <h3>Doctor Operations & Tools</h3>
+                <p>Dr. Satyam Vishwakarma • Admin Console</p>
+              </div>
+              <button className="close-sheet-btn" onClick={() => setShowDoctorMore(false)}>✕</button>
+            </div>
+            <div className="more-sheet-grid">
+              <button className="more-sheet-item" onClick={() => { setActiveTab("new-patient"); setShowDoctorMore(false); }}>
+                <span className="sheet-icon blue">➕</span>
+                <div className="sheet-info">
+                  <strong>Intake New Patient</strong>
+                  <span>Register patient & medical intake</span>
+                </div>
+              </button>
+
+              <button className="more-sheet-item" onClick={() => { setActiveTab("waiting"); setShowDoctorMore(false); }}>
+                <span className="sheet-icon amber">⏳</span>
+                <div className="sheet-info">
+                  <strong>Waiting Queue ({patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length})</strong>
+                  <span>Patients in clinic waiting area</span>
+                </div>
+              </button>
+
+              <button className="more-sheet-item" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); setShowDoctorMore(false); }}>
+                <span className="sheet-icon purple">📩</span>
+                <div className="sheet-info">
+                  <strong>Online Bookings ({enquiries.length})</strong>
+                  <span>Website appointments & leads</span>
+                </div>
+              </button>
+
+              <button className="more-sheet-item" onClick={() => { setActiveTab("settings"); setShowDoctorMore(false); }}>
+                <span className="sheet-icon teal">⚙️</span>
+                <div className="sheet-info">
+                  <strong>Cloud Settings & Backup</strong>
+                  <span>Security & Google Sheets sync</span>
+                </div>
+              </button>
+
+              <button className="more-sheet-item" onClick={() => { handleManualSync(); setShowDoctorMore(false); }}>
+                <span className="sheet-icon green">🔄</span>
+                <div className="sheet-info">
+                  <strong>Force Google Sheets Sync</strong>
+                  <span>Trigger full cloud sync now</span>
+                </div>
+              </button>
+
+              <button className="more-sheet-item" onClick={() => { onExit(); setShowDoctorMore(false); }}>
+                <span className="sheet-icon cyan">🚪</span>
+                <div className="sheet-info">
+                  <strong>Exit to Website</strong>
+                  <span>Return to public clinic page</span>
+                </div>
+              </button>
+
+              <button className="more-sheet-item danger" onClick={() => { handleDoctorLogout(); setShowDoctorMore(false); }}>
+                <span className="sheet-icon red">🔒</span>
+                <div className="sheet-info">
+                  <strong>Logout Doctor Session</strong>
+                  <span>Lock clinic clinical console</span>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       )}

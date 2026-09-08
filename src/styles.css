@@ -3740,6 +3740,10 @@ input:focus, select:focus, textarea:focus {
     margin: 0 !important;
   }
 
+  .doctor-brand-text {
+    display: none !important;
+  }
+
   .doctor-nav-actions {
     display: flex !important;
     flex-direction: row !important;
@@ -5980,64 +5984,15 @@ input:focus, select:focus, textarea:focus {
     font-size: 20px;
   }
 
-  /* Fixed Mobile Bottom Bar with Safe-Area Insets & Smooth Touch Scrolling */
-  .patient-navbar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    background: #0B1F2A;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    border-bottom: none;
-    padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px;
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 6px;
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.25);
+  /* On mobile phones, hide the multi-tab scrolling navbar in favor of 4-item bottom nav */
+  .patient-navbar,
+  .doctor-nav-tabs {
+    display: none !important;
   }
 
-  .patient-navbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-tab {
-    flex: 0 0 auto;
-    flex-direction: column;
-    gap: 3px;
-    padding: 6px 8px;
-    font-size: 10.5px;
-    font-weight: 700;
-    color: #94a3b8;
-    border-radius: 8px;
-    min-width: 58px;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .nav-tab .tab-icon {
-    font-size: 18px;
-    line-height: 1;
-  }
-
-  .nav-tab .tab-bubble {
-    display: none;
-  }
-
-  .nav-tab.active {
-    background: #0878C9;
-    color: #ffffff;
-  }
-
-  .patient-main-container {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  .patient-main-container,
+  .doctor-main-content {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .form-row-double {
@@ -6764,4 +6719,685 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid rgba(239, 68, 68, 0.35);
   color: #ef4444;
 }
+
+/* ==========================================================================
+   MOBILE HEALTHCARE APP REDESIGN (PATIENT & DOCTOR PORTALS)
+   ========================================================================== */
+
+/* App Greeting Card */
+.mobile-app-greeting-card {
+  background: linear-gradient(135deg, rgba(8, 120, 201, 0.14) 0%, rgba(22, 185, 129, 0.09) 100%);
+  border: 1px solid rgba(8, 120, 201, 0.28);
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-app-greeting-card.doctor-greeting {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(8, 120, 201, 0.09) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.greeting-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.greeting-wave {
+  font-size: 28px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.greeting-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text, #f1f5f9);
+  line-height: 1.25;
+}
+
+.greeting-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 500;
+}
+
+.patient-id-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  background: rgba(8, 120, 201, 0.18);
+  border: 1px solid rgba(8, 120, 201, 0.4);
+  color: #38bdf8;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.patient-id-badge-pill .copy-id-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.doctor-intake-primary-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.doctor-intake-primary-action:active {
+  transform: scale(0.98);
+}
+
+/* Recovery Status Card */
+.app-status-highlight-card {
+  background: var(--bg-card, #0f172a);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+.status-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.status-badge-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-badge-pill.gray {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.status-content-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.status-icon-bubble {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(8, 120, 201, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.status-info {
+  flex: 1;
+}
+
+.status-main {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text, #f1f5f9);
+}
+
+.status-sub {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.status-action-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(8, 120, 201, 0.4);
+  background: rgba(8, 120, 201, 0.12);
+  color: #38bdf8;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* 6-Card Touch Grid */
+.mobile-app-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+@media (min-width: 900px) {
+  .mobile-app-grid-6 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+}
+
+.mobile-app-card {
+  background: var(--bg-card, #0f172a);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+.mobile-app-card:hover {
+  border-color: rgba(8, 120, 201, 0.4);
+  box-shadow: 0 4px 16px rgba(8, 120, 201, 0.15);
+  transform: translateY(-2px);
+}
+
+.mobile-app-card:active {
+  transform: scale(0.97);
+}
+
+.card-icon-bubble {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.card-icon-bubble.blue {
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.card-icon-bubble.teal {
+  background: rgba(20, 184, 166, 0.15);
+  color: #2dd4bf;
+  border: 1px solid rgba(20, 184, 166, 0.3);
+}
+
+.card-icon-bubble.green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.card-icon-bubble.amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.card-icon-bubble.purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.card-icon-bubble.cyan {
+  background: rgba(6, 182, 212, 0.15);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.card-icon-bubble.red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.mobile-app-card .card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text, #f1f5f9);
+  line-height: 1.25;
+}
+
+.card-desc {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 500;
+}
+
+.card-count-badge {
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  line-height: 1;
+}
+
+.card-count-badge.amber {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.card-count-badge.teal {
+  background: rgba(20, 184, 166, 0.2);
+  color: #2dd4bf;
+  border: 1px solid rgba(20, 184, 166, 0.35);
+}
+
+.card-count-badge.green {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.card-count-badge.purple {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+.card-count-badge.cyan {
+  background: rgba(6, 182, 212, 0.2);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.35);
+}
+
+/* Compact Today's Queue Card */
+.today-queue-compact-card .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+}
+
+.cloud-sync-banner-card {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(2, 132, 199, 0.12));
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   4-ITEM FIXED BOTTOM NAVIGATION BAR
+   ========================================================================== */
+.mobile-bottom-nav-4 {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(11, 31, 42, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 769px) {
+  .mobile-bottom-nav-4 {
+    display: none !important;
+  }
+}
+
+.nav-item-4 {
+  position: relative;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 120ms ease;
+  min-height: 46px;
+}
+
+.nav-item-4:active {
+  transform: scale(0.95);
+}
+
+.nav-item-4.active {
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.12);
+}
+
+.doctor-bottom-nav .nav-item-4.active {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.nav-icon-4 {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.nav-label-4 {
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.bottom-nav-badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 18px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.bottom-nav-badge.green {
+  background: #10b981;
+}
+
+.bottom-nav-badge.orange {
+  background: #f59e0b;
+}
+
+/* ==========================================================================
+   APP MORE ACTION SHEET (DRAWER)
+   ========================================================================== */
+.app-more-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  animation: fadeInOverlay 180ms ease;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.app-more-sheet {
+  background: #0b1f2a;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 12px 18px calc(24px + env(safe-area-inset-bottom, 0px)) 18px;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  animation: slideUpSheet 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.more-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  margin: 0 auto 12px auto;
+}
+
+.more-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.more-sheet-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.more-sheet-header p {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.close-sheet-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #f1f5f9;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.more-sheet-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.more-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: #f1f5f9;
+  cursor: pointer;
+  text-align: left;
+  transition: all 120ms ease;
+}
+
+.more-sheet-item:active {
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(0.98);
+}
+
+.more-sheet-item .sheet-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.more-sheet-item .sheet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.more-sheet-item .sheet-info strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.more-sheet-item .sheet-info span {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.more-sheet-item.danger {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.more-sheet-item.danger .sheet-info strong {
+  color: #f87171;
+}
+
+/* Patient Quick Contact Modal */
+.patient-contact-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.patient-contact-modal {
+  background: #0b1f2a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  padding: 20px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.contact-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.contact-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.contact-options-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 12px 0;
+}
+
+.contact-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  transition: transform 120ms ease;
+}
+
+.contact-action-btn:active {
+  transform: scale(0.98);
+}
+
+.contact-action-btn.whatsapp {
+  background: #25d366;
+  color: #ffffff;
+}
+
+.contact-action-btn.call {
+  background: #0878c9;
+  color: #ffffff;
+}
+
+.contact-action-btn.directions {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+}
+
 

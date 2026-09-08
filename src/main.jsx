@@ -175,7 +175,7 @@ function WhatsAppIcon() {
 }
 
 function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, showDownloadBtn, themeProps }) {
-  const { themePreference, setTheme, isDark } = themeProps;
+  const isDark = themeProps?.isDark ?? true;
   return (
     <header className="site-header">
       <a className="brand" href="#home" aria-label="Vindhya Physio & Rehab Center home">
@@ -187,10 +187,6 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
         ))}
       </nav>
       <div className="header-actions-group">
-        <ThemeToggle
-          themePreference={themePreference}
-          setTheme={setTheme}
-        />
         {showDownloadBtn && (
           <button
             className="download-app-icon-btn"

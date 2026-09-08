@@ -50,6 +50,10 @@ export default function PatientPortal({ onClose, themeProps }) {
   // Selected receipt for digital preview modal
   const [previewReceipt, setPreviewReceipt] = useState(null);
 
+  // Mobile App Navigation States
+  const [showMoreSheet, setShowMoreSheet] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+
   // Auto load profile and records if logged in
   useEffect(() => {
     if (patientToken) {
@@ -285,19 +289,10 @@ export default function PatientPortal({ onClose, themeProps }) {
           <div className="patient-user-chip">
             <span className="avatar-circle">👤</span>
             <div className="user-text">
-              <span className="user-name">{patientProfile?.name || "Patient"}</span>
+              <span className="user-name">{patientFirstName}</span>
               <span className="user-id">{patientProfile?.patientId || "VPR"}</span>
             </div>
           </div>
-
-          <button
-            className="portal-theme-btn"
-            onClick={handleToggleTheme}
-            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            aria-label="Toggle Theme"
-          >
-            {isDarkMode ? "☀️" : "🌙"}
-          </button>
 
           <button className="portal-exit-btn" onClick={handleLogout} title="Sign Out">
             <span className="btn-icon">🚪</span>
@@ -376,166 +371,133 @@ export default function PatientPortal({ onClose, themeProps }) {
       <main className="patient-main-container">
         {/* ================================================================= */}
         {/* TAB 1: DASHBOARD */}
+        {/* ========================        {/* ================================================================= */}
+        {/* TAB 1: DASHBOARD (Mobile Native App 6-Box Layout) */}
         {/* ================================================================= */}
         {activeTab === "dashboard" && (
-          <div className="tab-pane dashboard-pane">
-            {/* Welcoming Greeting Header */}
-            <div className="welcome-banner">
-              <div className="welcome-text">
-                <h2>Hello, {patientFirstName} 👋</h2>
-                <p className="welcome-subtitle">
-                  Welcome to your personalized recovery portal. Dr. Satyam Vishwakarma and our team are dedicated to restoring your mobility, strength, and pain-free living.
-                </p>
+          <div className="tab-pane dashboard-pane mobile-app-home-view">
+            {/* 1. Dynamic Greeting & Patient Identity */}
+            <div className="mobile-app-greeting-card">
+              <div className="greeting-text-col">
+                <span className="greeting-salutation">👋 Hello, {patientFirstName}!</span>
+                <h2 className="greeting-headline">Take Charge of Your Recovery!</h2>
+                <p className="greeting-sub">Your personalized rehabilitation & clinic care</p>
               </div>
-              <div className="patient-quick-badge">
-                <span className="badge-title">PATIENT ID</span>
-                <span className="badge-value">{patientProfile?.patientId || "VPR"}</span>
-              </div>
-            </div>
-
-            {/* Recovery Journey Highlights Grid */}
-            <div className="journey-stats-grid">
-              <div className="journey-card highlight-card">
-                <span className="card-icon">🩺</span>
-                <div className="card-info">
-                  <span className="card-label">Visits Completed</span>
-                  <strong className="card-value">{totalVisitsCount}</strong>
-                  <span className="card-subtext">Clinical consultations & therapy</span>
-                </div>
-              </div>
-
-              <div className="journey-card">
-                <span className="card-icon">⚡</span>
-                <div className="card-info">
-                  <span className="card-label">Active Condition</span>
-                  <strong className="card-value condition-text">
-                    {recordsData?.stats?.activeCondition || "Under Assessment"}
-                  </strong>
-                  <span className="card-subtext">Primary rehabilitation focus</span>
-                </div>
-              </div>
-
-              <div className="journey-card">
-                <span className="card-icon">🗓️</span>
-                <div className="card-info">
-                  <span className="card-label">Days in Care</span>
-                  <strong className="card-value">{recordsData?.stats?.daysInRecovery || 1} Days</strong>
-                  <span className="card-subtext">
-                    Since {cleanDateOnly(recordsData?.stats?.firstVisitDate || patientProfile?.registrationDate)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="journey-card accent-card">
-                <span className="card-icon">🔔</span>
-                <div className="card-info">
-                  <span className="card-label">Next Follow-Up</span>
-                  <strong className="card-value follow-text">
-                    {recordsData?.stats?.nextFollowUp || "As Advised / SOS"}
-                  </strong>
-                  <span className="card-subtext">Dr. Satyam Vishwakarma</span>
-                </div>
+              <div className="patient-id-badge-pill">
+                <span className="id-label">PATIENT ID</span>
+                <strong className="id-code">{patientProfile?.patientId || "VPR"}</strong>
               </div>
             </div>
 
-            {/* Next Appointment & Action Card */}
-            <div className="dashboard-feature-card">
-              <div className="feature-head">
-                <div className="feature-title-row">
-                  <span className="pulse-dot"></span>
-                  <h3>Next Care Step & Clinic Appointment</h3>
-                </div>
-                <span className="feature-badge">Active Care</span>
-              </div>
-
-              <div className="feature-body">
-                <div className="doctor-profile-strip">
-                  <div className="doctor-badge-avatar">🩺</div>
-                  <div className="doctor-meta">
-                    <strong>Dr. Satyam Vishwakarma</strong>
-                    <span>Consultant Physiotherapist • Vindhya Physio & Rehab Center</span>
-                    <small>Amravati Chauraha, Vindhyachal, Mirzapur, U.P.</small>
+            {/* 2. Important Status / Next Appointment Highlight */}
+            <div className="app-status-highlight-card">
+              {recordsData?.appointments?.length > 0 ? (
+                <div className="status-highlight-body">
+                  <div className="status-badge-row">
+                    <span className="status-indicator-dot green"></span>
+                    <span className="status-tag-text">NEXT APPOINTMENT</span>
                   </div>
-                </div>
-
-                <div className="appointment-details-box">
-                  <div className="detail-item">
-                    <span className="label">Recommended Follow-up Date</span>
-                    <strong className="value">
-                      {recordsData.stats.nextFollowUp || "Flexible / Continue Home Rehab Protocol"}
-                    </strong>
+                  <div className="status-highlight-content">
+                    <h4>{cleanDateOnly(recordsData.appointments[0].date)} • {cleanTimeOnly(recordsData.appointments[0].time)}</h4>
+                    <p>{recordsData.appointments[0].reason || "Physiotherapy & Rehabilitation Session"}</p>
                   </div>
-                  <div className="detail-item">
-                    <span className="label">Clinic Timing</span>
-                    <strong className="value">10:00 AM – 02:00 PM & 04:00 PM – 08:00 PM</strong>
+                  <button className="status-action-btn" onClick={() => setActiveTab("appointments")}>
+                    View Appointment →
+                  </button>
+                </div>
+              ) : latestVisit ? (
+                <div className="status-highlight-body">
+                  <div className="status-badge-row">
+                    <span className="status-indicator-dot blue"></span>
+                    <span className="status-tag-text">RECENT VISIT</span>
+                    <span className="status-date-sub">{cleanDateOnly(latestVisit.date)}</span>
                   </div>
+                  <div className="status-highlight-content">
+                    <h4>{latestVisit.diagnosis || "Active Clinical Rehabilitation"}</h4>
+                    <p>✓ {latestVisit.status || "Completed"} • Follow-up: {latestVisit.followUpDate || "As advised"}</p>
+                  </div>
+                  <button className="status-action-btn" onClick={() => setActiveTab("visits")}>
+                    View Visit Details →
+                  </button>
                 </div>
-
-                <div className="feature-actions">
-                  <a
-                    href="https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20patient%20"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="action-btn wa"
-                  >
-                    💬 Message Doctor on WhatsApp
-                  </a>
-                  <a href="tel:+919793093316" className="action-btn call">
-                    📞 Call Reception (+91 9793093316)
-                  </a>
+              ) : (
+                <div className="status-highlight-body">
+                  <div className="status-badge-row">
+                    <span className="status-indicator-dot green"></span>
+                    <span className="status-tag-text">CARE STATUS</span>
+                  </div>
+                  <div className="status-highlight-content">
+                    <h4>Active Clinic Rehabilitation</h4>
+                    <p>Consultant: Dr. Satyam Vishwakarma (B.P.T.)</p>
+                  </div>
+                  <button className="status-action-btn" onClick={() => setShowContactModal(true)}>
+                    Contact Clinic →
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Quick Navigation Shortcuts */}
-            <div className="shortcuts-section">
-              <h3>Quick Actions & Portal Shortcuts</h3>
-              <div className="shortcuts-grid">
-                <button className="shortcut-box" onClick={() => setActiveTab("visits")}>
-                  <span className="shortcut-icon">🩺</span>
-                  <strong>View All Visits</strong>
-                  <span>History & treatment progress</span>
-                </button>
+            {/* 3. EXACTLY SIX PROMINENT FEATURE BOXES (2x3 Touch Grid) */}
+            <div className="mobile-app-grid-6">
+              <button className="mobile-app-card" onClick={() => setActiveTab("appointments")}>
+                <div className="card-icon-bubble blue">
+                  <span>📅</span>
+                </div>
+                <strong className="card-title">My Appointments</strong>
+                <span className="card-caption">
+                  {recordsData?.appointments?.length > 0
+                    ? `${recordsData.appointments.length} Scheduled`
+                    : "View & manage"}
+                </span>
+              </button>
 
-                <button className="shortcut-box" onClick={() => setActiveTab("receipts")}>
-                  <span className="shortcut-icon">🧾</span>
-                  <strong>Official Receipts</strong>
-                  <span>Download consultation slips</span>
-                </button>
+              <button className="mobile-app-card" onClick={() => setActiveTab("visits")}>
+                <div className="card-icon-bubble green">
+                  <span>📋</span>
+                </div>
+                <strong className="card-title">My Visits</strong>
+                <span className="card-caption">
+                  {recordsData?.visits?.length > 0
+                    ? `${recordsData.visits.length} Completed`
+                    : "Visit history"}
+                </span>
+              </button>
 
-                <button className="shortcut-box" onClick={() => setActiveTab("treatment")}>
-                  <span className="shortcut-icon">📋</span>
-                  <strong>Treatment Notes</strong>
-                  <span>Diagnosis & doctor advice</span>
-                </button>
+              <button className="mobile-app-card" onClick={() => setActiveTab("receipts")}>
+                <div className="card-icon-bubble emerald">
+                  <span>🧾</span>
+                </div>
+                <strong className="card-title">My Receipts</strong>
+                <span className="card-caption">View receipts</span>
+              </button>
 
-                <button className="shortcut-box" onClick={() => setActiveTab("exercises")}>
-                  <span className="shortcut-icon">🏃</span>
-                  <strong>Home Exercises</strong>
-                  <span>Daily rehabilitation guide</span>
-                </button>
+              <button className="mobile-app-card" onClick={() => setActiveTab("exercises")}>
+                <div className="card-icon-bubble cyan">
+                  <span>🏃</span>
+                </div>
+                <strong className="card-title">My Exercises</strong>
+                <span className="card-caption">Recovery exercises</span>
+              </button>
 
-                <button className="shortcut-box" onClick={() => setActiveTab("security")}>
-                  <span className="shortcut-icon">🔐</span>
-                  <strong>Profile & Password</strong>
-                  <span>View credentials & change password</span>
-                </button>
+              <button className="mobile-app-card" onClick={() => setActiveTab("security")}>
+                <div className="card-icon-bubble purple">
+                  <span>👤</span>
+                </div>
+                <strong className="card-title">My Profile</strong>
+                <span className="card-caption">Personal details</span>
+              </button>
 
-                <a
-                  href="https://maps.google.com/?q=Amravati+Chauraha+Vindhyachal+Mirzapur"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="shortcut-box"
-                >
-                  <span className="shortcut-icon">📍</span>
-                  <strong>Clinic Location</strong>
-                  <span>Directions to Vindhyachal center</span>
-                </a>
-              </div>
+              <button className="mobile-app-card" onClick={() => setShowContactModal(true)}>
+                <div className="card-icon-bubble green-phone">
+                  <span>📞</span>
+                </div>
+                <strong className="card-title">Contact Clinic</strong>
+                <span className="card-caption">Call & WhatsApp</span>
+              </button>
             </div>
 
-            {/* Recent Visits Timeline (Preview) */}
-            <div className="recent-visits-section">
+            {/* 4. Compact Recent Visits Timeline */}
+            <div className="recent-visits-section compact-preview">
               <div className="section-header-flex">
                 <h3>Recent Visit History</h3>
                 <button className="view-all-link" onClick={() => setActiveTab("visits")}>
@@ -546,11 +508,11 @@ export default function PatientPortal({ onClose, themeProps }) {
               {recordsData.visits.length === 0 ? (
                 <div className="empty-state-box">
                   <span>🩺</span>
-                  <p>Your visit history will appear here following your consultation.</p>
+                  <p>Your visit history will appear here following your clinic consultation.</p>
                 </div>
               ) : (
                 <div className="timeline-cards-list">
-                  {recordsData.visits.slice(0, 3).map((v) => {
+                  {recordsData.visits.slice(0, 2).map((v) => {
                     const receiptObj = makeReceiptObj(v);
                     return (
                       <div className="patient-visit-card" key={v.visitId}>
@@ -572,18 +534,12 @@ export default function PatientPortal({ onClose, themeProps }) {
 
                         <div className="visit-card-content">
                           <div className="row-item">
-                            <span className="item-label">Diagnosis / Assessment:</span>
+                            <span className="item-label">Diagnosis:</span>
                             <strong className="item-value">{v.diagnosis || "Under Evaluation"}</strong>
                           </div>
-                          {v.complaint && (
-                            <div className="row-item">
-                              <span className="item-label">Chief Complaint:</span>
-                              <span className="item-value">{v.complaint}</span>
-                            </div>
-                          )}
                           {v.treatmentNotes && (
                             <div className="row-item">
-                              <span className="item-label">Treatment & Plan:</span>
+                              <span className="item-label">Treatment:</span>
                               <span className="item-value">{v.treatmentNotes}</span>
                             </div>
                           )}
@@ -1208,6 +1164,174 @@ export default function PatientPortal({ onClose, themeProps }) {
               >
                 Close Preview
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* FIXED 4-ITEM MOBILE BOTTOM NAVIGATION */}
+      {/* ================================================================= */}
+      <nav className="mobile-bottom-nav-4" aria-label="Mobile Bottom Navigation">
+        <button
+          className={`nav-item-4 ${activeTab === "dashboard" && !showMoreSheet ? "active" : ""}`}
+          onClick={() => { setActiveTab("dashboard"); setShowMoreSheet(false); }}
+        >
+          <span className="nav-icon-4">🏠</span>
+          <span className="nav-label-4">Home</span>
+        </button>
+
+        <button
+          className={`nav-item-4 ${activeTab === "appointments" && !showMoreSheet ? "active" : ""}`}
+          onClick={() => { setActiveTab("appointments"); setShowMoreSheet(false); }}
+        >
+          <span className="nav-icon-4">📅</span>
+          <span className="nav-label-4">Appointments</span>
+          {recordsData?.appointments?.length > 0 && (
+            <span className="bottom-nav-badge">{recordsData.appointments.length}</span>
+          )}
+        </button>
+
+        <button
+          className={`nav-item-4 ${activeTab === "visits" && !showMoreSheet ? "active" : ""}`}
+          onClick={() => { setActiveTab("visits"); setShowMoreSheet(false); }}
+        >
+          <span className="nav-icon-4">🩺</span>
+          <span className="nav-label-4">Visits</span>
+          {recordsData?.visits?.length > 0 && (
+            <span className="bottom-nav-badge">{recordsData.visits.length}</span>
+          )}
+        </button>
+
+        <button
+          className={`nav-item-4 ${showMoreSheet ? "active" : ""}`}
+          onClick={() => setShowMoreSheet(prev => !prev)}
+        >
+          <span className="nav-icon-4">☰</span>
+          <span className="nav-label-4">More</span>
+        </button>
+      </nav>
+
+      {/* ================================================================= */}
+      {/* "MORE" SECONDARY FEATURES SHEET */}
+      {/* ================================================================= */}
+      {showMoreSheet && (
+        <div className="app-more-sheet-overlay" onClick={() => setShowMoreSheet(false)}>
+          <div className="app-more-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="more-sheet-handle"></div>
+            <div className="more-sheet-head">
+              <h3>More Features & Settings</h3>
+              <button className="more-sheet-close" onClick={() => setShowMoreSheet(false)}>✕</button>
+            </div>
+
+            <div className="more-sheet-list">
+              <button
+                className="more-sheet-item"
+                onClick={() => { setActiveTab("receipts"); setShowMoreSheet(false); }}
+              >
+                <span className="more-item-icon emerald">🧾</span>
+                <div className="more-item-text">
+                  <strong>My Receipts</strong>
+                  <span>Download & view official clinic consultation slips</span>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              <button
+                className="more-sheet-item"
+                onClick={() => { setActiveTab("treatment"); setShowMoreSheet(false); }}
+              >
+                <span className="more-item-icon blue">📋</span>
+                <div className="more-item-text">
+                  <strong>Treatment Plan</strong>
+                  <span>Doctor recommendations, diagnosis & staging</span>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              <button
+                className="more-sheet-item"
+                onClick={() => { setActiveTab("exercises"); setShowMoreSheet(false); }}
+              >
+                <span className="more-item-icon cyan">🏃</span>
+                <div className="more-item-text">
+                  <strong>Recovery Exercises</strong>
+                  <span>Home rehabilitation routines & video instructions</span>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              <button
+                className="more-sheet-item"
+                onClick={() => { setActiveTab("security"); setShowMoreSheet(false); }}
+              >
+                <span className="more-item-icon purple">🔐</span>
+                <div className="more-item-text">
+                  <strong>Recovery PIN & Password</strong>
+                  <span>View confidential recovery PIN or change password</span>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              <button
+                className="more-sheet-item"
+                onClick={() => { setShowContactModal(true); setShowMoreSheet(false); }}
+              >
+                <span className="more-item-icon green-phone">📞</span>
+                <div className="more-item-text">
+                  <strong>Contact Clinic</strong>
+                  <span>WhatsApp direct message & reception phone</span>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              <button
+                className="more-sheet-item logout-item"
+                onClick={() => { setShowMoreSheet(false); handleLogout(); }}
+              >
+                <span className="more-item-icon red">🚪</span>
+                <div className="more-item-text">
+                  <strong>Sign Out</strong>
+                  <span>Exit your patient recovery account</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* QUICK CONTACT CLINIC MODAL */}
+      {/* ================================================================= */}
+      {showContactModal && (
+        <div className="patient-submodal-overlay" onClick={() => setShowContactModal(false)}>
+          <div className="patient-submodal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="submodal-head">
+              <h3>📞 Contact Vindhya Physio Clinic</h3>
+              <button className="submodal-close" onClick={() => setShowContactModal(false)}>✕</button>
+            </div>
+            <p style={{ margin: "8px 0 16px", color: "var(--text-secondary, #475569)", fontSize: "13px", lineHeight: "1.5" }}>
+              Dr. Satyam Vishwakarma and our clinical care team are available in Mirzapur/Vindhyachal for clinical consultation and home care support.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <a
+                href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile?.name || "Patient")}%20(ID:%20${patientProfile?.patientId || "VPR"}).%20I%20have%20an%20inquiry%20regarding%20my%20physiotherapy.`}
+                target="_blank"
+                rel="noreferrer"
+                className="patient-primary-btn"
+                style={{ background: "#25D366", color: "#fff", textDecoration: "none", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+              >
+                <span>💬</span>
+                <span>Message Doctor on WhatsApp</span>
+              </a>
+              <a
+                href="tel:+919793093316"
+                className="patient-secondary-btn"
+                style={{ textDecoration: "none", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+              >
+                <span>📞</span>
+                <span>Call Reception (+91 9793093316)</span>
+              </a>
             </div>
           </div>
         </div>

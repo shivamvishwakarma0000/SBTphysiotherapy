@@ -300,23 +300,24 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 50;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px clamp(14px, 3vw, 40px);
+  justify-content: space-between;
+  gap: clamp(8px, 1.2vw, 18px);
+  padding: 8px clamp(10px, 1.8vw, 24px);
   background: var(--header-bg);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(20px);
   box-shadow: var(--header-shadow);
   box-sizing: border-box;
+  width: 100%;
 }
 
 .brand,
 .footer-brand {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-weight: 800;
   flex-shrink: 0;
 }
@@ -328,9 +329,9 @@ textarea {
 }
 
 .clinic-logo-img {
-  height: 44px;
+  height: 32px;
   width: auto;
-  max-width: 250px;
+  max-width: 150px;
   object-fit: contain;
   display: block;
 }
@@ -338,19 +339,17 @@ textarea {
 nav {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
+  justify-content: center;
+  gap: clamp(5px, 0.8vw, 11px);
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
+  margin: 0 8px;
+  overflow: visible;
   white-space: nowrap;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  -webkit-overflow-scrolling: touch;
   color: var(--muted);
-  font-size: 13px;
+  font-size: clamp(11px, 0.82vw, 12px);
   font-weight: 700;
+  padding: 0;
 }
 
 nav::-webkit-scrollbar {
@@ -362,7 +361,7 @@ nav a {
   flex-shrink: 0;
   color: var(--text-secondary);
   transition: color 150ms ease;
-  padding: 4px 0;
+  padding: 4px 2px;
 }
 
 nav a:hover {
@@ -372,7 +371,7 @@ nav a:hover {
 .header-actions-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: clamp(5px, 0.6vw, 8px);
   flex-shrink: 0;
 }
 
@@ -440,14 +439,14 @@ nav a:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 13px;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
   background: rgba(8, 120, 201, 0.12);
   border: 1px solid rgba(8, 120, 201, 0.35);
-  border-radius: 20px;
+  border-radius: 16px;
   color: #0878C9;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 800;
   white-space: nowrap;
   flex-shrink: 0;
@@ -468,14 +467,14 @@ nav a:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 13px;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
   background: var(--emerald-bg);
   border: 1px solid var(--emerald-border);
-  border-radius: 20px;
+  border-radius: 16px;
   color: var(--emerald);
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 800;
   white-space: nowrap;
   flex-shrink: 0;
@@ -519,6 +518,16 @@ nav a:hover {
   cursor: pointer;
   transition: all 180ms ease;
   border: none;
+}
+
+.header-cta {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  font-size: 11.5px !important;
+  line-height: 32px !important;
+  border-radius: 16px !important;
+  white-space: nowrap !important;
 }
 
 .header-cta,
@@ -1263,7 +1272,7 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   gap: 18px;
   width: max-content;
-  animation: continuousScroll 32s linear infinite;
+  animation: continuousScroll 75s linear infinite;
 }
 
 .testimonial-window:hover .testimonial-track {
@@ -2670,15 +2679,19 @@ input:focus, select:focus, textarea:focus {
 
 /* ================= RESPONSIVE DESIGN ================= */
 @media (max-width: 1180px) {
-  .site-header {
-    grid-template-columns: 1fr auto;
+  .portal-pill-text {
+    display: none !important;
+  }
+
+  .portal-pill-text-short {
+    display: inline !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
   }
 
   nav {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-    overflow-x: auto;
-    padding-bottom: 4px;
+    gap: clamp(4px, 0.8vw, 10px) !important;
+    font-size: 11.5px !important;
   }
 
   .hero-inner {
@@ -2819,11 +2832,11 @@ input:focus, select:focus, textarea:focus {
     width: 100% !important;
     display: flex !important;
     flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
     gap: 14px !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    padding-top: 2px !important;
-    padding-bottom: 6px !important;
+    padding: 2px 8px 6px 4px !important;
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
@@ -6456,3 +6469,244 @@ input:focus, select:focus, textarea:focus {
     display: none !important;
   }
 }
+
+/* ================= AUTO ENQUIRY MODAL POPUP ================= */
+.auto-enquiry-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(4, 10, 20, 0.76);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeInModal 240ms ease-out;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.auto-enquiry-card {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-card);
+  border: 1.5px solid rgba(16, 185, 129, 0.35);
+  border-radius: 22px;
+  padding: 26px 24px 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 35px rgba(16, 185, 129, 0.18);
+  color: var(--text);
+  box-sizing: border-box;
+  animation: scaleUpModal 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@keyframes scaleUpModal {
+  from {
+    opacity: 0;
+    transform: scale(0.93) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.auto-enquiry-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 180ms ease;
+  z-index: 3;
+}
+
+.auto-enquiry-close-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+  transform: rotate(90deg) scale(1.08);
+}
+
+.auto-enquiry-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--emerald);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.auto-enquiry-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--heading);
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+  padding-right: 32px;
+}
+
+.auto-enquiry-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0 0 16px 0;
+  line-height: 1.45;
+}
+
+.auto-enquiry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auto-enquiry-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.auto-enquiry-field input,
+.auto-enquiry-field select,
+.auto-enquiry-field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.auto-enquiry-field input:focus,
+.auto-enquiry-field select:focus,
+.auto-enquiry-field textarea:focus {
+  outline: none;
+  border-color: var(--emerald);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+
+.auto-enquiry-phone-row {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  overflow: hidden;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.auto-enquiry-phone-row:focus-within {
+  border-color: var(--emerald);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+
+.auto-enquiry-phone-row span {
+  padding: 0 10px 0 12px;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.auto-enquiry-phone-row input {
+  border: none !important;
+  background: transparent !important;
+  padding: 9px 10px 9px 0 !important;
+  box-shadow: none !important;
+}
+
+.auto-enquiry-submit-btn {
+  margin-top: 4px;
+  width: 100%;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+  transition: all 180ms ease;
+}
+
+.auto-enquiry-submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+
+.auto-enquiry-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.auto-enquiry-cancel-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px;
+  text-decoration: underline;
+  text-align: center;
+  transition: color 150ms ease;
+}
+
+.auto-enquiry-cancel-btn:hover {
+  color: var(--text);
+}
+
+.auto-enquiry-status {
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.auto-enquiry-status.success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10b981;
+}
+
+.auto-enquiry-status.error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+

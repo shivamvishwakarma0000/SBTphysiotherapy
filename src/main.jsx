@@ -826,11 +826,172 @@ function WhatsAppFloating() {
   );
 }
 
+function AutoEnquiryModal({ isOpen, onClose }) {
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    painArea: "Spine & Back Pain (Sciatica / Slip Disc)",
+    concern: ""
+  });
+  const [status, setStatus] = useState("idle"); // idle, loading, success, error, invalid
+
+  if (!isOpen) return null;
+
+  const update = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const cleanPhone = form.phone.replace(/\D/g, "");
+    if (!form.name.trim() || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setStatus("invalid");
+      return;
+    }
+    setStatus("loading");
+    try {
+      await api.createEnquiry({
+        name: form.name.trim(),
+        phone: cleanPhone,
+        painArea: form.painArea,
+        concern: form.concern.trim() || "Automatic 5-second website exploration enquiry",
+        duration: "Direct Online Enquiry"
+      });
+      setStatus("success");
+      setTimeout(() => {
+        onClose();
+      }, 2500);
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div className="auto-enquiry-overlay" onClick={onClose}>
+      <div className="auto-enquiry-card" onClick={(e) => e.stopPropagation()}>
+        <button
+          className="auto-enquiry-close-btn"
+          onClick={onClose}
+          title="Close and explore website"
+          aria-label="Close enquiry popup"
+        >
+          ✕
+        </button>
+
+        <div className="auto-enquiry-badge">
+          <span>🩺 Free Consultation Triage</span>
+        </div>
+
+        <h3 className="auto-enquiry-title">Need Expert Physio Guidance?</h3>
+        <p className="auto-enquiry-desc">
+          Tell us about your pain or condition. Dr. Satyam Vishwakarma & our clinic team will reach out directly for advice.
+        </p>
+
+        {status === "success" ? (
+          <div className="auto-enquiry-status success">
+            🎉 <strong>Enquiry Submitted!</strong><br />
+            Dr. Satyam's clinic team will call you at +91 {form.phone} shortly.
+          </div>
+        ) : (
+          <form className="auto-enquiry-form" onSubmit={handleSubmit}>
+            <label className="auto-enquiry-field">
+              Patient Full Name *
+              <input
+                type="text"
+                name="name"
+                required
+                value={form.name}
+                onChange={update}
+                placeholder="e.g. Rahul Sharma"
+                autoComplete="name"
+              />
+            </label>
+
+            <label className="auto-enquiry-field">
+              Mobile Number (10 Digits) *
+              <div className="auto-enquiry-phone-row">
+                <span>+91</span>
+                <input
+                  type="tel"
+                  name="phone"
+                  required
+                  maxLength="10"
+                  inputMode="numeric"
+                  value={form.phone}
+                  onChange={update}
+                  placeholder="9876543210"
+                  autoComplete="tel"
+                />
+              </div>
+            </label>
+
+            <label className="auto-enquiry-field">
+              Pain Area / Clinical Condition *
+              <select name="painArea" value={form.painArea} onChange={update}>
+                <option value="Spine & Back Pain (Sciatica / Slip Disc)">Spine & Lower Back Pain (Sciatica / Disc Bulge)</option>
+                <option value="Cupping Therapy / Hijama">Cupping Therapy / Pain Relief</option>
+                <option value="Cervical & Neck Spondylosis">Cervical & Neck Pain (Tech Neck)</option>
+                <option value="Knee Pain & Arthritis / ACL">Knee Pain & Arthritis / ACL Recovery</option>
+                <option value="Paralysis & Neuro Rehabilitation">Paralysis & Neuro Rehabilitation</option>
+                <option value="Frozen Shoulder & Shoulder Pain">Frozen Shoulder & Rotator Cuff</option>
+                <option value="Sports Injury Recovery">Sports Injury & Ligament Rehabilitation</option>
+                <option value="Post-Surgical Rehabilitation">Post-Surgical Knee / Hip / Spine Rehab</option>
+                <option value="Other Clinical Condition">Other Clinical Pain / Query</option>
+              </select>
+            </label>
+
+            <label className="auto-enquiry-field">
+              Describe Symptoms / Query (Optional)
+              <input
+                type="text"
+                name="concern"
+                value={form.concern}
+                onChange={update}
+                placeholder="e.g. Pain since 2 weeks, worse while sitting"
+              />
+            </label>
+
+            {status === "invalid" && (
+              <div className="auto-enquiry-status error">
+                Please provide your name and a valid 10-digit mobile number.
+              </div>
+            )}
+            {status === "error" && (
+              <div className="auto-enquiry-status error">
+                Failed to send online. Please call +91 9793093316 directly.
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="auto-enquiry-submit-btn"
+              disabled={status === "loading"}
+            >
+              {status === "loading" ? "Submitting..." : "Send Quick Enquiry ➔"}
+            </button>
+
+            <button
+              type="button"
+              className="auto-enquiry-cancel-btn"
+              onClick={onClose}
+            >
+              Cancel & Continue Exploring Website
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [showDoctorPortal, setShowDoctorPortal] = useState(false);
   const [showPatientPortal, setShowPatientPortal] = useState(() => {
     return !!localStorage.getItem("vindhya_patient_token") || window.location.hash === "#patient" || window.location.pathname.startsWith("/patient");
   });
+  const [showAutoEnquiry, setShowAutoEnquiry] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [isAppInstalled, setIsAppInstalled] = useState(() => {
@@ -898,6 +1059,26 @@ function App() {
     };
   }, [isMobileDevice, isAppInstalled]);
 
+  // Automatic Enquiry Pop-up Form after 5 seconds of exploring
+  useEffect(() => {
+    const isDismissed = sessionStorage.getItem("vindhya_auto_enquiry_dismissed") === "true";
+    if (isDismissed || showDoctorPortal || showPatientPortal) return;
+
+    const autoTimer = setTimeout(() => {
+      const stillDismissed = sessionStorage.getItem("vindhya_auto_enquiry_dismissed") === "true";
+      if (!stillDismissed && !showDoctorPortal && !showPatientPortal) {
+        setShowAutoEnquiry(true);
+      }
+    }, 5000);
+
+    return () => clearTimeout(autoTimer);
+  }, [showDoctorPortal, showPatientPortal]);
+
+  const handleCloseAutoEnquiry = () => {
+    sessionStorage.setItem("vindhya_auto_enquiry_dismissed", "true");
+    setShowAutoEnquiry(false);
+  };
+
   const handleDismissDownload = () => {
     sessionStorage.setItem('vindhya_download_prompt_dismissed', 'true');
     setShowDownloadModal(false);
@@ -926,6 +1107,11 @@ function App() {
       <Footer isDark={themeProps.isDark} />
 
       <WhatsAppFloating />
+
+      <AutoEnquiryModal
+        isOpen={showAutoEnquiry && !showDoctorPortal && !showPatientPortal}
+        onClose={handleCloseAutoEnquiry}
+      />
 
       <AppDownloadModal
         isOpen={showDownloadModal && canShowDownloadBtn}

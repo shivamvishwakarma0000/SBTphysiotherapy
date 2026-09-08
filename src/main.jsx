@@ -859,6 +859,9 @@ function AutoEnquiryModal({ isOpen, onClose }) {
         duration: "Direct Online Enquiry"
       });
       setStatus("success");
+      try {
+        localStorage.setItem("vindhya_auto_enquiry_ever_shown", "true");
+      } catch (e) {}
       setTimeout(() => {
         onClose();
       }, 2500);
@@ -987,9 +990,24 @@ function AutoEnquiryModal({ isOpen, onClose }) {
 }
 
 function App() {
-  const [showDoctorPortal, setShowDoctorPortal] = useState(false);
+  const [showDoctorPortal, setShowDoctorPortal] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const hash = window.location.hash;
+    const path = window.location.pathname;
+    const saved = localStorage.getItem("active_portal");
+    return hash === "#doctor" || path.startsWith("/doctor") || saved === "doctor";
+  });
   const [showPatientPortal, setShowPatientPortal] = useState(() => {
-    return !!localStorage.getItem("vindhya_patient_token") || window.location.hash === "#patient" || window.location.pathname.startsWith("/patient");
+    if (typeof window === "undefined") return false;
+    const hash = window.location.hash;
+    const path = window.location.pathname;
+    const saved = localStorage.getItem("active_portal");
+    return (
+      hash === "#patient" ||
+      path.startsWith("/patient") ||
+      saved === "patient" ||
+      !!localStorage.getItem("vindhya_patient_token")
+    );
   });
   const [showAutoEnquiry, setShowAutoEnquiry] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -1008,6 +1026,44 @@ function App() {
   });
 
   const themeProps = useTheme();
+
+  const openDoctorPortal = () => {
+    try {
+      localStorage.setItem("active_portal", "doctor");
+      window.location.hash = "doctor";
+    } catch (e) {}
+    setShowDoctorPortal(true);
+    setShowPatientPortal(false);
+  };
+
+  const closeDoctorPortal = () => {
+    try {
+      localStorage.setItem("active_portal", "closed");
+      if (window.location.hash === "#doctor") {
+        history.replaceState(null, "", window.location.pathname);
+      }
+    } catch (e) {}
+    setShowDoctorPortal(false);
+  };
+
+  const openPatientPortal = () => {
+    try {
+      localStorage.setItem("active_portal", "patient");
+      window.location.hash = "patient";
+    } catch (e) {}
+    setShowPatientPortal(true);
+    setShowDoctorPortal(false);
+  };
+
+  const closePatientPortal = () => {
+    try {
+      localStorage.setItem("active_portal", "closed");
+      if (window.location.hash === "#patient") {
+        history.replaceState(null, "", window.location.pathname);
+      }
+    } catch (e) {}
+    setShowPatientPortal(false);
+  };
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -1040,11 +1096,16 @@ function App() {
     }
 
     const checkHash = () => {
-      if (window.location.hash === "#doctor" || window.location.pathname.startsWith("/doctor")) {
+      const hash = window.location.hash;
+      const path = window.location.pathname;
+      if (hash === "#doctor" || path.startsWith("/doctor")) {
+        try { localStorage.setItem("active_portal", "doctor"); } catch (e) {}
         setShowDoctorPortal(true);
-      }
-      if (window.location.hash === "#patient" || window.location.pathname.startsWith("/patient")) {
+        setShowPatientPortal(false);
+      } else if (hash === "#patient" || path.startsWith("/patient")) {
+        try { localStorage.setItem("active_portal", "patient"); } catch (e) {}
         setShowPatientPortal(true);
+        setShowDoctorPortal(false);
       }
     };
     checkHash();
@@ -1060,22 +1121,46 @@ function App() {
   }, [isMobileDevice, isAppInstalled]);
 
   // Automatic Enquiry Pop-up Form after 5 seconds of exploring
+  // Constraints:
+  // 1. Never show for phone app (only for website)
+  // 2. Never show if user already has an account or is a doctor
+  // 3. Never show if currently inside Doctor Portal or Patient Portal
+  // 4. Appear ONLY ONCE EVER for new visitors on website (never again after app/browser is closed & reopened)
   useEffect(() => {
-    const isDismissed = sessionStorage.getItem("vindhya_auto_enquiry_dismissed") === "true";
-    if (isDismissed || showDoctorPortal || showPatientPortal) return;
+    const isStandalone = typeof window !== "undefined" && (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true ||
+      localStorage.getItem("vindhya_app_installed") === "true"
+    );
+    if (isStandalone || isAppInstalled) return;
+
+    const hasDoctorAccount = !!localStorage.getItem("doctor_token") || localStorage.getItem("doctorLoggedIn") === "true";
+    const hasPatientAccount = !!localStorage.getItem("vindhya_patient_token") || !!localStorage.getItem("vindhya_patient_profile");
+    if (hasDoctorAccount || hasPatientAccount) return;
+
+    if (showDoctorPortal || showPatientPortal) return;
+
+    const hasEverShown = localStorage.getItem("vindhya_auto_enquiry_ever_shown") === "true";
+    if (hasEverShown) return;
 
     const autoTimer = setTimeout(() => {
-      const stillDismissed = sessionStorage.getItem("vindhya_auto_enquiry_dismissed") === "true";
-      if (!stillDismissed && !showDoctorPortal && !showPatientPortal) {
+      const stillEverShown = localStorage.getItem("vindhya_auto_enquiry_ever_shown") === "true";
+      const currentlyInPortal = showDoctorPortal || showPatientPortal;
+      if (!stillEverShown && !currentlyInPortal) {
+        try {
+          localStorage.setItem("vindhya_auto_enquiry_ever_shown", "true");
+        } catch (e) {}
         setShowAutoEnquiry(true);
       }
     }, 5000);
 
     return () => clearTimeout(autoTimer);
-  }, [showDoctorPortal, showPatientPortal]);
+  }, [showDoctorPortal, showPatientPortal, isAppInstalled]);
 
   const handleCloseAutoEnquiry = () => {
-    sessionStorage.setItem("vindhya_auto_enquiry_dismissed", "true");
+    try {
+      localStorage.setItem("vindhya_auto_enquiry_ever_shown", "true");
+    } catch (e) {}
     setShowAutoEnquiry(false);
   };
 
@@ -1089,8 +1174,8 @@ function App() {
   return (
     <div className={`app-root ${themeProps.resolvedTheme}`}>
       <Header
-        onOpenDoctorPortal={() => setShowDoctorPortal(true)}
-        onOpenPatientPortal={() => setShowPatientPortal(true)}
+        onOpenDoctorPortal={openDoctorPortal}
+        onOpenPatientPortal={openPatientPortal}
         onOpenDownloadApp={() => setShowDownloadModal(true)}
         showDownloadBtn={canShowDownloadBtn}
         themeProps={themeProps}
@@ -1124,7 +1209,7 @@ function App() {
       {/* Doctor Portal Modal / View */}
       {showDoctorPortal && (
         <DoctorPortal
-          onClose={() => setShowDoctorPortal(false)}
+          onClose={closeDoctorPortal}
           themeProps={themeProps}
         />
       )}
@@ -1132,7 +1217,7 @@ function App() {
       {/* Patient Recovery Portal Modal / View */}
       {showPatientPortal && (
         <PatientPortal
-          onClose={() => setShowPatientPortal(false)}
+          onClose={closePatientPortal}
           themeProps={themeProps}
         />
       )}

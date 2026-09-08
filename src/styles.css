@@ -4547,11 +4547,12 @@ input:focus, select:focus, textarea:focus {
 /* NAVBAR (Top Navigation for Laptop & Desktop) */
 .patient-navbar {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  padding: 0 32px;
-  min-height: 56px;
+  gap: 6px;
+  padding: 4px 16px;
+  min-height: 42px;
+  height: 42px;
   background: var(--bg-surface, #ffffff);
   border-bottom: 1px solid var(--line, #e2e8f0);
   overflow-x: auto;
@@ -4561,13 +4562,13 @@ input:focus, select:focus, textarea:focus {
 .nav-tab {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 42px;
-  padding: 0 18px;
-  border-radius: 10px;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
   background: transparent;
   border: 1px solid transparent;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-secondary, #475569);
   cursor: pointer;
@@ -4584,14 +4585,14 @@ input:focus, select:focus, textarea:focus {
 .nav-tab.active {
   background: linear-gradient(135deg, #0878C9, #0284c7);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(8, 120, 201, 0.3);
+  box-shadow: 0 2px 8px rgba(8, 120, 201, 0.25);
 }
 
 .tab-bubble {
-  font-size: 11px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.12);
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
   font-weight: 800;
 }
 
@@ -4606,7 +4607,7 @@ input:focus, select:focus, textarea:focus {
   max-width: 1140px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px 16px 80px;
+  padding: 16px 16px 40px;
 }
 
 .welcome-banner {
@@ -5684,11 +5685,20 @@ input:focus, select:focus, textarea:focus {
   margin: 0;
 }
 
-.digital-slip-sheet {
+.digital-slip-sheet,
+[data-theme="dark"] .digital-slip-sheet,
+[data-theme="light"] .digital-slip-sheet {
   border: 2px solid #0B1F2A;
   border-radius: 12px;
   padding: 18px;
-  background: #fafcfd;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.digital-slip-sheet *,
+[data-theme="dark"] .digital-slip-sheet * {
+  box-sizing: border-box;
 }
 
 .slip-top-bar {
@@ -5700,16 +5710,18 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 14px;
 }
 
-.slip-top-bar h4 {
+.slip-top-bar h4,
+[data-theme="dark"] .slip-top-bar h4 {
   font-size: 14.5px;
   font-weight: 900;
-  color: #0B1F2A;
+  color: #0B1F2A !important;
   margin: 0 0 2px;
 }
 
-.slip-top-bar p {
+.slip-top-bar p,
+[data-theme="dark"] .slip-top-bar p {
   font-size: 11px;
-  color: #64748b;
+  color: #334155 !important;
   margin: 1px 0;
 }
 
@@ -5717,64 +5729,102 @@ input:focus, select:focus, textarea:focus {
   text-align: right;
 }
 
-.slip-doctor-right strong {
+.slip-doctor-right strong,
+[data-theme="dark"] .slip-doctor-right strong {
   font-size: 13.5px;
-  color: #0878C9;
+  color: #0878C9 !important;
+  font-weight: 800 !important;
 }
 
-.slip-doctor-right p {
+.slip-doctor-right p,
+[data-theme="dark"] .slip-doctor-right p {
   font-size: 11px;
+  color: #334155 !important;
   margin: 1px 0;
 }
 
-.slip-doctor-right small {
+.slip-doctor-right small,
+[data-theme="dark"] .slip-doctor-right small {
   font-size: 10px;
-  color: #94a3b8;
+  color: #475569 !important;
 }
 
-.slip-meta-grid {
+.slip-meta-grid,
+[data-theme="dark"] .slip-meta-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   padding: 10px;
-  background: #f1f5f9;
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
   border-radius: 8px;
   font-size: 12.5px;
   margin-bottom: 12px;
+  color: #0f172a !important;
 }
 
-.slip-meta-grid .lbl {
-  color: #64748b;
+.slip-meta-grid .lbl,
+[data-theme="dark"] .slip-meta-grid .lbl {
+  color: #475569 !important;
+  font-weight: 600 !important;
   margin-right: 6px;
 }
 
-.slip-treatment-details {
+.slip-meta-grid strong,
+[data-theme="dark"] .slip-meta-grid strong {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.slip-treatment-details,
+[data-theme="dark"] .slip-treatment-details {
   font-size: 12.5px;
   line-height: 1.6;
   margin-bottom: 14px;
+  color: #1e293b !important;
 }
 
-.slip-treatment-details p {
-  margin: 4px 0;
+.slip-treatment-details p,
+[data-theme="dark"] .slip-treatment-details p {
+  margin: 5px 0;
+  color: #1e293b !important;
 }
 
-.slip-fee-box {
+.slip-treatment-details strong,
+[data-theme="dark"] .slip-treatment-details strong {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.slip-fee-box,
+[data-theme="dark"] .slip-fee-box {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  background: #e0f2fe;
+  background: #e0f2fe !important;
+  border: 1px solid #bae6fd !important;
   border-radius: 8px;
   font-size: 13px;
   margin-bottom: 14px;
+  color: #0369a1 !important;
 }
 
-.slip-fee-box strong {
+.slip-fee-box span,
+[data-theme="dark"] .slip-fee-box span {
+  color: #0369a1 !important;
+  font-weight: 700 !important;
+}
+
+.slip-fee-box strong,
+[data-theme="dark"] .slip-fee-box strong {
   font-size: 15px;
-  color: #0369a1;
+  color: #0284c7 !important;
+  font-weight: 900 !important;
 }
 
-.slip-footer {
+.slip-footer,
+[data-theme="dark"] .slip-footer {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -5782,9 +5832,10 @@ input:focus, select:focus, textarea:focus {
   border-top: 1px solid #e2e8f0;
 }
 
-.slip-footer small {
+.slip-footer small,
+[data-theme="dark"] .slip-footer small {
   font-size: 10.5px;
-  color: #94a3b8;
+  color: #475569 !important;
   max-width: 260px;
 }
 
@@ -5792,21 +5843,25 @@ input:focus, select:focus, textarea:focus {
   text-align: center;
 }
 
-.sign-line {
+.sign-line,
+[data-theme="dark"] .sign-line {
   width: 140px;
   height: 1px;
-  background: #000;
+  background: #0f172a !important;
   margin-bottom: 4px;
 }
 
-.slip-doc-sign strong {
+.slip-doc-sign strong,
+[data-theme="dark"] .slip-doc-sign strong {
   display: block;
   font-size: 11px;
+  color: #0f172a !important;
 }
 
-.slip-doc-sign span {
+.slip-doc-sign span,
+[data-theme="dark"] .slip-doc-sign span {
   font-size: 10px;
-  color: #64748b;
+  color: #475569 !important;
 }
 
 .preview-dialog-actions {
@@ -6113,8 +6168,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 [data-theme="dark"] .patient-navbar {
-  background: var(--bg-surface);
-  border-color: var(--line);
+  background: #091a24;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .nav-tab {

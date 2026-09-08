@@ -632,6 +632,26 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
+  const handleDoctorResetToDefault = async () => {
+    if (!selectedPatient) return;
+    setAccountActionLoading(true);
+    setAccountActionMsg({ text: "", isError: false });
+    try {
+      const res = await api.resetPatientPasswordToDefault(selectedPatient.patientId);
+      if (res.ok) {
+        setAccountActionMsg({ text: "✅ Password reset to default 'vindhya' successfully.", isError: false });
+        const acc = await api.getPatientAccount(selectedPatient.patientId);
+        if (acc.ok) setPatientAccountData(acc);
+      } else {
+        setAccountActionMsg({ text: res.error || "Failed to reset password to default.", isError: true });
+      }
+    } catch (err) {
+      setAccountActionMsg({ text: err.message, isError: true });
+    } finally {
+      setAccountActionLoading(false);
+    }
+  };
+
   const handleTogglePatientAccountStatus = async (currentStatus) => {
     if (!selectedPatient) return;
     const targetStatus = currentStatus === "disabled" ? "active" : "disabled";
@@ -1049,24 +1069,37 @@ _(Saved in patient clinic records)_`;
 
         <div className="doctor-nav-actions">
           <ThemeToggle themePreference={themePreference} setTheme={setTheme} compact={true} />
-          <button
-            className="download-app-icon-btn doctor-download-icon-btn"
-            onClick={() => {
-              if (window.deferredPWAInstallPrompt) {
-                window.deferredPWAInstallPrompt.prompt();
-              } else {
-                alert("To install the Vindhya Physio App on your phone, tap your browser's menu (⋮ or Share icon) and select 'Add to Home Screen' or 'Install App'.");
-              }
-            }}
-            title="Download / Install App on Phone"
-            aria-label="Download App"
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
+          {(() => {
+            const isInstalledApp = typeof window !== "undefined" && (
+              window.matchMedia("(display-mode: standalone)").matches ||
+              window.navigator.standalone === true ||
+              localStorage.getItem("vindhya_app_installed") === "true"
+            );
+            const isMobileScreen = typeof window !== "undefined" && (
+              /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || window.innerWidth <= 768
+            );
+            if (!isMobileScreen || isInstalledApp) return null;
+            return (
+              <button
+                className="download-app-icon-btn doctor-download-icon-btn"
+                onClick={() => {
+                  if (window.deferredPWAInstallPrompt) {
+                    window.deferredPWAInstallPrompt.prompt();
+                  } else {
+                    alert("To install the Vindhya Physio App on your phone, tap your browser's menu (⋮ or Share icon) and select 'Add to Home Screen' or 'Install App'.");
+                  }
+                }}
+                title="Download / Install App on Phone"
+                aria-label="Download App"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+            );
+          })()}
           <button
             className="sync-badge-btn"
             onClick={() => {
@@ -2625,35 +2658,34 @@ _(Saved in patient clinic records)_`;
                 </div>
 
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                     <div>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted, #64748b)", display: "block" }}>4-Digit Recovery PIN</span>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted, #64748b)", display: "block" }}>Universal Default Password</span>
                       <strong style={{
-                        fontSize: "20px",
-                        letterSpacing: "3px",
-                        color: "#0878C9",
+                        fontSize: "18px",
+                        letterSpacing: "1.5px",
+                        color: "#16a34a",
                         fontFamily: "monospace",
-                        background: "rgba(8, 120, 201, 0.12)",
+                        background: "rgba(34, 197, 94, 0.12)",
                         padding: "4px 10px",
                         borderRadius: "6px",
                         display: "inline-block"
                       }}>
-                        {patientAccountData?.recoveryPin || "----"}
+                        vindhya
                       </strong>
+                      <span style={{ fontSize: "11px", marginLeft: "8px", color: "var(--text-muted, #64748b)" }}>
+                        ({patientAccountData?.hasCustomPassword ? "Custom password active" : "Default active"})
+                      </span>
                     </div>
                     <button
                       type="button"
                       className="secondary-btn"
-                      style={{ fontSize: "12px", padding: "6px 10px" }}
-                      onClick={() => {
-                        if (patientAccountData?.recoveryPin) {
-                          navigator.clipboard.writeText(patientAccountData.recoveryPin);
-                          setCopiedPatientPin(true);
-                          setTimeout(() => setCopiedPatientPin(false), 2500);
-                        }
-                      }}
+                      style={{ fontSize: "12px", padding: "6px 12px" }}
+                      onClick={handleDoctorResetToDefault}
+                      disabled={accountActionLoading}
+                      title="Reset patient's password back to universal default 'vindhya'"
                     >
-                      {copiedPatientPin ? "✅ Copied" : "📋 Copy PIN"}
+                      🔄 Reset to 'vindhya'
                     </button>
                   </div>
 
@@ -2663,7 +2695,7 @@ _(Saved in patient clinic records)_`;
                   >
                     <input
                       type="text"
-                      placeholder="Set new patient password"
+                      placeholder="Set custom password"
                       value={newPatientPassInput}
                       onChange={(e) => setNewPatientPassInput(e.target.value)}
                       style={{
@@ -2671,7 +2703,7 @@ _(Saved in patient clinic records)_`;
                         fontSize: "12px",
                         borderRadius: "6px",
                         border: "1px solid var(--border, #cbd5e1)",
-                        width: "180px"
+                        width: "170px"
                       }}
                     />
                     <button
@@ -2680,7 +2712,7 @@ _(Saved in patient clinic records)_`;
                       style={{ fontSize: "12px", padding: "6px 12px" }}
                       disabled={accountActionLoading || !newPatientPassInput}
                     >
-                      Set Password
+                      Set Custom
                     </button>
                   </form>
                 </div>
@@ -2697,7 +2729,7 @@ _(Saved in patient clinic records)_`;
                 )}
 
                 <div style={{ marginTop: "8px", fontSize: "11px", color: "var(--text-muted, #64748b)" }}>
-                  💡 Patient can log into the Patient Portal at any time using <strong>{selectedPatient.patientId}</strong> or Registered Mobile <strong>+91 {selectedPatient.phone}</strong> and their Recovery PIN / password.
+                  💡 Patient can log into their Patient Portal using Registered Mobile <strong>+91 {selectedPatient.phone}</strong> (or ID <strong>{selectedPatient.patientId}</strong>) and password <strong>vindhya</strong>.
                 </div>
               </div>
 

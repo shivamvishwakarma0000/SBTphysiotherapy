@@ -585,7 +585,23 @@ export const api = {
       const data = await res.json();
       if (res.ok && data.ok) return data;
     } catch (e) {}
-    return { ok: true, patientId, status: "active", recoveryPin: "----" };
+    return { ok: true, patientId, status: "active", defaultPassword: "vindhya", hasCustomPassword: false };
+  },
+
+  async resetPatientPasswordToDefault(patientId) {
+    const token = this.getToken();
+    try {
+      const res = await fetch(`/api/doctor/patients/${patientId}/account/reset-to-default`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return await res.json();
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
   },
 
   async setPatientPassword(patientId, newPassword) {
@@ -684,7 +700,7 @@ export const patientApi = {
         return { ok: false, error: data.error || "Login failed" };
       }
     } catch (err) {
-      // Offline fallback
+      // Offline fallback: Validate that patient is officially registered in clinic records
       const patients = getLocal(KEYS.PATIENTS, []);
       const cleanId = String(identifier).trim().toUpperCase();
       const cleanDigits = String(identifier).replace(/\D/g, "").slice(-10);
@@ -694,11 +710,26 @@ export const patientApi = {
         return pId === cleanId || (cleanDigits.length === 10 && pPhone === cleanDigits);
       });
       if (!p) {
-        return { ok: false, error: "Patient record not found. Please check your ID or registered mobile number." };
+        return {
+          ok: false,
+          error: "No registered patient account found with this phone number or ID. Only patients registered by Dr. Satyam Vishwakarma can log in."
+        };
       }
+
+      const inputPass = String(password).trim();
+      const customPass = localStorage.getItem("patient_custom_pass_" + p.patientId);
+      const isCorrect = customPass ? (inputPass === customPass) : (inputPass.toLowerCase() === "vindhya");
+
+      if (!isCorrect) {
+        return {
+          ok: false,
+          error: "Incorrect password. Default clinic password for all registered patients is 'vindhya'."
+        };
+      }
+
       const dummyToken = "local_patient_token_" + p.patientId;
       localStorage.setItem(PATIENT_TOKEN_KEY, dummyToken);
-      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
+      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...p, defaultPassword: "vindhya" }));
       return { ok: true, token: dummyToken, patient: p };
     }
   },
@@ -771,24 +802,25 @@ export const patientApi = {
         body: JSON.stringify({ currentPassword, newPassword })
       });
       const data = await res.json();
-      if (res.ok && data.ok) return data;
+      if (res.ok && data.ok) {
+        const p = this.getStoredPatient();
+        if (p) localStorage.setItem("patient_custom_pass_" + p.patientId, newPassword);
+        return data;
+      }
       return { ok: false, error: data.error || "Password change failed" };
     } catch (e) {
-      return { ok: false, error: e.message || "Network error" };
-    }
-  },
-
-  async resetPasswordWithPin(identifier, recoveryPin, newPassword) {
-    try {
-      const res = await fetch("/api/patient/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, recoveryPin, newPassword })
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) return data;
-      return { ok: false, error: data.error || "Password reset failed" };
-    } catch (e) {
+      // Offline fallback: update local storage custom password
+      const p = this.getStoredPatient();
+      if (p) {
+        const existingCustom = localStorage.getItem("patient_custom_pass_" + p.patientId);
+        const cur = String(currentPassword).trim();
+        const validCur = existingCustom ? (cur === existingCustom) : (cur.toLowerCase() === "vindhya");
+        if (!validCur) {
+          return { ok: false, error: "Current password is incorrect. (Initial default is 'vindhya')." };
+        }
+        localStorage.setItem("patient_custom_pass_" + p.patientId, newPassword);
+        return { ok: true, message: "Password updated successfully!" };
+      }
       return { ok: false, error: e.message || "Network error" };
     }
   }

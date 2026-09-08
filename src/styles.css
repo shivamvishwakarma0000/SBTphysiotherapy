@@ -3986,13 +3986,14 @@ input:focus, select:focus, textarea:focus {
 .patient-login-modal {
   width: 100%;
   max-width: 480px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--line, #e2e8f0);
   border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  padding: 28px 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  padding: 32px 28px;
   text-align: center;
   animation: fadeIn 220ms ease;
+  color: var(--text, #0f172a);
 }
 
 .patient-login-header .patient-portal-badge {
@@ -4008,7 +4009,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .patient-login-header .patient-portal-logo {
-  height: 44px;
+  height: 48px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -4017,9 +4018,9 @@ input:focus, select:focus, textarea:focus {
 }
 
 .patient-login-header h2 {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 800;
-  color: var(--text-primary, #0f172a);
+  color: var(--heading, #0f172a);
   margin: 0 0 4px;
 }
 
@@ -4029,11 +4030,19 @@ input:focus, select:focus, textarea:focus {
   margin: 0 0 20px;
 }
 
+.patient-login-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 .patient-login-card h3 {
   font-size: 17px;
   font-weight: 700;
   margin: 0 0 6px;
-  color: var(--text-primary, #0f172a);
+  color: var(--heading, #0f172a);
 }
 
 .patient-login-card .login-desc {
@@ -4409,47 +4418,54 @@ input:focus, select:focus, textarea:focus {
   padding: 4px 8px;
 }
 
-/* NAVBAR */
+/* NAVBAR (Top Navigation for Laptop & Desktop) */
 .patient-navbar {
   display: flex;
-  gap: 6px;
-  padding: 8px 24px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 0 32px;
+  min-height: 56px;
+  background: var(--bg-surface, #ffffff);
+  border-bottom: 1px solid var(--line, #e2e8f0);
   overflow-x: auto;
+  box-sizing: border-box;
 }
 
 .nav-tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
   border-radius: 10px;
   background: transparent;
-  border: none;
-  font-size: 13.5px;
+  border: 1px solid transparent;
+  font-size: 14px;
   font-weight: 700;
-  color: #475569;
+  color: var(--text-secondary, #475569);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 150ms ease;
+  transition: all 160ms ease;
+  user-select: none;
 }
 
 .nav-tab:hover {
-  background: #f1f5f9;
+  background: rgba(8, 120, 201, 0.08);
   color: #0878C9;
 }
 
 .nav-tab.active {
-  background: #0878C9;
+  background: linear-gradient(135deg, #0878C9, #0284c7);
   color: #ffffff;
+  box-shadow: 0 4px 12px rgba(8, 120, 201, 0.3);
 }
 
 .tab-bubble {
   font-size: 11px;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.12);
   font-weight: 800;
 }
 
@@ -5704,18 +5720,77 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 768px) {
   .patient-header {
     padding: 10px 14px;
+    gap: 8px;
   }
 
-  .portal-clinic-meta h1 {
-    font-size: 14px;
+  /* Remove clinic title text & badge on phone as requested */
+  .portal-clinic-meta {
+    display: none !important;
+  }
+
+  .patient-header .header-left {
+    flex-shrink: 0;
+  }
+
+  .portal-nav-logo {
+    height: 38px;
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .patient-header .header-right {
+    gap: 8px;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  /* Prevent vertical wrapping of patient ID on mobile */
+  .patient-user-chip {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    padding: 4px 10px !important;
+    border-radius: 18px !important;
+    flex-shrink: 0 !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .patient-user-chip .user-text {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    white-space: nowrap !important;
+    overflow: hidden;
   }
 
   .user-name {
-    display: none;
+    display: block !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    max-width: 85px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+  }
+
+  .user-id {
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+    color: #76B82A !important;
+    letter-spacing: 0.5px !important;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+  }
+
+  .portal-exit-btn {
+    padding: 6px 10px !important;
   }
 
   .portal-exit-btn .btn-label {
-    display: none;
+    display: none !important;
   }
 
   .welcome-banner {
@@ -5847,6 +5922,19 @@ input:focus, select:focus, textarea:focus {
   height: 44px;
 }
 
+/* Hide download button on laptop/desktop screens and inside already installed standalone PWA */
+@media (min-width: 1024px) {
+  .download-app-icon-btn {
+    display: none !important;
+  }
+}
+
+@media all and (display-mode: standalone) {
+  .download-app-icon-btn {
+    display: none !important;
+  }
+}
+
 .primary-btn,
 .secondary-btn,
 .portal-exit-btn {
@@ -5857,8 +5945,14 @@ input:focus, select:focus, textarea:focus {
    LONG TEXT SAFETY & TRUNCATION GUARDS
    ========================================================================== */
 
-.user-name,
 .user-id,
+.patient-user-chip .user-id,
+.patient-user-chip .user-name {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+
 .patient-name,
 .patient-id-badge,
 .mobile-patient-name,
@@ -5918,10 +6012,54 @@ input:focus, select:focus, textarea:focus {
 [data-theme="dark"] .empty-state-card,
 [data-theme="dark"] .patient-submodal-card,
 [data-theme="dark"] .receipt-preview-card,
+[data-theme="dark"] .patient-login-modal,
 [data-theme="dark"] .patient-login-card {
-  background: var(--bg-card) !important;
-  border-color: var(--line) !important;
-  color: var(--text) !important;
+  background: var(--bg-card, #132633) !important;
+  border-color: var(--line, #1e3a4b) !important;
+  color: var(--text, #f1f5f9) !important;
+}
+
+[data-theme="dark"] .patient-login-modal h2,
+[data-theme="dark"] .patient-login-card h3 {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .patient-login-modal .subtext,
+[data-theme="dark"] .patient-login-card .login-desc {
+  color: var(--text-secondary, #94a3b8) !important;
+}
+
+[data-theme="dark"] .patient-login-form label {
+  color: var(--text, #cbd5e1) !important;
+}
+
+[data-theme="dark"] .patient-support-note {
+  background: rgba(118, 184, 42, 0.12) !important;
+  border-color: rgba(118, 184, 42, 0.35) !important;
+}
+
+[data-theme="dark"] .patient-support-note span {
+  color: #84cc16 !important;
+}
+
+[data-theme="dark"] .patient-support-note p {
+  color: var(--text-secondary, #94a3b8) !important;
+}
+
+[data-theme="dark"] .patient-support-note strong {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .help-chip {
+  background: var(--bg-surface, #0d2230) !important;
+  border-color: var(--line, #1e3a4b) !important;
+  color: var(--text, #f1f5f9) !important;
+}
+
+[data-theme="dark"] .help-chip.wa {
+  background: #25d366 !important;
+  border-color: #25d366 !important;
+  color: #ffffff !important;
 }
 
 [data-theme="dark"] .journey-card .card-icon,
@@ -5948,10 +6086,11 @@ input:focus, select:focus, textarea:focus {
 [data-theme="dark"] .patient-submodal-card input,
 [data-theme="dark"] .patient-submodal-card select,
 [data-theme="dark"] .security-card input,
+[data-theme="dark"] .patient-login-form input,
 [data-theme="dark"] .patient-login-card input {
-  background: var(--input-bg) !important;
-  border-color: var(--input-border) !important;
-  color: var(--text) !important;
+  background: var(--input-bg, #0b1922) !important;
+  border-color: var(--input-border, #1e3a4b) !important;
+  color: var(--text, #f1f5f9) !important;
 }
 
 /* ==========================================================================

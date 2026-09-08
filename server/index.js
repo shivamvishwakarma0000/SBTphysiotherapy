@@ -90,24 +90,19 @@ async function generateNextPatientId() {
   return `VPR-${String(nextNum).padStart(4, "0")}`;
 }
 
-// 4-Digit Numeric Recovery PIN Generator
-function generateRecoveryPin() {
-  return String(Math.floor(1000 + Math.random() * 9000));
-}
-
 // Ensure patient credentials record exists in patient_auth.json and Google Sheets
 async function getOrCreatePatientAuth(patient) {
   const patientAuthList = await ensureDataFile(patientAuthFile, []);
   let authRecord = patientAuthList.find(a => a.patientId === patient.patientId);
   if (!authRecord) {
-    const pin = generateRecoveryPin();
+    const defaultPassword = "vindhya";
     const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash(pin, salt);
+    const hash = await bcrypt.hash(defaultPassword, salt);
     authRecord = {
       patientId: patient.patientId,
       phone: String(patient.phone || "").replace(/\D/g, "").slice(-10),
       passwordHash: hash,
-      recoveryPin: pin,
+      hasCustomPassword: false,
       status: "active",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -448,7 +443,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
 // 1B. PATIENT PORTAL AUTHENTICATION & SELF-SERVICE APIS
 // ==========================================
 
-// Patient Login (Patient ID or 10-digit Phone + Password / Recovery PIN)
+// Patient Login (Registered Phone or Patient ID + Universal Password 'vindhya' or Custom Password)
 app.post("/api/patient/login", async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -468,7 +463,7 @@ app.post("/api/patient/login", async (req, res) => {
 
     if (!patient) {
       return res.status(404).json({
-        error: "No patient record found matching that ID or Mobile number. Please check your details or contact clinic reception."
+        error: "No registered patient account found with this phone number or ID. Only patients enrolled by Dr. Satyam Vishwakarma in the clinic portal can log in."
       });
     }
 
@@ -481,16 +476,24 @@ app.post("/api/patient/login", async (req, res) => {
 
     const cleanInputPassword = String(password).trim();
     let isMatch = false;
-    if (authRecord.passwordHash) {
-      isMatch = await bcrypt.compare(cleanInputPassword, authRecord.passwordHash);
-    }
-    if (!isMatch && authRecord.recoveryPin && cleanInputPassword === String(authRecord.recoveryPin).trim()) {
-      isMatch = true;
+
+    if (!authRecord.hasCustomPassword) {
+      // Universal password 'vindhya' for all registered patients
+      if (cleanInputPassword.toLowerCase() === "vindhya") {
+        isMatch = true;
+      } else if (authRecord.passwordHash) {
+        isMatch = await bcrypt.compare(cleanInputPassword, authRecord.passwordHash);
+      }
+    } else {
+      // Patient has updated to their own custom password
+      if (authRecord.passwordHash) {
+        isMatch = await bcrypt.compare(cleanInputPassword, authRecord.passwordHash);
+      }
     }
 
     if (!isMatch) {
       return res.status(401).json({
-        error: "Incorrect password. You can also use your 4-digit Recovery PIN, or click 'Forgot Password?'."
+        error: "Incorrect password. The default clinic password for all registered patients is 'vindhya'. If you have changed your password, please enter your new password."
       });
     }
 
@@ -518,7 +521,8 @@ app.post("/api/patient/login", async (req, res) => {
         firstVisitReason: patient.firstVisitReason,
         registrationDate: patient.registrationDate,
         totalVisits: patient.totalVisits || 1,
-        lastVisitDate: patient.lastVisitDate || patient.registrationDate
+        lastVisitDate: patient.lastVisitDate || patient.registrationDate,
+        hasCustomPassword: !!authRecord.hasCustomPassword
       }
     });
   } catch (err) {
@@ -526,7 +530,7 @@ app.post("/api/patient/login", async (req, res) => {
   }
 });
 
-// Patient Self Profile & Recovery PIN view
+// Patient Self Profile view
 app.get("/api/patient/me", requirePatientAuth, async (req, res) => {
   try {
     const patient = req.patientRecord;
@@ -535,7 +539,8 @@ app.get("/api/patient/me", requirePatientAuth, async (req, res) => {
       ok: true,
       patient: {
         ...patient,
-        recoveryPin: auth.recoveryPin,
+        hasCustomPassword: !!auth.hasCustomPassword,
+        defaultPassword: "vindhya",
         accountStatus: auth.status || "active",
         lastUpdated: auth.updatedAt
       }
@@ -628,7 +633,7 @@ app.get("/api/patient/records", requirePatientAuth, async (req, res) => {
   }
 });
 
-// Patient Change Password
+// Patient Change Password (from default 'vindhya' to patient's own custom password)
 app.post("/api/patient/change-password", requirePatientAuth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -644,79 +649,40 @@ app.post("/api/patient/change-password", requirePatientAuth, async (req, res) =>
 
     const auth = authList[authIndex];
     let isMatch = false;
-    if (auth.passwordHash) {
-      isMatch = await bcrypt.compare(currentPassword, auth.passwordHash);
-    }
-    if (!isMatch && auth.recoveryPin && currentPassword === String(auth.recoveryPin).trim()) {
-      isMatch = true;
+
+    // Check if initial default password 'vindhya' or existing hashed password
+    if (!auth.hasCustomPassword) {
+      if (String(currentPassword).trim().toLowerCase() === "vindhya") {
+        isMatch = true;
+      } else if (auth.passwordHash) {
+        isMatch = await bcrypt.compare(String(currentPassword).trim(), auth.passwordHash);
+      }
+    } else {
+      if (auth.passwordHash) {
+        isMatch = await bcrypt.compare(String(currentPassword).trim(), auth.passwordHash);
+      }
     }
 
     if (!isMatch) {
-      return res.status(401).json({ error: "Current password or Recovery PIN is incorrect." });
+      return res.status(401).json({ error: "Current password is incorrect. (Initial default password is 'vindhya')." });
     }
 
     const salt = await bcrypt.genSalt(10);
     auth.passwordHash = await bcrypt.hash(newPassword, salt);
+    auth.hasCustomPassword = true;
     auth.updatedAt = new Date().toISOString();
     authList[authIndex] = auth;
 
     await writeDataFile(patientAuthFile, authList);
     syncToGoogleSheets("patient_auth", auth).catch(() => {});
 
-    res.json({ ok: true, message: "Password changed successfully!" });
+    res.json({ ok: true, message: "Your password has been changed successfully!" });
   } catch (err) {
-    res.status(500).json({ error: "Could not change password." });
+    res.status(500).json({ error: "Could not change password: " + err.message });
   }
 });
 
-// Patient Self-Reset Password using 4-digit Recovery PIN (NO OTP / NO SMS)
-app.post("/api/patient/reset-password", async (req, res) => {
-  try {
-    const { identifier, recoveryPin, newPassword } = req.body;
-    if (!identifier || !recoveryPin || !newPassword || newPassword.length < 4) {
-      return res.status(400).json({ error: "Patient ID/Mobile, 4-digit PIN, and new password (min 4 chars) are required." });
-    }
-
-    const cleanId = String(identifier).trim().toUpperCase();
-    const cleanPhoneDigits = String(identifier).replace(/\D/g, "").slice(-10);
-
-    const patients = await ensureDataFile(patientsFile, []);
-    const patient = patients.find(p => {
-      const pId = String(p.patientId || "").trim().toUpperCase();
-      const pPhone = String(p.phone || "").replace(/\D/g, "").slice(-10);
-      return pId === cleanId || (cleanPhoneDigits.length === 10 && pPhone === cleanPhoneDigits);
-    });
-
-    if (!patient) {
-      return res.status(404).json({ error: "No patient account found for this ID or mobile number." });
-    }
-
-    const authList = await ensureDataFile(patientAuthFile, []);
-    const authIndex = authList.findIndex(a => a.patientId === patient.patientId);
-    if (authIndex === -1) {
-      return res.status(404).json({ error: "No security credentials found for this patient." });
-    }
-
-    const auth = authList[authIndex];
-    if (String(auth.recoveryPin).trim() !== String(recoveryPin).trim()) {
-      return res.status(400).json({ error: "Invalid Recovery PIN. Please check your 4-digit PIN or ask clinic reception." });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    auth.passwordHash = await bcrypt.hash(newPassword, salt);
-    auth.updatedAt = new Date().toISOString();
-    authList[authIndex] = auth;
-
-    await writeDataFile(patientAuthFile, authList);
-    syncToGoogleSheets("patient_auth", auth).catch(() => {});
-
-    res.json({ ok: true, message: "Password reset successful! You can now log in." });
-  } catch (err) {
-    res.status(500).json({ error: "Password reset failed: " + err.message });
-  }
-});
-
-// Doctor: Get patient account info & Recovery PIN
+// Doctor: Get patient portal account info
 app.get("/api/doctor/patients/:id/account", requireDoctorAuth, async (req, res) => {
   try {
     const patientId = req.params.id;
@@ -729,7 +695,8 @@ app.get("/api/doctor/patients/:id/account", requireDoctorAuth, async (req, res) 
       ok: true,
       patientId: auth.patientId,
       phone: auth.phone,
-      recoveryPin: auth.recoveryPin,
+      defaultPassword: "vindhya",
+      hasCustomPassword: !!auth.hasCustomPassword,
       status: auth.status || "active",
       createdAt: auth.createdAt,
       updatedAt: auth.updatedAt
@@ -739,7 +706,47 @@ app.get("/api/doctor/patients/:id/account", requireDoctorAuth, async (req, res) 
   }
 });
 
-// Doctor: Reset patient password directly
+// Doctor: Reset patient password back to universal default ('vindhya')
+app.post("/api/doctor/patients/:id/account/reset-to-default", requireDoctorAuth, async (req, res) => {
+  try {
+    const patientId = req.params.id;
+    const patients = await ensureDataFile(patientsFile, []);
+    const patient = patients.find(p => p.patientId === patientId);
+    if (!patient) return res.status(404).json({ error: "Patient not found." });
+
+    const authList = await ensureDataFile(patientAuthFile, []);
+    let auth = authList.find(a => a.patientId === patientId);
+    const defaultPassword = "vindhya";
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(defaultPassword, salt);
+
+    if (auth) {
+      auth.passwordHash = hash;
+      auth.hasCustomPassword = false;
+      auth.updatedAt = new Date().toISOString();
+    } else {
+      auth = {
+        patientId,
+        phone: patient.phone,
+        passwordHash: hash,
+        hasCustomPassword: false,
+        status: "active",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      authList.push(auth);
+    }
+
+    await writeDataFile(patientAuthFile, authList);
+    syncToGoogleSheets("patient_auth", auth).catch(() => {});
+
+    res.json({ ok: true, message: `Password for ${patient.name} (${patientId}) reset to universal default: 'vindhya'.` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to reset patient password to default." });
+  }
+});
+
+// Doctor: Set custom patient password directly
 app.post("/api/doctor/patients/:id/account/password", requireDoctorAuth, async (req, res) => {
   try {
     const patientId = req.params.id;
@@ -759,13 +766,14 @@ app.post("/api/doctor/patients/:id/account/password", requireDoctorAuth, async (
 
     if (auth) {
       auth.passwordHash = hash;
+      auth.hasCustomPassword = true;
       auth.updatedAt = new Date().toISOString();
     } else {
       auth = {
         patientId,
         phone: patient.phone,
         passwordHash: hash,
-        recoveryPin: generateRecoveryPin(),
+        hasCustomPassword: true,
         status: "active",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -1035,7 +1043,7 @@ app.post("/api/doctor/patients", requireDoctorAuth, async (req, res) => {
       ok: true,
       patient: {
         ...newPatient,
-        recoveryPin: patientAuth.recoveryPin
+        defaultPassword: "vindhya"
       },
       visit: firstVisit,
       message: "Patient enrolled successfully."

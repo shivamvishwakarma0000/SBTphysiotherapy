@@ -2,10 +2,10 @@
   {
     "patientId": "VPR-0001",
     "phone": "8858496345",
-    "passwordHash": "$2b$10$ey/UR79vETGQIiaVTzCSS.Mw636Rd7ZCvlqZSd0PBjYshlS3GfCDK",
-    "recoveryPin": "9305",
+    "passwordHash": "$2b$10$sLP0OZ5OTjlqKHYbTwj61uUDYu/1fzIqERNsZ3E0GNNp0jol2EKZa",
+    "hasCustomPassword": false,
     "status": "active",
     "createdAt": "2026-09-08T12:07:31.198Z",
-    "updatedAt": "2026-09-08T12:07:31.438Z"
+    "updatedAt": "2026-09-08T15:15:36.487Z"
   }
 ]

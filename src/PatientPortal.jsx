@@ -21,16 +21,11 @@ export default function PatientPortal({ onClose, themeProps }) {
     }
   });
 
-  // Login & Recovery Form State
+  // Login Form State
   const [loginForm, setLoginForm] = useState({ identifier: "", password: "" });
   const [loginError, setLoginError] = useState("");
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotForm, setForgotForm] = useState({ identifier: "", recoveryPin: "", newPassword: "" });
-  const [forgotMsg, setForgotMsg] = useState({ text: "", isError: false });
 
-  // Security & Password Change State
-  const [showPin, setShowPin] = useState(false);
-  const [pinCopied, setPinCopied] = useState(false);
+  // Password Change State
   const [changePassForm, setChangePassForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [changePassMsg, setChangePassMsg] = useState({ text: "", isError: false });
 
@@ -87,37 +82,10 @@ export default function PatientPortal({ onClose, themeProps }) {
         setPatientProfile(res.patient);
         setLoginForm({ identifier: "", password: "" });
       } else {
-        setLoginError(res.error || "Login failed. Please check your Patient ID or Mobile number.");
+        setLoginError(res.error || "Login failed. Please check your Patient ID or Registered Mobile number.");
       }
     } catch (err) {
       setLoginError("Login service currently unavailable. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotSubmit = async (e) => {
-    e.preventDefault();
-    setForgotMsg({ text: "", isError: false });
-    setLoading(true);
-    try {
-      const res = await patientApi.resetPasswordWithPin(
-        forgotForm.identifier,
-        forgotForm.recoveryPin,
-        forgotForm.newPassword
-      );
-      if (res.ok) {
-        setForgotMsg({ text: "✅ Password reset successfully! You can now log in.", isError: false });
-        setTimeout(() => {
-          setShowForgotModal(false);
-          setForgotMsg({ text: "", isError: false });
-          setForgotForm({ identifier: "", recoveryPin: "", newPassword: "" });
-        }, 2200);
-      } else {
-        setForgotMsg({ text: res.error || "Password reset failed.", isError: true });
-      }
-    } catch (err) {
-      setForgotMsg({ text: "Could not reset password: " + err.message, isError: true });
     } finally {
       setLoading(false);
     }
@@ -155,13 +123,6 @@ export default function PatientPortal({ onClose, themeProps }) {
     setPatientToken("");
     setPatientProfile(null);
     setActiveTab("dashboard");
-  };
-
-  const handleCopyPin = (pin) => {
-    if (!pin) return;
-    navigator.clipboard.writeText(String(pin));
-    setPinCopied(true);
-    setTimeout(() => setPinCopied(false), 3000);
   };
 
   // Helper: Build standard receipt object for PDF export from visit
@@ -228,11 +189,11 @@ export default function PatientPortal({ onClose, themeProps }) {
 
             <form onSubmit={handleLogin} className="patient-login-form">
               <label>
-                Patient ID or Registered Mobile
+                Patient ID or Registered Mobile (10 Digits)
                 <input
                   type="text"
                   required
-                  placeholder="e.g. VPR-0001 or 9793093316"
+                  placeholder="e.g. 8858496345 or VPR-0001"
                   value={loginForm.identifier}
                   onChange={(e) => setLoginForm({ ...loginForm, identifier: e.target.value })}
                   autoComplete="username"
@@ -240,31 +201,18 @@ export default function PatientPortal({ onClose, themeProps }) {
               </label>
 
               <label>
-                Password or 4-Digit Recovery PIN
+                Password (Default is 'vindhya')
                 <input
                   type="password"
                   required
-                  placeholder="Enter password or your 4-digit PIN"
+                  placeholder="Enter password (default: vindhya)"
                   value={loginForm.password}
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                   autoComplete="current-password"
                 />
               </label>
 
-              <div className="login-help-row">
-                <button
-                  type="button"
-                  className="link-btn"
-                  onClick={() => {
-                    setShowForgotModal(true);
-                    setForgotMsg({ text: "", isError: false });
-                  }}
-                >
-                  Forgot Password? (Use 4-Digit PIN)
-                </button>
-              </div>
-
-              <button type="submit" className="patient-primary-btn" disabled={loading}>
+              <button type="submit" className="patient-primary-btn" disabled={loading} style={{ marginTop: "6px" }}>
                 {loading ? "Signing in..." : "Sign In to Portal →"}
               </button>
             </form>
@@ -272,8 +220,9 @@ export default function PatientPortal({ onClose, themeProps }) {
             <div className="patient-support-note">
               <span>💡 First time logging in?</span>
               <p>
-                Use your <strong>Patient ID</strong> or <strong>Registered Mobile</strong>. Your initial default
-                password is your <strong>4-digit Recovery PIN</strong> provided by the clinic reception.
+                Use your <strong>10-digit Registered Mobile Number</strong> or <strong>Patient ID</strong>.<br />
+                Your universal clinic password is <strong>vindhya</strong>.<br />
+                <em>Only patients registered by Dr. Satyam Vishwakarma can log in. You can change your password anytime inside your profile.</em>
               </p>
               <div className="helpline-chips">
                 <a href="tel:+919793093316" className="help-chip">📞 Call: +91 9793093316</a>
@@ -288,73 +237,6 @@ export default function PatientPortal({ onClose, themeProps }) {
             </button>
           </div>
         </div>
-
-        {/* Self-Reset Password Modal using 4-Digit PIN */}
-        {showForgotModal && (
-          <div className="patient-submodal-overlay">
-            <div className="patient-submodal-card">
-              <div className="submodal-head">
-                <h3>Self-Reset Password with PIN</h3>
-                <button className="submodal-close" onClick={() => setShowForgotModal(false)}>✕</button>
-              </div>
-              <p className="submodal-desc">
-                No OTP or SMS needed! Enter your <strong>Patient ID / Mobile</strong> along with your unique <strong>4-digit Recovery PIN</strong>.
-              </p>
-
-              {forgotMsg.text && (
-                <div className={`patient-alert ${forgotMsg.isError ? "error" : "success"}`}>
-                  {forgotMsg.text}
-                </div>
-              )}
-
-              <form onSubmit={handleForgotSubmit} className="patient-login-form">
-                <label>
-                  Patient ID or Registered Mobile
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. VPR-0001 or 9793093316"
-                    value={forgotForm.identifier}
-                    onChange={(e) => setForgotForm({ ...forgotForm, identifier: e.target.value })}
-                  />
-                </label>
-
-                <label>
-                  4-Digit Recovery PIN
-                  <input
-                    type="password"
-                    maxLength={4}
-                    required
-                    placeholder="e.g. 4829"
-                    value={forgotForm.recoveryPin}
-                    onChange={(e) => setForgotForm({ ...forgotForm, recoveryPin: e.target.value })}
-                  />
-                </label>
-
-                <label>
-                  New Password (min 4 characters)
-                  <input
-                    type="password"
-                    minLength={4}
-                    required
-                    placeholder="Enter your new password"
-                    value={forgotForm.newPassword}
-                    onChange={(e) => setForgotForm({ ...forgotForm, newPassword: e.target.value })}
-                  />
-                </label>
-
-                <div className="submodal-actions">
-                  <button type="button" className="patient-secondary-btn" onClick={() => setShowForgotModal(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="patient-primary-btn" disabled={loading}>
-                    {loading ? "Resetting..." : "Reset Password & Login"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -462,7 +344,7 @@ export default function PatientPortal({ onClose, themeProps }) {
           onClick={() => setActiveTab("security")}
         >
           <span className="tab-icon">🔐</span>
-          <span className="tab-label">Profile & PIN</span>
+          <span className="tab-label">Profile & Password</span>
         </button>
       </nav>
 
@@ -1070,13 +952,13 @@ export default function PatientPortal({ onClose, themeProps }) {
         )}
 
         {/* ================================================================= */}
-        {/* TAB 7: PROFILE & SECURITY (RECOVERY PIN VIEW) */}
+        {/* TAB 7: PROFILE & PASSWORD SETTINGS */}
         {/* ================================================================= */}
         {activeTab === "security" && (
           <div className="tab-pane security-pane">
             <div className="section-title-box">
-              <h2>My Profile & Security Settings</h2>
-              <p>View your patient registration details, manage your 4-digit Recovery PIN, and change your portal password.</p>
+              <h2>My Profile & Password Settings</h2>
+              <p>View your patient registration details and manage your portal login password.</p>
             </div>
 
             {/* Profile Demographics */}
@@ -1118,58 +1000,44 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
             </div>
 
-            {/* 4-Digit Recovery PIN Box */}
-            <div className="security-card recovery-pin-box">
+            {/* Universal Password Information Card */}
+            <div className="security-card credentials-info-box">
               <div className="pin-head">
                 <div className="pin-title-row">
-                  <span className="pin-icon">🔐</span>
+                  <span className="pin-icon">🔑</span>
                   <div>
-                    <h3>Your 4-Digit Recovery PIN</h3>
+                    <h3>Clinic Login Credentials</h3>
                     <p>
-                      Your personal master recovery key. Use this 4-digit PIN to reset your password or sign in from any new phone or device without waiting for SMS or OTP.
+                      Your account was enrolled at Vindhya Physio & Rehab Center by Dr. Satyam Vishwakarma.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="pin-display-area">
-                <div className="pin-bubble">
-                  {showPin ? (
-                    <span className="pin-digits">{patientProfile.recoveryPin || "4829"}</span>
-                  ) : (
-                    <span className="pin-digits masked">••••</span>
-                  )}
+              <div className="patient-details-grid" style={{ marginTop: "14px" }}>
+                <div className="detail-cell">
+                  <label>Login ID</label>
+                  <strong style={{ color: "#0878C9" }}>+91 {patientProfile.phone} <small style={{ color: "var(--text-muted)", fontWeight: "normal" }}>or {patientProfile.patientId}</small></strong>
                 </div>
-
-                <div className="pin-button-group">
-                  <button
-                    className="patient-secondary-btn"
-                    onClick={() => setShowPin(!showPin)}
-                  >
-                    {showPin ? "🙈 Hide PIN" : "👁️ Show PIN"}
-                  </button>
-                  <button
-                    className="patient-primary-btn"
-                    onClick={() => handleCopyPin(patientProfile.recoveryPin || "4829")}
-                  >
-                    {pinCopied ? "✅ Copied!" : "📋 Copy PIN"}
-                  </button>
+                <div className="detail-cell">
+                  <label>Initial Universal Password</label>
+                  <strong style={{ fontFamily: "monospace", letterSpacing: "1px", color: "#16a34a" }}>vindhya</strong>
                 </div>
               </div>
 
-              <div className="pin-security-tips">
-                <span>🛡️ Security Note:</span>
+              <div className="pin-security-tips" style={{ marginTop: "16px" }}>
+                <span>🛡️ Security Tip:</span>
                 <p>
-                  Keep this 4-digit PIN confidential. If you ever forget your password, you can use this PIN on the login screen to set a new password instantly.
+                  The initial default password for all patients is <strong>vindhya</strong>. You can change your password below to your own private password anytime. If you ever forget it, the doctor can reset it back to default for you at the clinic.
                 </p>
               </div>
             </div>
 
             {/* Change Password Form */}
             <div className="security-card">
-              <h3>Change Portal Password</h3>
+              <h3>Change Your Password</h3>
               <p className="card-subtext">
-                Choose a memorable password for regular sign-in. Your 4-digit Recovery PIN will always remain available as a backup.
+                Enter your current password (enter <strong>vindhya</strong> if this is your first time) and choose a new password.
               </p>
 
               {changePassMsg.text && (
@@ -1180,11 +1048,11 @@ export default function PatientPortal({ onClose, themeProps }) {
 
               <form onSubmit={handleChangePassword} className="patient-login-form">
                 <label>
-                  Current Password or 4-Digit PIN
+                  Current Password
                   <input
                     type="password"
                     required
-                    placeholder="Enter current password or PIN"
+                    placeholder="Enter current password (default: vindhya)"
                     value={changePassForm.currentPassword}
                     onChange={(e) => setChangePassForm({ ...changePassForm, currentPassword: e.target.value })}
                   />
@@ -1216,7 +1084,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   </label>
                 </div>
 
-                <button type="submit" className="patient-primary-btn" disabled={loading}>
+                <button type="submit" className="patient-primary-btn" disabled={loading} style={{ alignSelf: "flex-start", minWidth: "180px" }}>
                   {loading ? "Updating..." : "Update Password"}
                 </button>
               </form>

@@ -171,7 +171,7 @@ function WhatsAppIcon() {
   );
 }
 
-function Header({ onOpenDoctorPortal, themeProps }) {
+function Header({ onOpenDoctorPortal, onOpenDownloadApp, themeProps }) {
   const { themePreference, setTheme, isDark } = themeProps;
   return (
     <header className="site-header">
@@ -188,6 +188,18 @@ function Header({ onOpenDoctorPortal, themeProps }) {
           themePreference={themePreference}
           setTheme={setTheme}
         />
+        <button
+          className="download-app-icon-btn"
+          onClick={onOpenDownloadApp}
+          title="Install / Download Clinic App"
+          aria-label="Download App"
+        >
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
         <button
           className="doctor-portal-pill-btn"
           onClick={onOpenDoctorPortal}
@@ -701,11 +713,117 @@ function Footer({ onOpenDoctorPortal, isDark = false }) {
   );
 }
 
+function AppDownloadModal({ isOpen, onClose, deferredPrompt }) {
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    const ua = window.navigator.userAgent.toLowerCase();
+    setIsIOS(/iphone|ipad|ipod/.test(ua));
+  }, []);
+
+  if (!isOpen) return null;
+
+  const handleDownload = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          sessionStorage.setItem('vindhya_download_prompt_dismissed', 'true');
+        }
+      } catch (err) {
+        console.log("Install prompt error:", err);
+      }
+      onClose();
+    } else if (isIOS) {
+      // Steps are rendered in card
+    } else {
+      alert("To install the app, tap your browser's menu (⋮ or Share) and select 'Install app' or 'Add to Home Screen'.");
+      onClose();
+    }
+  };
+
+  return (
+    <div className="app-download-modal-overlay" onClick={onClose}>
+      <div className="app-download-card" onClick={(e) => e.stopPropagation()}>
+        <button className="download-modal-close" onClick={onClose} aria-label="Close modal">✕</button>
+        
+        <div className="app-download-header">
+          <img
+            src="/icon-192.png"
+            alt="Vindhya Physio & Rehab Center"
+            className="app-download-logo"
+          />
+          <div className="app-download-meta">
+            <h3>Vindhya Physio App</h3>
+            <span className="app-download-badge">Official Clinic App</span>
+          </div>
+        </div>
+
+        <p className="app-download-desc">
+          Download our clinic app on your phone for instant appointment booking, WhatsApp doctor helpline, and exercise guidance.
+        </p>
+
+        {isIOS ? (
+          <div className="ios-install-steps">
+            <strong>📲 How to Install on iPhone / iPad:</strong>
+            <ol>
+              <li>Tap the <strong>Share</strong> icon <span className="ios-icon">⎋</span> at the bottom of Safari.</li>
+              <li>Scroll down and tap <strong>Add to Home Screen</strong> <span className="ios-icon">⊞</span>.</li>
+              <li>Tap <strong>Add</strong> at top right corner.</li>
+            </ol>
+            <div className="download-modal-actions" style={{ marginTop: "14px" }}>
+              <button className="primary-btn download-btn" onClick={onClose} style={{ width: "100%" }}>
+                Got It
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="download-modal-actions">
+            <button className="primary-btn download-btn" onClick={handleDownload}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download
+            </button>
+            <button className="secondary-btn later-btn" onClick={onClose}>
+              Maybe Later
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [showDoctorPortal, setShowDoctorPortal] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const themeProps = useTheme();
 
   useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      window.deferredPWAInstallPrompt = e;
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Auto-prompt on mobile devices after 1.5 seconds if not previously dismissed in this session
+    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const dismissed = sessionStorage.getItem('vindhya_download_prompt_dismissed');
+
+    let timer;
+    if (isMobile && !isStandalone && !dismissed) {
+      timer = setTimeout(() => {
+        setShowDownloadModal(true);
+      }, 1500);
+    }
+
     const checkHash = () => {
       if (window.location.hash === "#doctor" || window.location.pathname.startsWith("/doctor")) {
         setShowDoctorPortal(true);
@@ -713,13 +831,24 @@ function App() {
     };
     checkHash();
     window.addEventListener("hashchange", checkHash);
-    return () => window.removeEventListener("hashchange", checkHash);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("hashchange", checkHash);
+    };
   }, []);
+
+  const handleDismissDownload = () => {
+    sessionStorage.setItem('vindhya_download_prompt_dismissed', 'true');
+    setShowDownloadModal(false);
+  };
 
   return (
     <div className={`app-root ${themeProps.resolvedTheme}`}>
       <Header
         onOpenDoctorPortal={() => setShowDoctorPortal(true)}
+        onOpenDownloadApp={() => setShowDownloadModal(true)}
         themeProps={themeProps}
       />
       <main>
@@ -734,6 +863,13 @@ function App() {
       <Footer
         onOpenDoctorPortal={() => setShowDoctorPortal(true)}
         isDark={themeProps.isDark}
+      />
+
+      {/* App Download / Install Modal */}
+      <AppDownloadModal
+        isOpen={showDownloadModal}
+        onClose={handleDismissDownload}
+        deferredPrompt={deferredPrompt}
       />
 
       {/* Doctor Portal Modal / View */}

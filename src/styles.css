@@ -1391,11 +1391,16 @@ input:focus, select:focus, textarea:focus {
   box-shadow: var(--shadow-sm);
 }
 
+.doctor-nav-top-row {
+  display: contents;
+}
+
 .doctor-nav-brand {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  order: 1;
 }
 
 .doctor-nav-logo {
@@ -1422,6 +1427,7 @@ input:focus, select:focus, textarea:focus {
   gap: 8px;
   width: 100%;
   max-width: 660px;
+  order: 2;
 }
 
 .doctor-nav-tabs button {
@@ -1519,6 +1525,7 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  order: 3;
 }
 
 .sync-badge-btn {
@@ -2905,12 +2912,6 @@ input:focus, select:focus, textarea:focus {
     min-width: 580px !important;
   }
 
-  .doctor-navbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
   .doctor-nav-tabs {
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
@@ -3688,30 +3689,62 @@ input:focus, select:focus, textarea:focus {
 
   .doctor-navbar {
     display: flex !important;
-    flex-wrap: wrap !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 6px 10px !important;
+    gap: 6px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Row 1 on mobile: Logo on left, Actions (Toggle, Sync, Logout, Exit) on right */
+  .doctor-nav-top-row {
+    display: flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 8px 10px !important;
-    gap: 8px 4px !important;
+    width: 100% !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
   }
 
   .doctor-nav-brand {
-    order: 1 !important;
-    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .doctor-nav-brand .doctor-nav-logo {
-    height: 30px !important;
-    max-width: 140px !important;
+    height: 26px !important;
+    max-height: 26px !important;
+    max-width: 125px !important;
+    width: auto !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 !important;
   }
 
   .doctor-nav-actions {
-    order: 2 !important;
-    flex: 0 0 auto !important;
     display: flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     gap: 4px !important;
+    flex-shrink: 0 !important;
     margin-left: auto !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .doctor-nav-actions .theme-toggle-btn {
+    width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   .doctor-nav-actions .sync-badge-btn,
@@ -3721,23 +3754,27 @@ input:focus, select:focus, textarea:focus {
     font-size: 11px !important;
     min-height: 28px !important;
     border-radius: 6px !important;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
-  /* 6 Boxes directly below on row 2: Clean 3x2 Grid */
+  /* Row 2 on mobile: 6 Boxes directly below in a clean 3x2 Grid */
   .doctor-nav-tabs {
-    order: 3 !important;
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
-    gap: 6px !important;
+    gap: 5px !important;
     width: 100% !important;
-    margin: 4px 0 2px 0 !important;
+    margin: 0 !important;
     padding: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .doctor-nav-tabs button {
-    font-size: 11px !important;
+    font-size: 10.5px !important;
     font-weight: 700 !important;
-    padding: 7px 4px !important;
+    padding: 6px 3px !important;
     min-height: 38px !important;
     text-align: center !important;
     display: flex !important;
@@ -3746,6 +3783,9 @@ input:focus, select:focus, textarea:focus {
     justify-content: center !important;
     line-height: 1.15 !important;
     border-radius: 8px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    box-sizing: border-box !important;
   }
 
   /* 4 Boxes directly below: Exactly Equal and Short */

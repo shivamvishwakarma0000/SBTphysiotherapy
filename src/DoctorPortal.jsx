@@ -1207,11 +1207,6 @@ _(Saved in patient clinic records)_`;
                   alt="Vindhya Physio & Rehab Center"
                   className="mobile-hero-logo"
                 />
-                <div className="mobile-hero-brand-text">
-                  <span className="brand-name">VINDHYA</span>
-                  <span className="brand-dept">PHYSIO & REHAB CENTER</span>
-                  <span className="brand-motto">MOVE BETTER • FEEL BETTER • LIVE BETTER</span>
-                </div>
               </div>
 
               <div className="greeting-text">
@@ -1222,7 +1217,7 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
               <button 
-                className="doctor-intake-primary-action" 
+                className="doctor-intake-primary-action desktop-only-widget" 
                 onClick={() => selectDoctorTab("new-patient")}
               >
                 <span className="action-plus">➕</span>
@@ -1301,7 +1296,7 @@ _(Saved in patient clinic records)_`;
             </div>
 
             {!getWebhookUrl() && (
-              <div className="cloud-sync-banner-card">
+              <div className="cloud-sync-banner-card desktop-only-widget">
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <span style={{ fontSize: "24px" }}>☁️</span>
                   <div>
@@ -1318,7 +1313,7 @@ _(Saved in patient clinic records)_`;
             )}
 
             {/* Split view: Today's Queue & Recent Patients */}
-            <div className="dashboard-split">
+            <div className="dashboard-split desktop-only-widget">
               <div className="dash-panel today-queue-compact-card">
                 <div className="panel-header">
                   <div>

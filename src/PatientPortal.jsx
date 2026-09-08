@@ -443,6 +443,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "dashboard" && (
           <div className="tab-pane dashboard-pane mobile-app-home-view">
             {/* 1. Dynamic Greeting & Patient Identity (Matching Image 3 Reference) */}
+            {/* 1. Dynamic Greeting & Patient Identity (Matching Image 2 Reference) */}
             <div className="mobile-app-greeting-card">
               <div className="mobile-hero-brand">
                 {CLINIC_LOGO_B64 && (
@@ -452,27 +453,16 @@ export default function PatientPortal({ onClose, themeProps }) {
                     className="mobile-hero-logo"
                   />
                 )}
-                <div className="mobile-hero-brand-text">
-                  <span className="brand-name">VINDHYA</span>
-                  <span className="brand-dept">PHYSIO & REHAB CENTER</span>
-                  <span className="brand-motto">MOVE BETTER • FEEL BETTER • LIVE BETTER</span>
-                </div>
               </div>
 
               <div className="greeting-text-col">
-                <span className="greeting-salutation">Hello, {patientFirstName}!</span>
-                <h2 className="greeting-headline">Take Charge of Your Recovery!</h2>
-                <p className="greeting-sub">Your personalized rehabilitation & clinic care</p>
-              </div>
-
-              <div className="patient-id-badge-pill">
-                <span className="id-label">PATIENT ID</span>
-                <strong className="id-code">{patientProfile?.patientId || "VPR"}</strong>
+                <span className="greeting-salutation">Hello,</span>
+                <h2 className="greeting-headline">Take Charge of<br />Your Recovery!</h2>
               </div>
             </div>
 
-            {/* 2. Important Status / Next Appointment Highlight */}
-            <div className="app-status-highlight-card">
+            {/* 2. Desktop Only: Status / Next Appointment Highlight */}
+            <div className="app-status-highlight-card desktop-only-widget">
               {recordsData?.appointments?.length > 0 ? (
                 <div className="status-highlight-body">
                   <div className="status-badge-row">
@@ -578,8 +568,8 @@ export default function PatientPortal({ onClose, themeProps }) {
               </button>
             </div>
 
-            {/* 4. Compact Recent Visits Timeline */}
-            <div className="recent-visits-section compact-preview">
+            {/* 4. Desktop Only: Recent Visits Timeline */}
+            <div className="recent-visits-section compact-preview desktop-only-widget">
               <div className="section-header-flex">
                 <h3>Recent Visit History</h3>
                 <button className="view-all-link" onClick={() => setActiveTab("visits")}>

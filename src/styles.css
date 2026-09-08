@@ -6729,19 +6729,144 @@ input:focus, select:focus, textarea:focus {
   .patient-portal-root,
   .patient-main-container,
   .dashboard-pane,
+  .doctor-portal-fullscreen,
   .doctor-main-content,
   .dashboard-view {
     background: #f0f4f8 !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  /* Completely remove top header on mobile in doctor and patient portals */
+  .doctor-navbar,
+  .patient-header,
+  .patient-navbar,
+  .desktop-only-widget {
+    display: none !important;
+  }
+
+  /* 1. App Greeting Hero Card (Top Blue Section Matching Image 2) */
+  .mobile-app-greeting-card {
+    margin: 0 0 14px 0 !important;
+    border-radius: 0 0 26px 26px !important;
+    padding: 24px 16px 18px 16px !important;
+    gap: 10px !important;
+    box-shadow: 0 10px 30px rgba(5, 24, 41, 0.25) !important;
+  }
+
+  .mobile-hero-brand {
+    margin-bottom: 2px !important;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  /* Big logo covering top ~25-30% */
+  .mobile-hero-logo {
+    width: min(240px, 75vw) !important;
+    max-width: 250px !important;
+    height: auto !important;
+    max-height: 85px !important;
+    object-fit: contain !important;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45)) !important;
+  }
+
+  .greeting-text-col,
+  .mobile-app-greeting-card .greeting-text {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 3px !important;
+  }
+
+  .greeting-salutation {
+    font-size: 14.5px !important;
+    font-weight: 700 !important;
+    color: #93c5fd !important;
+    letter-spacing: 0.3px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .greeting-headline,
+  .greeting-title {
+    margin: 0 !important;
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    line-height: 1.25 !important;
+    letter-spacing: -0.3px !important;
+  }
+
+  .greeting-sub,
+  .greeting-subtitle {
+    margin: 0 !important;
+    font-size: 11.5px !important;
+    color: #94a3b8 !important;
+  }
+
+  /* 2. Exactly Six Prominent Touch Boxes (2x3 Grid Matching Image 2 - No Scroll) */
+  .mobile-app-grid-6 {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    padding: 0 12px !important;
+    margin-bottom: 75px !important; /* Space above bottom nav */
+  }
+
+  .mobile-app-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(226, 232, 240, 0.85) !important;
+    border-radius: 18px !important;
+    padding: 12px 8px !important;
+    min-height: 80px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 4px !important;
+    box-shadow: 0 4px 14px rgba(11, 43, 77, 0.06) !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: transform 120ms ease, box-shadow 120ms ease !important;
+  }
+
+  .mobile-app-card:active {
+    transform: scale(0.96) !important;
+  }
+
+  .card-icon-bubble {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 24px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .card-title {
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+  }
+
+  .card-caption,
+  .card-desc {
+    display: none !important; /* Minimal Image 2 look with no text overflow */
   }
 }
 
-/* 1. App Greeting Hero Card (Top Blue Section) */
+/* 1. App Greeting Hero Card (Desktop & Base) */
 .mobile-app-greeting-card {
   background: linear-gradient(180deg, #051829 0%, #082946 70%, #0d385e 100%) !important;
   border: none !important;
-  border-radius: 0 0 24px 24px !important;
-  padding: 20px 20px 24px 20px !important;
-  margin: -16px -16px 18px -16px !important;
+  border-radius: 20px !important;
+  padding: 24px 20px !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -6752,18 +6877,10 @@ input:focus, select:focus, textarea:focus {
   overflow: hidden !important;
 }
 
-@media (min-width: 769px) {
-  .mobile-app-greeting-card {
-    border-radius: 20px !important;
-    margin: 0 0 20px 0 !important;
-  }
-}
-
 .mobile-app-greeting-card.doctor-greeting {
   background: linear-gradient(180deg, #051829 0%, #073336 60%, #0a463e 100%) !important;
 }
 
-/* Centered Vindhya Logo & Motto in Hero */
 .mobile-hero-brand {
   display: flex !important;
   flex-direction: column !important;
@@ -6774,41 +6891,11 @@ input:focus, select:focus, textarea:focus {
 }
 
 .mobile-hero-logo {
-  height: 48px !important;
-  max-height: 52px !important;
+  height: 54px !important;
+  max-height: 60px !important;
   width: auto !important;
   object-fit: contain !important;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35)) !important;
-}
-
-.mobile-hero-brand-text {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  text-align: center !important;
-}
-
-.mobile-hero-brand-text .brand-name {
-  font-size: 15px !important;
-  font-weight: 900 !important;
-  color: #f59e0b !important;
-  letter-spacing: 1px !important;
-  line-height: 1.1 !important;
-}
-
-.mobile-hero-brand-text .brand-dept {
-  font-size: 10.5px !important;
-  font-weight: 800 !important;
-  color: #ffffff !important;
-  letter-spacing: 0.8px !important;
-}
-
-.mobile-hero-brand-text .brand-motto {
-  font-size: 8.5px !important;
-  font-weight: 700 !important;
-  color: #38bdf8 !important;
-  letter-spacing: 0.8px !important;
-  margin-top: 2px !important;
 }
 
 .greeting-text-col {
@@ -6960,7 +7047,7 @@ input:focus, select:focus, textarea:focus {
   cursor: pointer !important;
 }
 
-/* 3. The 6 Prominent Feature Cards (Matching Image 3) */
+/* 3. The 6 Prominent Feature Cards (Matching Image 2 / Image 3) */
 .mobile-app-grid-6 {
   display: grid !important;
   grid-template-columns: repeat(2, 1fr) !important;
@@ -7110,6 +7197,231 @@ input:focus, select:focus, textarea:focus {
 .card-count-badge.cyan {
   background: #cffafe !important;
   color: #0e7490 !important;
+}
+
+/* ==========================================================================
+   HIGH CONTRAST TEXT & READABILITY FIX (IMAGES 3 & 4)
+   Ensure crisp, dark legible text across light background portal views
+   ========================================================================== */
+.doctor-main-content,
+.patient-main-container,
+.today-visits-view,
+.patients-directory-view,
+.enquiries-view,
+.settings-view,
+.enroll-view,
+.tab-pane,
+.section-header-row,
+.section-title-box,
+.dashboard-view {
+  color: #0f172a !important;
+}
+
+.doctor-main-content h1,
+.doctor-main-content h2,
+.doctor-main-content h3,
+.doctor-main-content h4,
+.patient-main-container h1,
+.patient-main-container h2,
+.patient-main-container h3,
+.patient-main-container h4,
+.section-header-row h1,
+.section-header-row h2,
+.section-header-row h3,
+.section-header-row h4,
+.section-title-box h1,
+.section-title-box h2,
+.section-title-box h3,
+.section-title-box h4 {
+  color: #0f172a !important;
+}
+
+.doctor-main-content p,
+.patient-main-container p,
+.section-header-row p,
+.section-title-box p {
+  color: #334155 !important;
+}
+
+/* Search bars, input boxes, and dropdowns */
+.search-bar-row,
+.patients-toolbar,
+.table-toolbar {
+  display: flex !important;
+  gap: 10px !important;
+  margin: 12px 0 !important;
+}
+
+.search-input,
+.doctor-main-content input[type="text"],
+.doctor-main-content input[type="search"],
+.doctor-main-content input[type="tel"],
+.doctor-main-content input[type="date"],
+.doctor-main-content select,
+.patient-main-container input,
+.patient-main-container select {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  font-size: 13.5px !important;
+}
+
+.search-input::placeholder,
+.doctor-main-content input::placeholder,
+.patient-main-container input::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
+.doctor-main-content .secondary-btn,
+.patient-main-container .secondary-btn {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+
+.doctor-main-content .secondary-btn:hover,
+.patient-main-container .secondary-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Directory Controls, Filter Pills, and Sort Dropdowns */
+.directory-controls-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin: 12px 0 !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  padding: 12px 14px !important;
+  box-shadow: 0 4px 14px rgba(11, 43, 77, 0.05) !important;
+  color: #0f172a !important;
+}
+
+.directory-controls-bar label,
+.directory-sort-box label {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  margin-right: 4px !important;
+}
+
+.directory-controls-bar select,
+.sort-select {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  font-weight: 600 !important;
+}
+
+.filter-pill {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  border: none !important;
+  font-weight: 700 !important;
+}
+
+.filter-pill.active {
+  background: #0878C9 !important;
+  color: #ffffff !important;
+}
+
+/* Doctor Table Contrast */
+.doctor-table {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+}
+
+.doctor-table th {
+  background: #0b1f2a !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.doctor-table td {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.table-action-btn {
+  background: #eff6ff !important;
+  color: #0284c7 !important;
+  border: 1px solid #bae6fd !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+}
+
+/* Top Blue Hero Greeting Typography (Must stay white/cyan on dark gradient) */
+.mobile-app-greeting-card,
+.mobile-app-greeting-card h1,
+.mobile-app-greeting-card h2,
+.mobile-app-greeting-card .greeting-headline,
+.mobile-app-greeting-card .greeting-title {
+  color: #ffffff !important;
+}
+
+.mobile-app-greeting-card .greeting-salutation {
+  color: #93c5fd !important;
+}
+
+.mobile-app-greeting-card p,
+.mobile-app-greeting-card .greeting-sub,
+.mobile-app-greeting-card .greeting-subtitle {
+  color: #cbd5e1 !important;
+}
+
+@media (max-width: 768px) {
+  .doctor-intake-primary-action {
+    display: none !important;
+  }
+}
+
+/* Patient List Cards in Doctor Directory (Pure White Surface with High Contrast Dark Text) */
+.mobile-patient-cards,
+.patient-list-grid {
+  display: grid !important;
+  gap: 12px !important;
+}
+
+.mobile-patient-card,
+.patient-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  box-shadow: 0 4px 14px rgba(11, 43, 77, 0.06) !important;
+}
+
+.mobile-patient-name,
+.patient-card h4,
+.patient-card strong {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.mobile-patient-sub,
+.patient-card p,
+.patient-card span:not(.patient-id-badge):not(.status-badge):not(.visit-count-tag):not(.patient-concern-pill) {
+  color: #475569 !important;
+}
+
+.patient-concern-pill,
+.medical-condition-tag {
+  background: #eff6ff !important;
+  color: #0369a1 !important;
+  border: 1px solid #bae6fd !important;
+  font-weight: 700 !important;
 }
 
 /* 4. Fixed 4-Item Bottom Navigation Bar (White Surface, Equal Edge-to-Edge Spacing) */

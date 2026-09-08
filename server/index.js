@@ -257,6 +257,9 @@ function requireDoctorAuth(req, res, next) {
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    if (!decoded || decoded.role === "patient" || !decoded.email) {
+      return res.status(403).json({ error: "Access denied. Doctor privileges required." });
+    }
     req.doctor = decoded;
     next();
   } catch (err) {
@@ -961,7 +964,9 @@ app.post("/api/doctor/patients", requireDoctorAuth, async (req, res) => {
     const patients = await ensureDataFile(patientsFile, []);
     const visits = await ensureDataFile(visitsFile, []);
 
-    const patientId = await generateNextPatientId();
+    const patientId = (req.body.patientId && String(req.body.patientId).trim())
+      ? String(req.body.patientId).trim().toUpperCase()
+      : await generateNextPatientId();
     const todayStr = (visitDate || new Date().toISOString().slice(0, 10)).trim();
     const timeStr = (visitTime || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })).trim();
 

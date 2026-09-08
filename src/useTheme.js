@@ -42,7 +42,7 @@ export function useTheme() {
 
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
-      metaThemeColor.setAttribute("content", active === "dark" ? "#04101a" : "#f8fafc");
+      metaThemeColor.setAttribute("content", active === "dark" ? "#0B1F2A" : "#0878C9");
     }
 
     try {
@@ -71,7 +71,7 @@ export function useTheme() {
 
         const metaThemeColor = document.querySelector('meta[name="theme-color"]');
         if (metaThemeColor) {
-          metaThemeColor.setAttribute("content", nextTheme === "dark" ? "#04101a" : "#f8fafc");
+          metaThemeColor.setAttribute("content", nextTheme === "dark" ? "#0B1F2A" : "#0878C9");
         }
       }
     };

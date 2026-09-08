@@ -126,7 +126,7 @@ function ClinicLogo({ isDark = false }) {
   return (
     <div className="clinic-logo-wrap">
       <img
-        src={isDark ? "/vindhya-logo-transparent.png" : "/vindhya-logo-light.png"}
+        src="/vindhya-receipt-logo.png"
         alt="Vindhya Physio & Rehab Center"
         className="clinic-logo-img"
       />

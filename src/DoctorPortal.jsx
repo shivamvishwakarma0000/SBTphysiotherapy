@@ -40,6 +40,8 @@ export default function DoctorPortal({ onClose, themeProps }) {
   // Patients & Enquiries State
   const [patients, setPatients] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [patientFilter, setPatientFilter] = useState("all"); // "all", "today", "active", "waiting", "completed"
+  const [patientSort, setPatientSort] = useState("newest"); // "newest", "name", "visits"
   const [todayVisits, setTodayVisits] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -71,6 +73,29 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
     return s.slice(0, 10);
   };
+
+  const filteredPatients = useMemo(() => {
+    let list = [...patients];
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (patientFilter === "today") {
+      list = list.filter(p => cleanDateOnly(p.lastVisitDate || p.registrationDate) === todayStr);
+    } else if (patientFilter === "active") {
+      list = list.filter(p => (p.status || "Active").toLowerCase() === "active");
+    } else if (patientFilter === "waiting") {
+      list = list.filter(p => (p.status || "").toLowerCase().includes("wait") || p.totalVisits === 0);
+    } else if (patientFilter === "completed") {
+      list = list.filter(p => (p.status || "").toLowerCase().includes("complete"));
+    }
+
+    if (patientSort === "name") {
+      list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    } else if (patientSort === "visits") {
+      list.sort((a, b) => (b.totalVisits || 0) - (a.totalVisits || 0));
+    } else {
+      list.sort((a, b) => (b.registrationDate || b.patientId || "").localeCompare(a.registrationDate || a.patientId || ""));
+    }
+    return list;
+  }, [patients, patientFilter, patientSort]);
 
   // Standalone Comprehensive Clinical Hindi / Hinglish / Raw English Translator
   const translateSymptomsToEnglish = (rawText) => {
@@ -589,10 +614,10 @@ export default function DoctorPortal({ onClose, themeProps }) {
     doc.setFillColor(7, 25, 39);
     doc.rect(0, 0, 210, 44, "F");
 
-    // Clinic Official Logo (Rendered with natural 3.186:1 aspect ratio)
+    // Clinic Official Receipt Logo (Rendered with natural 3.067:1 aspect ratio)
     try {
       if (CLINIC_LOGO_B64) {
-        doc.addImage(CLINIC_LOGO_B64, "PNG", 14, 6, 58, 18.2);
+        doc.addImage(CLINIC_LOGO_B64, "PNG", 14, 6, 58, 18.91);
       }
     } catch (err) {
       console.log("Could not render logo in PDF:", err);
@@ -894,7 +919,7 @@ _(Saved in patient clinic records)_`;
           </div>
           <div className="login-header">
             <img
-              src={isDark ? "/vindhya-logo-transparent.png" : "/vindhya-logo-light.png"}
+              src="/vindhya-receipt-logo.png"
               alt="Vindhya Physio & Rehab Center"
               className="login-logo-img"
             />
@@ -1027,14 +1052,10 @@ _(Saved in patient clinic records)_`;
       <header className="doctor-navbar">
         <div className="doctor-nav-brand">
           <img
-            src={isDark ? "/vindhya-logo-transparent.png" : "/vindhya-logo-light.png"}
+            src="/vindhya-receipt-logo.png"
             alt="Vindhya Physio & Rehab Center"
             className="doctor-nav-logo"
           />
-          <div className="doctor-nav-title">
-            <strong>DR. SATYAM VISHWAKARMA</strong>
-            <span>Consultant Physiotherapist</span>
-          </div>
         </div>
 
         <nav className="doctor-nav-tabs">
@@ -1697,7 +1718,56 @@ _(Saved in patient clinic records)_`;
               </button>
             </div>
 
-            <div className="table-responsive">
+            <div className="directory-controls-bar">
+              <div className="directory-filter-pills">
+                <button
+                  className={`filter-pill ${patientFilter === "all" ? "active" : ""}`}
+                  onClick={() => setPatientFilter("all")}
+                >
+                  All ({patients.length})
+                </button>
+                <button
+                  className={`filter-pill ${patientFilter === "today" ? "active" : ""}`}
+                  onClick={() => setPatientFilter("today")}
+                >
+                  📅 Today ({patients.filter(p => cleanDateOnly(p.lastVisitDate || p.registrationDate) === new Date().toISOString().slice(0, 10)).length})
+                </button>
+                <button
+                  className={`filter-pill ${patientFilter === "active" ? "active" : ""}`}
+                  onClick={() => setPatientFilter("active")}
+                >
+                  Active ({patients.filter(p => (p.status || "Active").toLowerCase() === "active").length})
+                </button>
+                <button
+                  className={`filter-pill ${patientFilter === "waiting" ? "active" : ""}`}
+                  onClick={() => setPatientFilter("waiting")}
+                >
+                  ⏳ Waiting ({patients.filter(p => (p.status || "").toLowerCase().includes("wait") || p.totalVisits === 0).length})
+                </button>
+                <button
+                  className={`filter-pill ${patientFilter === "completed" ? "active" : ""}`}
+                  onClick={() => setPatientFilter("completed")}
+                >
+                  ✓ Completed ({patients.filter(p => (p.status || "").toLowerCase().includes("complete")).length})
+                </button>
+              </div>
+
+              <div className="directory-sort-box">
+                <label>Sort:</label>
+                <select
+                  value={patientSort}
+                  onChange={(e) => setPatientSort(e.target.value)}
+                  className="sort-select"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="name">Name (A–Z)</option>
+                  <option value="visits">Most Visits</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Desktop Scannable Table (Visible on Tablets & Desktops) */}
+            <div className="table-responsive hide-on-mobile">
               <table className="doctor-table">
                 <thead>
                   <tr>
@@ -1707,13 +1777,14 @@ _(Saved in patient clinic records)_`;
                     <th>Phone</th>
                     <th>Address</th>
                     <th>Primary Concern</th>
+                    <th>Status</th>
                     <th>Total Visits</th>
                     <th>Last Visit</th>
-                    <th style={{ minWidth: "280px" }}>Actions</th>
+                    <th style={{ minWidth: "260px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {patients.map(p => (
+                  {filteredPatients.map(p => (
                     <tr key={p.patientId}>
                       <td><span className="patient-id-badge">{p.patientId}</span></td>
                       <td><strong>{p.name}</strong></td>
@@ -1721,12 +1792,27 @@ _(Saved in patient clinic records)_`;
                       <td>+91 {p.phone}</td>
                       <td>{p.address || "Vindhyachal"}</td>
                       <td>{p.firstVisitReason}</td>
-                      <td><span className="visit-count-tag">{p.totalVisits} Visits</span></td>
+                      <td>
+                        <span className={`status-badge ${(p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`}>
+                          {p.status || "Active"}
+                        </span>
+                      </td>
+                      <td><span className="visit-count-tag">{p.totalVisits || 1} Visits</span></td>
                       <td>{cleanDateOnly(p.lastVisitDate || p.registrationDate)}</td>
                       <td>
                         <div className="patient-table-actions-grid">
                           <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)} title="Open Full Profile">
                             👤 Profile
+                          </button>
+                          <button 
+                            className="table-action-btn btn-consult" 
+                            onClick={() => {
+                              setSelectedPatient(p);
+                              setShowAddVisitModal(true);
+                            }} 
+                            title="Record Consultation / Visit"
+                          >
+                            ➕ Consult
                           </button>
                           <button 
                             className="table-action-btn btn-whatsapp" 
@@ -1738,12 +1824,12 @@ _(Saved in patient clinic records)_`;
                                   patientId: p.patientId,
                                   patientName: p.name,
                                   phone: p.phone,
-                                  visitNumber: 1,
-                                  date: cleanDateOnly(p.registrationDate),
+                                  visitNumber: p.totalVisits || 1,
+                                  date: cleanDateOnly(p.lastVisitDate || p.registrationDate),
                                   time: "10:00 AM",
                                   reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
                                   complaint: p.firstVisitReason || "Consultation",
-                                  diagnosis: p.firstVisitReason || "Under Evaluation",
+                                  diagnosis: p.lastDiagnosis || p.firstVisitReason || "Under Evaluation",
                                   treatmentNotes: "Physical evaluation & physiotherapy management.",
                                   followUpDate: "As advised by doctor",
                                   fee: p.lastFee || "₹500",
@@ -1757,34 +1843,6 @@ _(Saved in patient clinic records)_`;
                             💬 WhatsApp
                           </button>
                           <button 
-                            className="table-action-btn btn-pdf" 
-                            onClick={() => {
-                              handleDownloadPDF({
-                                patient: p,
-                                visit: {
-                                  visitId: `VST-${p.patientId}-1`,
-                                  patientId: p.patientId,
-                                  patientName: p.name,
-                                  phone: p.phone,
-                                  visitNumber: 1,
-                                  date: cleanDateOnly(p.registrationDate),
-                                  time: "10:00 AM",
-                                  reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
-                                  complaint: p.firstVisitReason || "Consultation",
-                                  diagnosis: p.firstVisitReason || "Under Evaluation",
-                                  treatmentNotes: "Physical evaluation & physiotherapy management.",
-                                  followUpDate: "As advised by doctor",
-                                  fee: p.lastFee || "₹500",
-                                  status: "Completed",
-                                  doctor: "Dr. Satyam Vishwakarma"
-                                }
-                              });
-                            }}
-                            title="Download PDF Receipt"
-                          >
-                            📥 PDF
-                          </button>
-                          <button 
                             className="table-action-btn btn-delete" 
                             onClick={() => handleDeletePatient(p.patientId, p.name)}
                             title="Permanently delete patient record"
@@ -1795,13 +1853,81 @@ _(Saved in patient clinic records)_`;
                       </td>
                     </tr>
                   ))}
-                  {patients.length === 0 && (
+                  {filteredPatients.length === 0 && (
                     <tr>
-                      <td colSpan="9" className="empty-cell">No matching patient records found.</td>
+                      <td colSpan="10" className="empty-cell">No matching patient records found for the selected filter.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Patient Cards (No horizontal overflow, compact & touch-friendly) */}
+            <div className="mobile-patient-cards hide-on-desktop">
+              {filteredPatients.map(p => (
+                <article className="mobile-patient-card" key={p.patientId}>
+                  <div className="mobile-patient-top">
+                    <div>
+                      <span className="patient-id-badge">{p.patientId}</span>
+                      <h3 className="mobile-patient-name">{p.name}</h3>
+                      <p className="mobile-patient-sub">{p.age}y • {p.gender} • +91 {p.phone}</p>
+                    </div>
+                    <span className={`status-badge ${(p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`}>
+                      {p.status || "Active"}
+                    </span>
+                  </div>
+                  <div className="mobile-patient-info">
+                    <span className="patient-concern-pill">🩺 {p.firstVisitReason}</span>
+                    <span className="visit-count-tag">{p.totalVisits || 1} Visits</span>
+                  </div>
+                  <div className="mobile-patient-actions">
+                    <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)}>
+                      👤 Profile
+                    </button>
+                    <button 
+                      className="table-action-btn btn-consult"
+                      onClick={() => {
+                        setSelectedPatient(p);
+                        setShowAddVisitModal(true);
+                      }}
+                    >
+                      ➕ Consult
+                    </button>
+                    <button 
+                      className="table-action-btn btn-whatsapp"
+                      onClick={() => {
+                        handleWhatsAppDirectShare({
+                          patient: p,
+                          visit: {
+                            visitId: `VST-${p.patientId}-1`,
+                            patientId: p.patientId,
+                            patientName: p.name,
+                            phone: p.phone,
+                            visitNumber: p.totalVisits || 1,
+                            date: cleanDateOnly(p.lastVisitDate || p.registrationDate),
+                            time: "10:00 AM",
+                            reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
+                            complaint: p.firstVisitReason || "Consultation",
+                            diagnosis: p.lastDiagnosis || p.firstVisitReason || "Under Evaluation",
+                            treatmentNotes: "Physical evaluation & physiotherapy management.",
+                            followUpDate: "As advised by doctor",
+                            fee: p.lastFee || "₹500",
+                            status: "Completed",
+                            doctor: "Dr. Satyam Vishwakarma"
+                          }
+                        });
+                      }}
+                    >
+                      💬 WhatsApp
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {filteredPatients.length === 0 && (
+                <div className="mobile-empty-card">
+                  <p>No matching patient records found for the selected filter.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -2464,7 +2590,7 @@ _(Saved in patient clinic records)_`;
               <div className="receipt-header-banner">
                 <div className="receipt-banner-left">
                   <img
-                    src="/vindhya-logo-transparent.png"
+                    src="/vindhya-receipt-logo.png"
                     alt="Vindhya Physio & Rehab Center"
                     className="receipt-logo"
                   />
@@ -2852,6 +2978,33 @@ _(Saved in patient clinic records)_`;
           </div>
         </div>
       )}
+
+      {/* Mobile Sticky Bottom Navigation for Instant One-Tap Access */}
+      <nav className="doctor-mobile-bottom-nav hide-on-desktop">
+        <button className={activeTab === "dashboard" ? "active" : ""} onClick={() => setActiveTab("dashboard")}>
+          <span className="bot-icon">📊</span>
+          <span>Home</span>
+        </button>
+        <button className={activeTab === "waiting" ? "active" : ""} onClick={() => setActiveTab("waiting")}>
+          <span className="bot-icon">⏳</span>
+          <span>Waiting</span>
+          {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length > 0 && (
+            <span className="bot-dot"></span>
+          )}
+        </button>
+        <button className={activeTab === "new-patient" ? "active" : ""} onClick={() => setActiveTab("new-patient")}>
+          <span className="bot-icon">➕</span>
+          <span>Intake</span>
+        </button>
+        <button className={activeTab === "patients" ? "active" : ""} onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
+          <span className="bot-icon">👥</span>
+          <span>Patients</span>
+        </button>
+        <button className={activeTab === "today" ? "active" : ""} onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
+          <span className="bot-icon">📅</span>
+          <span>Today</span>
+        </button>
+      </nav>
     </div>
   );
 }

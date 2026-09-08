@@ -5,7 +5,7 @@
 
 const DEFAULT_DOCTOR_EMAIL = "shivamupsc8@gmail.com";
 const DEFAULT_DOCTOR_PASS = "@Shivam0000";
-export const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxaUQWab2LHMYA_w97RPNL9A8TuJJy2jR2X3KqcAyihQj_qwvdOGwv23fO9nOFb_WYNRA/exec";
+export const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyq_8IPpItrS6W60AjV3GaOEQ9zaXvEQ-OrH6qjCc3ighhLsBQ0JMmXAZnyn2SUQm1VSQ/exec";
 
 // Keys for localStorage
 const KEYS = {

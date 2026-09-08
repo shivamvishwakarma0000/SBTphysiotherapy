@@ -2228,7 +2228,7 @@ _(Saved in patient clinic records)_`;
                   className="secondary-btn full-btn"
                   style={{ marginTop: "10px", background: "rgba(234, 179, 8, 0.12)", color: "#facc15", borderColor: "rgba(234, 179, 8, 0.4)" }}
                   onClick={async () => {
-                    const defaultUrl = "https://script.google.com/macros/s/AKfycbxaUQWab2LHMYA_w97RPNL9A8TuJJy2jR2X3KqcAyihQj_qwvdOGwv23fO9nOFb_WYNRA/exec";
+                    const defaultUrl = "https://script.google.com/macros/s/AKfycbyq_8IPpItrS6W60AjV3GaOEQ9zaXvEQ-OrH6qjCc3ighhLsBQ0JMmXAZnyn2SUQm1VSQ/exec";
                     setCustomWebhookInput(defaultUrl);
                     setWebhookUrl(defaultUrl);
                     setWebhookSavedMsg("⏳ Restoring clinic records from official Google Sheets database...");

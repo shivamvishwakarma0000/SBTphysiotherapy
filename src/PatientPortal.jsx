@@ -1,9 +1,26 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { patientApi } from "./apiService";
-import { downloadReceiptPDF, cleanDateOnly } from "./receiptUtils";
+import { downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
 import { CLINIC_LOGO_B64 } from "./pdfAssets";
 
 export default function PatientPortal({ onClose, themeProps }) {
+  const handleToggleTheme = () => {
+    if (themeProps && typeof themeProps.toggleTheme === "function") {
+      themeProps.toggleTheme();
+    } else {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = current === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(next);
+      try { localStorage.setItem("vindhya_physio_theme", next); } catch (e) {}
+    }
+  };
+
+  const isDark = themeProps?.isDark !== undefined
+    ? themeProps.isDark
+    : (document.documentElement.getAttribute("data-theme") !== "light");
+
   const [patientToken, setPatientToken] = useState(() => patientApi.getStoredToken() || "");
   const [patientProfile, setPatientProfile] = useState(() => patientApi.getStoredPatient() || null);
   const [loading, setLoading] = useState(false);
@@ -181,9 +198,6 @@ export default function PatientPortal({ onClose, themeProps }) {
 
           <div className="patient-login-card">
             <h3>Sign In to Your Health Portal</h3>
-            <p className="login-desc">
-              Access your visit history, official doctor receipts, treatment progress & home rehab plan.
-            </p>
 
             {loginError && <div className="patient-alert error">{loginError}</div>}
 
@@ -274,6 +288,15 @@ export default function PatientPortal({ onClose, themeProps }) {
               <span className="user-id">{patientProfile.patientId}</span>
             </div>
           </div>
+
+          <button
+            className="portal-theme-btn"
+            onClick={handleToggleTheme}
+            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            aria-label="Toggle Theme"
+          >
+            {isDarkMode ? "☀️" : "🌙"}
+          </button>
 
           <button className="portal-exit-btn" onClick={handleLogout} title="Sign Out">
             <span className="btn-icon">🚪</span>
@@ -493,8 +516,8 @@ export default function PatientPortal({ onClose, themeProps }) {
 
                 <button className="shortcut-box" onClick={() => setActiveTab("security")}>
                   <span className="shortcut-icon">🔐</span>
-                  <strong>Account & 4-Digit PIN</strong>
-                  <span>View PIN or change password</span>
+                  <strong>Profile & Password</strong>
+                  <span>View credentials & change password</span>
                 </button>
 
                 <a
@@ -623,10 +646,10 @@ export default function PatientPortal({ onClose, themeProps }) {
                         </span>
                       </div>
                       <div className="appt-body">
-                        <p><strong>Preferred Date:</strong> {appt.appointmentDate || cleanDateOnly(appt.date)}</p>
+                        <p><strong>Preferred Date:</strong> {cleanDateOnly(appt.appointmentDate || appt.date)}</p>
                         <p><strong>Condition:</strong> {appt.painArea || "Physiotherapy Consultation"}</p>
                         {appt.concern && <p><strong>Notes:</strong> {appt.concern}</p>}
-                        <small>Submitted on {cleanDateOnly(appt.date)} at {appt.time || ""}</small>
+                        <small>Submitted on {cleanDateOnly(appt.date)} {cleanTimeOnly(appt.time) ? `at ${cleanTimeOnly(appt.time)}` : ""}</small>
                       </div>
                     </div>
                   ))}
@@ -746,22 +769,35 @@ export default function PatientPortal({ onClose, themeProps }) {
                   return (
                     <div className="receipt-summary-card" key={v.visitId}>
                       <div className="receipt-card-top">
-                        <span className="receipt-badge">OFFICIAL SLIP</span>
+                        <span className="receipt-badge">OFFICIAL CLINIC SLIP</span>
                         <span className="receipt-no">{receiptObj.receiptNumber}</span>
                       </div>
 
                       <div className="receipt-card-center">
                         <div className="amount-display">
                           <span className="currency">₹</span>
-                          <strong className="amount">{receiptObj.fee || 500}</strong>
+                          <strong className="amount">{receiptObj.fee || 300}</strong>
                         </div>
-                        <span className="payment-mode">Paid via {receiptObj.paymentMode || "Cash / UPI"}</span>
+                        <span className="payment-mode">Paid via {receiptObj.paymentMode || "Cash"} • Status: Verified</span>
                       </div>
 
                       <div className="receipt-card-meta">
-                        <p><strong>Visit:</strong> Visit #{v.visitNumber || 1}</p>
-                        <p><strong>Date:</strong> {cleanDateOnly(v.date)}</p>
-                        <p><strong>Service:</strong> {v.reason || "Physiotherapy Assessment & Treatment"}</p>
+                        <div className="receipt-meta-row">
+                          <span className="meta-label">Treatment:</span>
+                          <span className="meta-val">{v.treatmentGiven || v.reason || "Physical Therapy & Rehabilitation"}</span>
+                        </div>
+                        <div className="receipt-meta-row">
+                          <span className="meta-label">Visit & Date:</span>
+                          <span className="meta-val">Visit #{v.visitNumber || 1} • {cleanDateOnly(v.date)}</span>
+                        </div>
+                        <div className="receipt-meta-row">
+                          <span className="meta-label">Doctor:</span>
+                          <span className="meta-val">Dr. Satyam Vishwakarma (B.P.T. - BHU)</span>
+                        </div>
+                        <div className="receipt-meta-row">
+                          <span className="meta-label">Clinic:</span>
+                          <span className="meta-val">Vindhya Physio & Rehab Center</span>
+                        </div>
                       </div>
 
                       <div className="receipt-card-actions">

@@ -16,6 +16,16 @@ export const cleanDateOnly = (d) => {
   return s.slice(0, 10);
 };
 
+export const cleanTimeOnly = (t) => {
+  if (!t) return "";
+  const s = String(t).trim();
+  if (s.includes("1899") || s.includes("GMT") || s.includes("Standard Time")) {
+    const match = s.match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
+    return match ? match[1] : "";
+  }
+  return s;
+};
+
 export const buildReceiptPDF = (receipt) => {
   const { patient, visit } = receipt;
   const doc = new jsPDF({

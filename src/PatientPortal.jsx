@@ -211,6 +211,14 @@ export default function PatientPortal({ onClose, themeProps }) {
     setPatientToken("");
     setPatientProfile(null);
     setActiveTab("dashboard");
+    try {
+      localStorage.removeItem("active_portal");
+      if (window.location.hash === "#patient") {
+        history.replaceState(null, "", window.location.pathname);
+      }
+    } catch (e) {}
+    setShowMoreSheet(false);
+    if (onClose) onClose();
   };
 
   // Helper: Build standard receipt object for PDF export from visit
@@ -329,7 +337,8 @@ export default function PatientPortal({ onClose, themeProps }) {
   // =========================================================================
   // VIEW B: PATIENT PORTAL DASHBOARD & SECTIONS
   // =========================================================================
-  const patientFirstName = (patientProfile?.name || "Patient").split(" ")[0];
+  const patientDisplayName = patientProfile?.name || patientProfile?.patientName || "Patient";
+  const patientFirstName = patientDisplayName.split(" ")[0];
   const totalVisitsCount = recordsData?.stats?.totalVisits || recordsData?.visits?.length || 1;
   const latestVisit = recordsData?.visits?.[0] || null;
 
@@ -456,7 +465,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
 
               <div className="greeting-text-col">
-                <span className="greeting-salutation">Hello,</span>
+                <span className="greeting-salutation">Hello, {patientDisplayName}!</span>
                 <h2 className="greeting-headline">Take Charge of<br />Your Recovery!</h2>
               </div>
             </div>
@@ -1337,8 +1346,19 @@ export default function PatientPortal({ onClose, themeProps }) {
               </button>
 
               <button
+                type="button"
                 className="more-sheet-item"
-                onClick={() => { setShowMoreSheet(false); if (onClose) onClose(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMoreSheet(false);
+                  try {
+                    localStorage.removeItem("active_portal");
+                    if (window.location.hash === "#patient") {
+                      history.replaceState(null, "", window.location.pathname);
+                    }
+                  } catch (err) {}
+                  if (onClose) onClose();
+                }}
               >
                 <span className="more-item-icon cyan">🚪</span>
                 <div className="more-item-text">
@@ -1350,8 +1370,13 @@ export default function PatientPortal({ onClose, themeProps }) {
 
               {/* Styled Dedicated Logout Button */}
               <button
+                type="button"
                 className="more-sheet-logout-btn"
-                onClick={() => { setShowMoreSheet(false); handleLogout(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMoreSheet(false);
+                  handleLogout();
+                }}
               >
                 <span className="logout-icon">🔒</span>
                 <span>Logout Patient Session</span>

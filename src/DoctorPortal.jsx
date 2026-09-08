@@ -487,10 +487,18 @@ export default function DoctorPortal({ onClose, themeProps }) {
 
   const handleLogout = () => {
     setToken("");
-    localStorage.removeItem("doctor_token");
+    try {
+      localStorage.removeItem("doctor_token");
+      localStorage.removeItem("active_portal");
+      if (window.location.hash === "#doctor") {
+        history.replaceState(null, "", window.location.pathname);
+      }
+    } catch (e) {}
     setDoctorInfo(null);
     setSelectedPatient(null);
     setActiveReceipt(null);
+    setShowDoctorMore(false);
+    if (onClose) onClose();
   };
 
   const handleForgotSubmit = async (e) => {
@@ -1198,7 +1206,7 @@ _(Saved in patient clinic records)_`;
         
         {/* ================= 1. DASHBOARD VIEW ================= */}
         {activeTab === "dashboard" && (
-          <div className="dashboard-view">
+          <div className="dashboard-view mobile-app-home-view">
             {/* Mobile App Doctor Greeting */}
             <div className="mobile-app-greeting-card doctor-greeting">
               <div className="mobile-hero-brand">
@@ -3546,7 +3554,21 @@ _(Saved in patient clinic records)_`;
                 <span className="more-arrow">›</span>
               </button>
 
-              <button className="more-sheet-item" onClick={() => { onExit(); setShowDoctorMore(false); }}>
+              <button
+                type="button"
+                className="more-sheet-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDoctorMore(false);
+                  try {
+                    localStorage.removeItem("active_portal");
+                    if (window.location.hash === "#doctor") {
+                      history.replaceState(null, "", window.location.pathname);
+                    }
+                  } catch (err) {}
+                  if (onClose) onClose();
+                }}
+              >
                 <span className="sheet-icon cyan">🚪</span>
                 <div className="sheet-info">
                   <strong>Exit to Clinic Website</strong>
@@ -3556,7 +3578,15 @@ _(Saved in patient clinic records)_`;
               </button>
 
               {/* Styled Dedicated Logout Button */}
-              <button className="more-sheet-logout-btn" onClick={() => { handleDoctorLogout(); setShowDoctorMore(false); }}>
+              <button
+                type="button"
+                className="more-sheet-logout-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDoctorMore(false);
+                  handleLogout();
+                }}
+              >
                 <span className="logout-icon">🔒</span>
                 <span>Logout Doctor Session</span>
               </button>

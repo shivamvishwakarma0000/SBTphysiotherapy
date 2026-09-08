@@ -2693,8 +2693,7 @@ input:focus, select:focus, textarea:focus {
   .form-grid,
   .footer,
   .form-row-3,
-  .form-row-2,
-  .metrics-grid {
+  .form-row-2 {
     grid-template-columns: 1fr;
   }
 
@@ -3503,68 +3502,12 @@ input:focus, select:focus, textarea:focus {
   font-size: 13px;
 }
 
-/* ==========================================================================
-   DOCTOR MOBILE BOTTOM NAVIGATION
-   ========================================================================== */
-
-.doctor-mobile-bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  background: var(--doctor-nav-bg);
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 1000;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-  padding: 0 4px;
-}
-
-.doctor-mobile-bottom-nav button {
-  background: none;
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  height: 100%;
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 10.5px;
-  font-weight: 600;
-  position: relative;
-  transition: color 0.15s ease;
-  padding: 2px 0;
-}
-
-.doctor-mobile-bottom-nav button .bot-icon {
-  font-size: 17px;
-  margin-bottom: 2px;
-}
-
-.doctor-mobile-bottom-nav button.active {
-  color: var(--primary);
-  font-weight: 700;
-}
-
-.doctor-mobile-bottom-nav button .bot-dot {
-  position: absolute;
-  top: 6px;
-  right: 28%;
-  width: 7px;
-  height: 7px;
-  background: var(--amber);
-  border-radius: 50%;
-}
-
 /* Logo Blending Optimizations */
-.doctor-nav-logo {
+.doctor-nav-logo,
+.brand-logo-img,
+.clinic-logo-img {
   height: 40px;
-  max-width: 220px;
+  max-width: 230px;
   width: auto;
   object-fit: contain;
   display: block;
@@ -3605,16 +3548,91 @@ input:focus, select:focus, textarea:focus {
   }
   
   .doctor-portal-fullscreen {
-    padding-bottom: 64px; /* Space for bottom nav */
+    padding-bottom: 0 !important; /* No bottom nav or extra footer bar */
   }
 
   .doctor-nav-brand .doctor-nav-logo {
-    height: 32px;
-    max-width: 170px;
+    height: 34px;
+    max-width: 175px;
   }
 
+  .doctor-navbar {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+
+  .doctor-nav-actions {
+    gap: 6px !important;
+    justify-content: flex-end !important;
+  }
+
+  .doctor-nav-actions .sync-badge-btn,
+  .doctor-nav-actions .logout-btn,
+  .doctor-nav-actions .close-portal-btn {
+    padding: 5px 9px !important;
+    font-size: 11.5px !important;
+    min-height: 32px !important;
+  }
+
+  /* 6 Boxes on Top: Clean 3x2 Grid */
   .doctor-nav-tabs {
-    display: none; /* Accessible via bottom nav on mobile */
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin: 4px 0 !important;
+    padding: 0 !important;
+  }
+
+  .doctor-nav-tabs button {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    padding: 7px 4px !important;
+    min-height: 38px !important;
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1.15 !important;
+    border-radius: 8px !important;
+  }
+
+  /* 4 Boxes directly below: Exactly Equal and Short */
+  .metrics-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin: 10px 0 16px 0 !important;
+  }
+
+  .metric-card {
+    padding: 8px 10px !important;
+    min-height: 56px !important;
+    height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  .metric-card .metric-icon {
+    font-size: 20px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .metric-card h3 {
+    font-size: 16px !important;
+    margin: 0 !important;
+    line-height: 1.1 !important;
+  }
+
+  .metric-card p {
+    font-size: 10.5px !important;
+    margin: 2px 0 0 !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
   }
 }
 

@@ -57,6 +57,78 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [webhookSavedMsg, setWebhookSavedMsg] = useState("");
   const [restoreLoading, setRestoreLoading] = useState(false);
 
+  // Clinic Map Location State
+  const DEFAULT_CLINIC_LOCATION = {
+    address: "Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)",
+    lat: 25.1337,
+    lng: 82.5644,
+    name: "Vindhya Physio & Rehab Center"
+  };
+
+  const [clinicLocation, setClinicLocation] = useState(() => {
+    try {
+      const saved = localStorage.getItem("vindhya_clinic_location");
+      return saved ? JSON.parse(saved) : DEFAULT_CLINIC_LOCATION;
+    } catch {
+      return DEFAULT_CLINIC_LOCATION;
+    }
+  });
+  const [locationAddressInput, setLocationAddressInput] = useState(() => clinicLocation.address);
+  const [locationLatInput, setLocationLatInput] = useState(() => clinicLocation.lat);
+  const [locationLngInput, setLocationLngInput] = useState(() => clinicLocation.lng);
+  const [locationSearchLoading, setLocationSearchLoading] = useState(false);
+  const [locationSavedMsg, setLocationSavedMsg] = useState("");
+
+  const handleSearchPlaceLocation = async (e) => {
+    if (e) e.preventDefault();
+    if (!locationAddressInput.trim()) return;
+    setLocationSearchLoading(true);
+    setLocationSavedMsg("");
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationAddressInput.trim())}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const place = data[0];
+        const newLat = parseFloat(place.lat);
+        const newLng = parseFloat(place.lon);
+        setLocationLatInput(newLat);
+        setLocationLngInput(newLng);
+        const updated = {
+          address: locationAddressInput.trim(),
+          lat: newLat,
+          lng: newLng,
+          name: place.display_name.split(",")[0] || "Vindhya Physio & Rehab Center"
+        };
+        setClinicLocation(updated);
+        localStorage.setItem("vindhya_clinic_location", JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent("clinic-location-updated", { detail: updated }));
+        setLocationSavedMsg("📍 Location found and pinned on map!");
+        setTimeout(() => setLocationSavedMsg(""), 5000);
+      } else {
+        setLocationSavedMsg("⚠️ Place not found automatically. You can enter Latitude & Longitude directly.");
+      }
+    } catch (err) {
+      setLocationSavedMsg("⚠️ Search service busy. You can save manual Latitude & Longitude.");
+    } finally {
+      setLocationSearchLoading(false);
+    }
+  };
+
+  const handleSaveClinicLocation = (e) => {
+    if (e) e.preventDefault();
+    const updated = {
+      address: locationAddressInput.trim() || DEFAULT_CLINIC_LOCATION.address,
+      lat: parseFloat(locationLatInput) || DEFAULT_CLINIC_LOCATION.lat,
+      lng: parseFloat(locationLngInput) || DEFAULT_CLINIC_LOCATION.lng,
+      name: "Vindhya Physio & Rehab Center"
+    };
+    setClinicLocation(updated);
+    localStorage.setItem("vindhya_clinic_location", JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("clinic-location-updated", { detail: updated }));
+    setLocationSavedMsg("✅ Clinic location and map marker saved successfully!");
+    setTimeout(() => setLocationSavedMsg(""), 5000);
+  };
+
   const getNowTimeStr = () => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 
   const cleanDateOnly = (d) => {
@@ -1097,13 +1169,13 @@ _(Saved in patient clinic records)_`;
             title={getWebhookUrl() ? "Google Sheets Connected (Click to sync)" : "Click to connect Google Sheets Webhook"}
           >
             <span className={`sync-dot ${getWebhookUrl() ? "green" : "orange"}`}></span>
-            Sheets: {syncLoading ? "Syncing..." : (getWebhookUrl() ? "Cloud Connected" : "Connect Cloud")}
+            {syncLoading ? "Syncing..." : "Sync"}
           </button>
           <button className="logout-btn" onClick={handleLogout} title="Logout">
             Logout
           </button>
           <button className="close-portal-btn" onClick={onClose} title="Return to public website">
-            ✕ Exit Portal
+            ✕ Exit
           </button>
         </div>
       </header>
@@ -1120,33 +1192,38 @@ _(Saved in patient clinic records)_`;
         {/* ================= 1. DASHBOARD VIEW ================= */}
         {activeTab === "dashboard" && (
           <div className="dashboard-view">
-            {/* Dedicated Mobile Clinical Command Hub (Phone Only) */}
-            <div className="mobile-clinical-command hide-on-desktop">
-              <div className="mobile-command-header">
-                <span className="live-pulse-dot"></span>
-                <strong>Clinic Mobile Command Hub</strong>
+            {/* 4 Equal, Short Metric Boxes directly below navigation */}
+            <div className="metrics-grid">
+              <div className="metric-card" onClick={() => { setActiveTab("patients"); fetchPatients(); }} title="View All Patients">
+                <span className="metric-icon">👥</span>
+                <div>
+                  <h3>{stats.totalPatients}</h3>
+                  <p>All Patients</p>
+                </div>
               </div>
-              <div className="mobile-quick-grid">
-                <button className="mobile-quick-btn intake-btn" onClick={() => setActiveTab("new-patient")}>
-                  <span className="quick-icon">➕</span>
-                  <strong>1. Intake Patient</strong>
-                  <small>Register Arrival</small>
-                </button>
-                <button className="mobile-quick-btn waiting-btn" onClick={() => setActiveTab("waiting")}>
-                  <span className="quick-icon">⏳</span>
-                  <strong>2. Waiting Queue</strong>
-                  <small>{patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length} in queue</small>
-                </button>
-                <button className="mobile-quick-btn patients-btn" onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
-                  <span className="quick-icon">👥</span>
-                  <strong>3. All Patients</strong>
-                  <small>{patients.length} records</small>
-                </button>
-                <button className="mobile-quick-btn today-btn" onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
-                  <span className="quick-icon">📅</span>
-                  <strong>4. Today's Visits</strong>
-                  <small>{todayVisits.length} logged</small>
-                </button>
+
+              <div className="metric-card" onClick={() => setActiveTab("waiting")} title="View Waiting Queue">
+                <span className="metric-icon">⏳</span>
+                <div>
+                  <h3>{patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length}</h3>
+                  <p>Waiting Queue</p>
+                </div>
+              </div>
+
+              <div className="metric-card" onClick={() => { setActiveTab("today"); fetchTodayVisits(); }} title="View Today's Visits">
+                <span className="metric-icon">📅</span>
+                <div>
+                  <h3>{stats.todayVisitsCount}</h3>
+                  <p>Today's Visits</p>
+                </div>
+              </div>
+
+              <div className="metric-card" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }} title="View Online Bookings">
+                <span className="metric-icon">📩</span>
+                <div>
+                  <h3>{stats.totalEnquiriesCount || enquiries.length}</h3>
+                  <p>Online Bookings</p>
+                </div>
               </div>
             </div>
 
@@ -1190,40 +1267,6 @@ _(Saved in patient clinic records)_`;
                 <button className="secondary-btn" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
                   📩 Website Bookings ({enquiries.length})
                 </button>
-              </div>
-            </div>
-
-            <div className="metrics-grid">
-              <div className="metric-card" onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
-                <span className="metric-icon">👥</span>
-                <div>
-                  <h3>{stats.totalPatients}</h3>
-                  <p>Total Registered Patients</p>
-                </div>
-              </div>
-
-              <div className="metric-card" onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
-                <span className="metric-icon">📅</span>
-                <div>
-                  <h3>{stats.todayVisitsCount}</h3>
-                  <p>Today's Visits</p>
-                </div>
-              </div>
-
-              <div className="metric-card" onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
-                <span className="metric-icon">📩</span>
-                <div>
-                  <h3>{stats.totalEnquiriesCount || enquiries.length}</h3>
-                  <p>Website Consult Bookings</p>
-                </div>
-              </div>
-
-              <div className="metric-card">
-                <span className="metric-icon">🩺</span>
-                <div>
-                  <h3>{stats.totalVisitsCount}</h3>
-                  <p>Total Completed Visits</p>
-                </div>
               </div>
             </div>
 
@@ -2191,6 +2234,160 @@ _(Saved in patient clinic records)_`;
                   </button>
                 </div>
               </div>
+
+              {/* Clinic Map Location & Pin Assignment Card */}
+              <div className="settings-card" style={{ gridColumn: "1 / -1" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
+                  <h3 style={{ margin: 0 }}>📍 Clinic Map Location & Geo-Pin</h3>
+                  <span style={{ fontSize: "12px", color: "var(--emerald)", fontWeight: "600" }}>
+                    Public Website Map Synced
+                  </span>
+                </div>
+                <p>
+                  As an admin/doctor, enter your clinic place name, address, or manual coordinates (Latitude & Longitude) below. The map will place an exact marker and automatically update the map on the public website.
+                </p>
+
+                {locationSavedMsg && (
+                  <div style={{
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    background: "rgba(16, 185, 129, 0.15)",
+                    border: "1px solid #10b981",
+                    color: "#34d399",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    marginBottom: "14px"
+                  }}>
+                    {locationSavedMsg}
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveClinicLocation}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+                    <label>
+                      Clinic Address / Place Name
+                      <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                        <input
+                          type="text"
+                          placeholder="e.g. Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)"
+                          value={locationAddressInput}
+                          onChange={(e) => setLocationAddressInput(e.target.value)}
+                          required
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          className="secondary-btn"
+                          onClick={handleSearchPlaceLocation}
+                          disabled={locationSearchLoading}
+                          style={{ whiteSpace: "nowrap", padding: "0 14px", minHeight: "42px" }}
+                          title="Search and auto-detect latitude and longitude"
+                        >
+                          {locationSearchLoading ? "Searching..." : "🔍 Locate"}
+                        </button>
+                      </div>
+                    </label>
+
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      <label style={{ flex: 1 }}>
+                        Latitude (Manual)
+                        <input
+                          type="number"
+                          step="any"
+                          value={locationLatInput}
+                          onChange={(e) => setLocationLatInput(e.target.value)}
+                          required
+                          style={{ marginTop: "4px" }}
+                        />
+                      </label>
+                      <label style={{ flex: 1 }}>
+                        Longitude (Manual)
+                        <input
+                          type="number"
+                          step="any"
+                          value={locationLngInput}
+                          onChange={(e) => setLocationLngInput(e.target.value)}
+                          required
+                          style={{ marginTop: "4px" }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "10px", marginTop: "14px", flexWrap: "wrap" }}>
+                    <button type="submit" className="primary-btn" style={{ padding: "10px 22px", fontWeight: "700" }}>
+                      💾 Save & Update Clinic Location Pin
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      onClick={() => {
+                        if (navigator.geolocation) {
+                          navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                              const lat = parseFloat(pos.coords.latitude.toFixed(6));
+                              const lng = parseFloat(pos.coords.longitude.toFixed(6));
+                              setLocationLatInput(lat);
+                              setLocationLngInput(lng);
+                              setLocationSavedMsg(`📍 Detected GPS: ${lat}, ${lng}. Click "Save & Update Clinic Location Pin" to apply.`);
+                              setTimeout(() => setLocationSavedMsg(""), 5000);
+                            },
+                            (err) => alert("Could not fetch device GPS: " + err.message)
+                          );
+                        } else {
+                          alert("Geolocation not supported on this browser.");
+                        }
+                      }}
+                      style={{ padding: "10px 16px" }}
+                      title="Fetch coordinates from phone or laptop GPS"
+                    >
+                      🎯 Use My Current GPS
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      onClick={() => {
+                        setLocationAddressInput(DEFAULT_CLINIC_LOCATION.address);
+                        setLocationLatInput(DEFAULT_CLINIC_LOCATION.lat);
+                        setLocationLngInput(DEFAULT_CLINIC_LOCATION.lng);
+                      }}
+                      style={{ padding: "10px 16px" }}
+                    >
+                      ↺ Reset Default
+                    </button>
+                  </div>
+                </form>
+
+                {/* Live Interactive Map Preview */}
+                <div style={{ marginTop: "18px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                    <strong style={{ fontSize: "13px", color: "var(--text)" }}>
+                      Live Clinic Marker Preview: {clinicLocation.address} ({clinicLocation.lat}, {clinicLocation.lng})
+                    </strong>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${clinicLocation.lat},${clinicLocation.lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-link-btn"
+                      style={{ fontSize: "12px", textDecoration: "underline" }}
+                    >
+                      ↗ View on Google Maps
+                    </a>
+                  </div>
+                  <iframe
+                    title="Clinic Location Map Preview"
+                    style={{
+                      width: "100%",
+                      height: "230px",
+                      borderRadius: "10px",
+                      border: "1.5px solid var(--line)",
+                      display: "block"
+                    }}
+                    loading="lazy"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(clinicLocation.lng) - 0.02}%2C${parseFloat(clinicLocation.lat) - 0.02}%2C${parseFloat(clinicLocation.lng) + 0.02}%2C${parseFloat(clinicLocation.lat) + 0.02}&layer=mapnik&marker=${clinicLocation.lat}%2C${clinicLocation.lng}`}
+                  ></iframe>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -2978,33 +3175,6 @@ _(Saved in patient clinic records)_`;
           </div>
         </div>
       )}
-
-      {/* Mobile Sticky Bottom Navigation for Instant One-Tap Access */}
-      <nav className="doctor-mobile-bottom-nav hide-on-desktop">
-        <button className={activeTab === "dashboard" ? "active" : ""} onClick={() => setActiveTab("dashboard")}>
-          <span className="bot-icon">📊</span>
-          <span>Home</span>
-        </button>
-        <button className={activeTab === "waiting" ? "active" : ""} onClick={() => setActiveTab("waiting")}>
-          <span className="bot-icon">⏳</span>
-          <span>Waiting</span>
-          {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length > 0 && (
-            <span className="bot-dot"></span>
-          )}
-        </button>
-        <button className={activeTab === "new-patient" ? "active" : ""} onClick={() => setActiveTab("new-patient")}>
-          <span className="bot-icon">➕</span>
-          <span>Intake</span>
-        </button>
-        <button className={activeTab === "patients" ? "active" : ""} onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
-          <span className="bot-icon">👥</span>
-          <span>Patients</span>
-        </button>
-        <button className={activeTab === "today" ? "active" : ""} onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
-          <span className="bot-icon">📅</span>
-          <span>Today</span>
-        </button>
-      </nav>
     </div>
   );
 }

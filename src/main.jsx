@@ -622,6 +622,30 @@ function Testimonials() {
 }
 
 function Footer({ onOpenDoctorPortal, isDark = false }) {
+  const [clinicLoc, setClinicLoc] = useState(() => {
+    try {
+      const saved = localStorage.getItem("vindhya_clinic_location");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      address: "Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)",
+      lat: 25.1337,
+      lng: 82.5644
+    };
+  });
+
+  useEffect(() => {
+    const handleLocUpdate = (e) => {
+      if (e.detail) setClinicLoc(e.detail);
+    };
+    window.addEventListener("clinic-location-updated", handleLocUpdate);
+    return () => window.removeEventListener("clinic-location-updated", handleLocUpdate);
+  }, []);
+
+  const lat = parseFloat(clinicLoc.lat) || 25.1337;
+  const lng = parseFloat(clinicLoc.lng) || 82.5644;
+  const mapSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.02}%2C${lat - 0.02}%2C${lng + 0.02}%2C${lat + 0.02}&layer=mapnik&marker=${lat}%2C${lng}`;
+
   return (
     <footer id="contact" className="footer">
       <div>
@@ -631,7 +655,7 @@ function Footer({ onOpenDoctorPortal, isDark = false }) {
         </div>
         <p>Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</p>
         <p style={{ marginTop: '8px', color: 'var(--muted)', fontSize: '0.9rem' }}>
-          {clinicAddress}
+          📍 {clinicLoc.address || clinicAddress}
         </p>
       </div>
       <div>
@@ -660,10 +684,18 @@ function Footer({ onOpenDoctorPortal, isDark = false }) {
         </button>
         <iframe
           className="map-frame"
-          title="Vindhyachal Mirzapur Uttar Pradesh map"
+          title="Vindhyachal Mirzapur Uttar Pradesh clinic location map"
           loading="lazy"
-          src="https://www.openstreetmap.org/export/embed.html?bbox=82.48%2C25.10%2C82.60%2C25.20&layer=mapnik&marker=25.1337%2C82.5644"
+          src={mapSrc}
         ></iframe>
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: 'inline-block', marginTop: '6px', fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'underline' }}
+        >
+          ↗ Open in Google Maps
+        </a>
       </div>
     </footer>
   );

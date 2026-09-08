@@ -88,7 +88,7 @@ function setupDatabase() {
   var enquirySheet = ss.getSheetByName("ENQUIRIES") || ss.insertSheet("ENQUIRIES");
   var enquiryHeaders = [
     "Enquiry ID", "Date", "Time", "Patient Name", "Phone Number", 
-    "Condition / Pain Area", "Duration", "Preferred Date", "Symptoms & Message"
+    "Condition / Pain Area", "Duration", "Preferred Date", "Symptoms & Message", "Status"
   ];
   enquirySheet.getRange(1, 1, 1, enquiryHeaders.length).setValues([enquiryHeaders]);
   enquirySheet.getRange(1, 1, 1, enquiryHeaders.length)
@@ -98,6 +98,20 @@ function setupDatabase() {
     .setFontSize(10);
   enquirySheet.setFrozenRows(1);
 
+  // 4. Setup PATIENT_AUTH Tab (Secure Patient Portal Authentication)
+  var authSheet = ss.getSheetByName("PATIENT_AUTH") || ss.insertSheet("PATIENT_AUTH");
+  var authHeaders = [
+    "Patient ID", "Registered Phone", "Password Hash", "Recovery PIN", 
+    "Account Status", "Created Date", "Last Updated"
+  ];
+  authSheet.getRange(1, 1, 1, authHeaders.length).setValues([authHeaders]);
+  authSheet.getRange(1, 1, 1, authHeaders.length)
+    .setBackground("#071927")
+    .setFontColor("#a855f7")
+    .setFontWeight("bold")
+    .setFontSize(10);
+  authSheet.setFrozenRows(1);
+
   // Delete default blank "Sheet1" if empty
   var defaultSheet = ss.getSheetByName("Sheet1");
   if (defaultSheet && ss.getSheets().length > 1) {
@@ -105,7 +119,7 @@ function setupDatabase() {
   }
 
   Logger.log("✅ Database URL: " + ss.getUrl());
-  Logger.log("✅ Database initialized successfully with PATIENTS, VISITS, and ENQUIRIES tables!");
+  Logger.log("✅ Database initialized successfully with PATIENTS, VISITS, ENQUIRIES, and PATIENT_AUTH tables!");
 }
 
 /**
@@ -317,13 +331,43 @@ function doPost(e) {
         data.painArea || "",
         data.duration || "",
         data.appointmentDate || "",
-        data.concern || ""
+        data.concern || "",
+        data.status || "New"
       ]);
       return ContentService.createTextOutput(JSON.stringify({ ok: true, result: "success", type: "enquiry", id: data.id }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 4. Delete Patient Record from Sheet
+    // 4. Secure Patient Portal Auth Sync
+    if (action === "sync_patient_auth") {
+      var authSheet = ss.getSheetByName("PATIENT_AUTH") || ss.insertSheet("PATIENT_AUTH");
+      var authData = authSheet.getDataRange().getValues();
+      var targetRow = -1;
+      for (var i = 1; i < authData.length; i++) {
+        if (authData[i][0] === data.patientId) {
+          targetRow = i + 1;
+          break;
+        }
+      }
+      var authRowVals = [
+        data.patientId || "",
+        data.phone || "",
+        data.passwordHash || "",
+        data.recoveryPin || "",
+        data.status || "active",
+        data.createdAt || new Date().toISOString(),
+        data.updatedAt || new Date().toISOString()
+      ];
+      if (targetRow > 0) {
+        authSheet.getRange(targetRow, 1, 1, authRowVals.length).setValues([authRowVals]);
+      } else {
+        authSheet.appendRow(authRowVals);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, result: "auth_synced", id: data.patientId }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 5. Delete Patient Record from Sheet
     if (action === "delete_patient") {
       var pSheet = ss.getSheetByName("PATIENTS");
       if (pSheet && pSheet.getLastRow() > 1) {

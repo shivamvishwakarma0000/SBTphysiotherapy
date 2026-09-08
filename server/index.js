@@ -17,6 +17,7 @@ const enquiriesFile = path.join(dataDir, "enquiries.json");
 const patientsFile = path.join(dataDir, "patients.json");
 const visitsFile = path.join(dataDir, "visits.json");
 const authFile = path.join(dataDir, "auth.json");
+const patientAuthFile = path.join(dataDir, "patient_auth.json");
 
 const port = process.env.PORT || 5174;
 const host = process.env.HOST || "127.0.0.1";
@@ -89,6 +90,35 @@ async function generateNextPatientId() {
   return `VPR-${String(nextNum).padStart(4, "0")}`;
 }
 
+// 4-Digit Numeric Recovery PIN Generator
+function generateRecoveryPin() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+// Ensure patient credentials record exists in patient_auth.json and Google Sheets
+async function getOrCreatePatientAuth(patient) {
+  const patientAuthList = await ensureDataFile(patientAuthFile, []);
+  let authRecord = patientAuthList.find(a => a.patientId === patient.patientId);
+  if (!authRecord) {
+    const pin = generateRecoveryPin();
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(pin, salt);
+    authRecord = {
+      patientId: patient.patientId,
+      phone: String(patient.phone || "").replace(/\D/g, "").slice(-10),
+      passwordHash: hash,
+      recoveryPin: pin,
+      status: "active",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    patientAuthList.push(authRecord);
+    await writeDataFile(patientAuthFile, patientAuthList);
+    syncToGoogleSheets("patient_auth", authRecord).catch(() => {});
+  }
+  return authRecord;
+}
+
 // Google Sheets Sync & Bidirectional Restore Service
 async function syncToGoogleSheets(type, payload) {
   const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
@@ -98,7 +128,8 @@ async function syncToGoogleSheets(type, payload) {
   try {
     let action = "sync_patient";
     if (type === "visit") action = "sync_visit";
-    if (type === "enquiry") action = "sync_enquiry";
+    if (type === "enquiry" || type === "enquiry_status") action = "sync_enquiry";
+    if (type === "patient_auth") action = "sync_patient_auth";
 
     const response = await fetch(webhookUrl, {
       method: "POST",
@@ -230,6 +261,40 @@ function requireDoctorAuth(req, res, next) {
     next();
   } catch (err) {
     return res.status(401).json({ error: "Session expired or invalid token. Please log in again." });
+  }
+}
+
+// Middleware: Patient Portal Guard
+async function requirePatientAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Access denied. Patient login required." });
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (!decoded || decoded.role !== "patient" || !decoded.patientId) {
+      return res.status(401).json({ error: "Invalid patient session." });
+    }
+
+    const patients = await ensureDataFile(patientsFile, []);
+    const patient = patients.find(p => p.patientId === decoded.patientId);
+    if (!patient) {
+      return res.status(404).json({ error: "Patient record not found." });
+    }
+
+    const authList = await ensureDataFile(patientAuthFile, []);
+    const authRecord = authList.find(a => a.patientId === decoded.patientId);
+    if (authRecord && authRecord.status === "disabled") {
+      return res.status(403).json({ error: "Your Patient Portal account has been deactivated. Please contact clinic reception." });
+    }
+
+    req.patient = decoded;
+    req.patientRecord = patient;
+    req.patientAuth = authRecord;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Session expired or invalid. Please log in again." });
   }
 }
 
@@ -373,6 +438,402 @@ app.post("/api/auth/reset-password", async (req, res) => {
     res.json({ ok: true, message: "Password reset successful. You may now log in." });
   } catch (err) {
     res.status(500).json({ error: "Password reset failed." });
+  }
+});
+
+// ==========================================
+// 1B. PATIENT PORTAL AUTHENTICATION & SELF-SERVICE APIS
+// ==========================================
+
+// Patient Login (Patient ID or 10-digit Phone + Password / Recovery PIN)
+app.post("/api/patient/login", async (req, res) => {
+  try {
+    const { identifier, password } = req.body;
+    if (!identifier || !password) {
+      return res.status(400).json({ error: "Patient ID or Registered Mobile number and password are required." });
+    }
+
+    const cleanId = String(identifier).trim().toUpperCase();
+    const cleanPhoneDigits = String(identifier).replace(/\D/g, "").slice(-10);
+
+    const patients = await ensureDataFile(patientsFile, []);
+    const patient = patients.find(p => {
+      const pId = String(p.patientId || "").trim().toUpperCase();
+      const pPhone = String(p.phone || "").replace(/\D/g, "").slice(-10);
+      return pId === cleanId || (cleanPhoneDigits.length === 10 && pPhone === cleanPhoneDigits);
+    });
+
+    if (!patient) {
+      return res.status(404).json({
+        error: "No patient record found matching that ID or Mobile number. Please check your details or contact clinic reception."
+      });
+    }
+
+    const authRecord = await getOrCreatePatientAuth(patient);
+    if (authRecord.status === "disabled") {
+      return res.status(403).json({
+        error: "Your Patient Portal account has been deactivated. Please contact Dr. Satyam Vishwakarma or clinic reception."
+      });
+    }
+
+    const cleanInputPassword = String(password).trim();
+    let isMatch = false;
+    if (authRecord.passwordHash) {
+      isMatch = await bcrypt.compare(cleanInputPassword, authRecord.passwordHash);
+    }
+    if (!isMatch && authRecord.recoveryPin && cleanInputPassword === String(authRecord.recoveryPin).trim()) {
+      isMatch = true;
+    }
+
+    if (!isMatch) {
+      return res.status(401).json({
+        error: "Incorrect password. You can also use your 4-digit Recovery PIN, or click 'Forgot Password?'."
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        patientId: patient.patientId,
+        phone: patient.phone,
+        name: patient.name,
+        role: "patient"
+      },
+      JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    res.json({
+      ok: true,
+      token,
+      patient: {
+        patientId: patient.patientId,
+        name: patient.name,
+        phone: patient.phone,
+        age: patient.age,
+        gender: patient.gender,
+        address: patient.address,
+        firstVisitReason: patient.firstVisitReason,
+        registrationDate: patient.registrationDate,
+        totalVisits: patient.totalVisits || 1,
+        lastVisitDate: patient.lastVisitDate || patient.registrationDate
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Patient login service error: " + err.message });
+  }
+});
+
+// Patient Self Profile & Recovery PIN view
+app.get("/api/patient/me", requirePatientAuth, async (req, res) => {
+  try {
+    const patient = req.patientRecord;
+    const auth = req.patientAuth || await getOrCreatePatientAuth(patient);
+    res.json({
+      ok: true,
+      patient: {
+        ...patient,
+        recoveryPin: auth.recoveryPin,
+        accountStatus: auth.status || "active",
+        lastUpdated: auth.updatedAt
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch patient profile." });
+  }
+});
+
+// Patient Self Records (Visits, Official Receipts, Treatment Notes, Appointments)
+app.get("/api/patient/records", requirePatientAuth, async (req, res) => {
+  try {
+    const patientId = req.patient.patientId;
+    const patientPhoneDigits = String(req.patient.phone || "").replace(/\D/g, "").slice(-10);
+
+    const visits = await ensureDataFile(visitsFile, []);
+    const enquiries = await ensureDataFile(enquiriesFile, []);
+
+    // Patient visits
+    const patientVisits = visits
+      .filter(v => v.patientId === patientId)
+      .sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.visitNumber || 0) - (a.visitNumber || 0))
+      .map(v => ({
+        visitId: v.visitId,
+        patientId: v.patientId,
+        patientName: v.patientName,
+        phone: v.phone,
+        visitNumber: v.visitNumber || 1,
+        date: v.date,
+        time: v.time,
+        reason: v.reason || "Consultation & Therapy",
+        complaint: v.complaint || "",
+        diagnosis: v.diagnosis || "",
+        treatmentNotes: v.treatmentNotes || "",
+        followUpDate: v.followUpDate || "",
+        status: v.status || "Completed",
+        doctor: v.doctor || "Dr. Satyam Vishwakarma",
+        receipt: v.receipt || null
+      }));
+
+    // Patient enquiries / appointments
+    const patientAppointments = enquiries
+      .filter(e => {
+        const ePhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+        return (patientPhoneDigits.length === 10 && ePhone === patientPhoneDigits) ||
+               (e.linkedPatientId && e.linkedPatientId === patientId);
+      })
+      .map(e => ({
+        id: e.id,
+        date: e.date,
+        time: e.time,
+        painArea: e.painArea,
+        duration: e.duration,
+        appointmentDate: e.appointmentDate,
+        concern: e.concern,
+        status: e.status || "New",
+        createdAt: e.createdAt
+      }));
+
+    // Journey stats
+    const totalVisitsCount = Math.max(req.patientRecord.totalVisits || 0, patientVisits.length);
+    const firstVisit = patientVisits[patientVisits.length - 1];
+    const latestVisit = patientVisits[0];
+
+    let daysInRecovery = 1;
+    if (firstVisit && firstVisit.date) {
+      const startMs = new Date(firstVisit.date).getTime();
+      const nowMs = Date.now();
+      if (!isNaN(startMs) && nowMs >= startMs) {
+        daysInRecovery = Math.max(1, Math.ceil((nowMs - startMs) / (1000 * 60 * 60 * 24)));
+      }
+    }
+
+    res.json({
+      ok: true,
+      patient: req.patientRecord,
+      stats: {
+        totalVisits: totalVisitsCount,
+        firstVisitDate: firstVisit?.date || req.patientRecord.registrationDate,
+        lastVisitDate: latestVisit?.date || req.patientRecord.lastVisitDate || req.patientRecord.registrationDate,
+        daysInRecovery,
+        activeCondition: latestVisit?.diagnosis || req.patientRecord.firstVisitReason || "Under Evaluation",
+        nextFollowUp: latestVisit?.followUpDate || null
+      },
+      visits: patientVisits,
+      appointments: patientAppointments
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch patient records." });
+  }
+});
+
+// Patient Change Password
+app.post("/api/patient/change-password", requirePatientAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword || newPassword.length < 4) {
+      return res.status(400).json({ error: "New password must be at least 4 characters long." });
+    }
+
+    const authList = await ensureDataFile(patientAuthFile, []);
+    const authIndex = authList.findIndex(a => a.patientId === req.patient.patientId);
+    if (authIndex === -1) {
+      return res.status(404).json({ error: "Authentication profile not found." });
+    }
+
+    const auth = authList[authIndex];
+    let isMatch = false;
+    if (auth.passwordHash) {
+      isMatch = await bcrypt.compare(currentPassword, auth.passwordHash);
+    }
+    if (!isMatch && auth.recoveryPin && currentPassword === String(auth.recoveryPin).trim()) {
+      isMatch = true;
+    }
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Current password or Recovery PIN is incorrect." });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    auth.passwordHash = await bcrypt.hash(newPassword, salt);
+    auth.updatedAt = new Date().toISOString();
+    authList[authIndex] = auth;
+
+    await writeDataFile(patientAuthFile, authList);
+    syncToGoogleSheets("patient_auth", auth).catch(() => {});
+
+    res.json({ ok: true, message: "Password changed successfully!" });
+  } catch (err) {
+    res.status(500).json({ error: "Could not change password." });
+  }
+});
+
+// Patient Self-Reset Password using 4-digit Recovery PIN (NO OTP / NO SMS)
+app.post("/api/patient/reset-password", async (req, res) => {
+  try {
+    const { identifier, recoveryPin, newPassword } = req.body;
+    if (!identifier || !recoveryPin || !newPassword || newPassword.length < 4) {
+      return res.status(400).json({ error: "Patient ID/Mobile, 4-digit PIN, and new password (min 4 chars) are required." });
+    }
+
+    const cleanId = String(identifier).trim().toUpperCase();
+    const cleanPhoneDigits = String(identifier).replace(/\D/g, "").slice(-10);
+
+    const patients = await ensureDataFile(patientsFile, []);
+    const patient = patients.find(p => {
+      const pId = String(p.patientId || "").trim().toUpperCase();
+      const pPhone = String(p.phone || "").replace(/\D/g, "").slice(-10);
+      return pId === cleanId || (cleanPhoneDigits.length === 10 && pPhone === cleanPhoneDigits);
+    });
+
+    if (!patient) {
+      return res.status(404).json({ error: "No patient account found for this ID or mobile number." });
+    }
+
+    const authList = await ensureDataFile(patientAuthFile, []);
+    const authIndex = authList.findIndex(a => a.patientId === patient.patientId);
+    if (authIndex === -1) {
+      return res.status(404).json({ error: "No security credentials found for this patient." });
+    }
+
+    const auth = authList[authIndex];
+    if (String(auth.recoveryPin).trim() !== String(recoveryPin).trim()) {
+      return res.status(400).json({ error: "Invalid Recovery PIN. Please check your 4-digit PIN or ask clinic reception." });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    auth.passwordHash = await bcrypt.hash(newPassword, salt);
+    auth.updatedAt = new Date().toISOString();
+    authList[authIndex] = auth;
+
+    await writeDataFile(patientAuthFile, authList);
+    syncToGoogleSheets("patient_auth", auth).catch(() => {});
+
+    res.json({ ok: true, message: "Password reset successful! You can now log in." });
+  } catch (err) {
+    res.status(500).json({ error: "Password reset failed: " + err.message });
+  }
+});
+
+// Doctor: Get patient account info & Recovery PIN
+app.get("/api/doctor/patients/:id/account", requireDoctorAuth, async (req, res) => {
+  try {
+    const patientId = req.params.id;
+    const patients = await ensureDataFile(patientsFile, []);
+    const patient = patients.find(p => p.patientId === patientId);
+    if (!patient) return res.status(404).json({ error: "Patient not found." });
+
+    const auth = await getOrCreatePatientAuth(patient);
+    res.json({
+      ok: true,
+      patientId: auth.patientId,
+      phone: auth.phone,
+      recoveryPin: auth.recoveryPin,
+      status: auth.status || "active",
+      createdAt: auth.createdAt,
+      updatedAt: auth.updatedAt
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch patient account details." });
+  }
+});
+
+// Doctor: Reset patient password directly
+app.post("/api/doctor/patients/:id/account/password", requireDoctorAuth, async (req, res) => {
+  try {
+    const patientId = req.params.id;
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ error: "Password must be at least 4 characters long." });
+    }
+
+    const patients = await ensureDataFile(patientsFile, []);
+    const patient = patients.find(p => p.patientId === patientId);
+    if (!patient) return res.status(404).json({ error: "Patient not found." });
+
+    const authList = await ensureDataFile(patientAuthFile, []);
+    let auth = authList.find(a => a.patientId === patientId);
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(newPassword, salt);
+
+    if (auth) {
+      auth.passwordHash = hash;
+      auth.updatedAt = new Date().toISOString();
+    } else {
+      auth = {
+        patientId,
+        phone: patient.phone,
+        passwordHash: hash,
+        recoveryPin: generateRecoveryPin(),
+        status: "active",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      authList.push(auth);
+    }
+
+    await writeDataFile(patientAuthFile, authList);
+    syncToGoogleSheets("patient_auth", auth).catch(() => {});
+
+    res.json({ ok: true, message: `Password for ${patient.name} (${patientId}) updated successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to set patient password." });
+  }
+});
+
+// Doctor: Toggle patient account status (active/disabled)
+app.post("/api/doctor/patients/:id/account/status", requireDoctorAuth, async (req, res) => {
+  try {
+    const patientId = req.params.id;
+    const { status } = req.body;
+    if (!["active", "disabled"].includes(status)) {
+      return res.status(400).json({ error: "Status must be 'active' or 'disabled'." });
+    }
+
+    const patients = await ensureDataFile(patientsFile, []);
+    const patient = patients.find(p => p.patientId === patientId);
+    if (!patient) return res.status(404).json({ error: "Patient not found." });
+
+    const authList = await ensureDataFile(patientAuthFile, []);
+    let auth = authList.find(a => a.patientId === patientId);
+    if (!auth) {
+      auth = await getOrCreatePatientAuth(patient);
+      auth.status = status;
+      authList.push(auth);
+    } else {
+      auth.status = status;
+      auth.updatedAt = new Date().toISOString();
+    }
+    await writeDataFile(patientAuthFile, authList);
+
+    syncToGoogleSheets("patient_auth", auth).catch(() => {});
+    res.json({ ok: true, status: auth.status, message: `Patient account is now ${auth.status}.` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update account status." });
+  }
+});
+
+// Doctor: Update Enquiry Status (e.g., Hidden / Spam, Converted, or Link to Existing Patient)
+app.post("/api/doctor/enquiries/:id/status", requireDoctorAuth, async (req, res) => {
+  try {
+    const enquiryId = req.params.id;
+    const { status, linkedPatientId } = req.body;
+    if (!status) return res.status(400).json({ error: "Status is required." });
+
+    const enquiries = await ensureDataFile(enquiriesFile, []);
+    const enquiry = enquiries.find(e => e.id === enquiryId);
+    if (!enquiry) return res.status(404).json({ error: "Enquiry not found." });
+
+    enquiry.status = status;
+    if (linkedPatientId) {
+      enquiry.linkedPatientId = linkedPatientId;
+    }
+    enquiry.updatedAt = new Date().toISOString();
+
+    await writeDataFile(enquiriesFile, enquiries);
+    syncToGoogleSheets("enquiry_status", enquiry).catch(() => {});
+
+    res.json({ ok: true, enquiry, message: `Enquiry updated to ${status}.` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update enquiry status." });
   }
 });
 
@@ -549,6 +1010,9 @@ app.post("/api/doctor/patients", requireDoctorAuth, async (req, res) => {
     await writeDataFile(patientsFile, patients);
     await writeDataFile(visitsFile, visits);
 
+    // Initialize patient portal credentials (PIN & initial password)
+    const patientAuth = await getOrCreatePatientAuth(newPatient);
+
     syncToGoogleSheets("patient", newPatient).then(async (res) => {
       if (res.synced) {
         newPatient.syncStatus = "synced";
@@ -564,7 +1028,10 @@ app.post("/api/doctor/patients", requireDoctorAuth, async (req, res) => {
 
     res.status(201).json({
       ok: true,
-      patient: newPatient,
+      patient: {
+        ...newPatient,
+        recoveryPin: patientAuth.recoveryPin
+      },
       visit: firstVisit,
       message: "Patient enrolled successfully."
     });

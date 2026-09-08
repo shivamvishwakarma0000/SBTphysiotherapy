@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import DoctorPortal from "./DoctorPortal";
+import PatientPortal from "./PatientPortal";
 import { api } from "./apiService";
 import { useTheme } from "./useTheme";
 import ThemeToggle from "./ThemeToggle";
@@ -171,7 +172,7 @@ function WhatsAppIcon() {
   );
 }
 
-function Header({ onOpenDoctorPortal, onOpenDownloadApp, themeProps }) {
+function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, themeProps }) {
   const { themePreference, setTheme, isDark } = themeProps;
   return (
     <header className="site-header">
@@ -199,6 +200,13 @@ function Header({ onOpenDoctorPortal, onOpenDownloadApp, themeProps }) {
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
+        </button>
+        <button
+          className="patient-portal-pill-btn"
+          onClick={onOpenPatientPortal}
+          title="Patient Portal — Visits, Receipts & Recovery Plan"
+        >
+          👤 Patient Portal
         </button>
         <button
           className="doctor-portal-pill-btn"
@@ -633,7 +641,7 @@ function Testimonials() {
   );
 }
 
-function Footer({ onOpenDoctorPortal, isDark = false }) {
+function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
   const [clinicLoc, setClinicLoc] = useState(() => {
     try {
       const saved = localStorage.getItem("vindhya_clinic_location");
@@ -687,7 +695,27 @@ function Footer({ onOpenDoctorPortal, isDark = false }) {
         <a href="#treatments">Sports Injury & Post-Surgical</a>
       </div>
       <div>
-        <h3>Doctor Access & Location</h3>
+        <h3>Patient & Doctor Portals</h3>
+        <button
+          className="footer-patient-portal-btn"
+          onClick={onOpenPatientPortal}
+          style={{
+            display: "block",
+            width: "100%",
+            padding: "10px 14px",
+            marginBottom: "8px",
+            background: "linear-gradient(135deg, #0878C9, #0284c7)",
+            color: "#ffffff",
+            fontWeight: "700",
+            fontSize: "13px",
+            borderRadius: "8px",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "center"
+          }}
+        >
+          👤 Patient Recovery Portal
+        </button>
         <button
           className="footer-doctor-portal-btn"
           onClick={onOpenDoctorPortal}
@@ -800,6 +828,9 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt }) {
 
 function App() {
   const [showDoctorPortal, setShowDoctorPortal] = useState(false);
+  const [showPatientPortal, setShowPatientPortal] = useState(() => {
+    return !!localStorage.getItem("vindhya_patient_token") || window.location.hash === "#patient" || window.location.pathname.startsWith("/patient");
+  });
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const themeProps = useTheme();
@@ -828,6 +859,9 @@ function App() {
       if (window.location.hash === "#doctor" || window.location.pathname.startsWith("/doctor")) {
         setShowDoctorPortal(true);
       }
+      if (window.location.hash === "#patient" || window.location.pathname.startsWith("/patient")) {
+        setShowPatientPortal(true);
+      }
     };
     checkHash();
     window.addEventListener("hashchange", checkHash);
@@ -848,6 +882,7 @@ function App() {
     <div className={`app-root ${themeProps.resolvedTheme}`}>
       <Header
         onOpenDoctorPortal={() => setShowDoctorPortal(true)}
+        onOpenPatientPortal={() => setShowPatientPortal(true)}
         onOpenDownloadApp={() => setShowDownloadModal(true)}
         themeProps={themeProps}
       />
@@ -862,6 +897,7 @@ function App() {
       </main>
       <Footer
         onOpenDoctorPortal={() => setShowDoctorPortal(true)}
+        onOpenPatientPortal={() => setShowPatientPortal(true)}
         isDark={themeProps.isDark}
       />
 
@@ -876,6 +912,14 @@ function App() {
       {showDoctorPortal && (
         <DoctorPortal
           onClose={() => setShowDoctorPortal(false)}
+          themeProps={themeProps}
+        />
+      )}
+
+      {/* Patient Recovery Portal Modal / View */}
+      {showPatientPortal && (
+        <PatientPortal
+          onClose={() => setShowPatientPortal(false)}
           themeProps={themeProps}
         />
       )}

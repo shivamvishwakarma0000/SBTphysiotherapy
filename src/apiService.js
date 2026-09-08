@@ -573,5 +573,223 @@ export const api = {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  },
+
+  // 7. PATIENT ACCOUNT & SECURITY (DOCTOR CONTROLS)
+  async getPatientAccount(patientId) {
+    const token = this.getToken();
+    try {
+      const res = await fetch(`/api/doctor/patients/${patientId}/account`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) return data;
+    } catch (e) {}
+    return { ok: true, patientId, status: "active", recoveryPin: "----" };
+  },
+
+  async setPatientPassword(patientId, newPassword) {
+    const token = this.getToken();
+    try {
+      const res = await fetch(`/api/doctor/patients/${patientId}/account/password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ newPassword })
+      });
+      return await res.json();
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  },
+
+  async togglePatientAccountStatus(patientId, status) {
+    const token = this.getToken();
+    try {
+      const res = await fetch(`/api/doctor/patients/${patientId}/account/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      return await res.json();
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  },
+
+  async updateEnquiryStatus(enquiryId, status, linkedPatientId = null) {
+    const token = this.getToken();
+    try {
+      const res = await fetch(`/api/doctor/enquiries/${enquiryId}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status, linkedPatientId })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) return data;
+    } catch (e) {}
+
+    // Fallback local
+    const enquiries = getLocal(KEYS.ENQUIRIES, []);
+    const enq = enquiries.find(e => e.id === enquiryId);
+    if (enq) {
+      enq.status = status;
+      if (linkedPatientId) enq.linkedPatientId = linkedPatientId;
+      setLocal(KEYS.ENQUIRIES, enquiries);
+    }
+    return { ok: true };
+  }
+};
+
+// ==========================================
+// PATIENT PORTAL API SERVICE
+// ==========================================
+const PATIENT_TOKEN_KEY = "vindhya_patient_token";
+const PATIENT_PROFILE_KEY = "vindhya_patient_profile";
+
+export const patientApi = {
+  getStoredToken() {
+    return localStorage.getItem(PATIENT_TOKEN_KEY);
+  },
+  getStoredPatient() {
+    const raw = localStorage.getItem(PATIENT_PROFILE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  },
+  logout() {
+    localStorage.removeItem(PATIENT_TOKEN_KEY);
+    localStorage.removeItem(PATIENT_PROFILE_KEY);
+  },
+  async login(identifier, password) {
+    try {
+      const res = await fetch("/api/patient/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        localStorage.setItem(PATIENT_TOKEN_KEY, data.token);
+        localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(data.patient));
+        return data;
+      }
+      if (!res.ok) {
+        return { ok: false, error: data.error || "Login failed" };
+      }
+    } catch (err) {
+      // Offline fallback
+      const patients = getLocal(KEYS.PATIENTS, []);
+      const cleanId = String(identifier).trim().toUpperCase();
+      const cleanDigits = String(identifier).replace(/\D/g, "").slice(-10);
+      const p = patients.find(pt => {
+        const pId = String(pt.patientId || "").trim().toUpperCase();
+        const pPhone = String(pt.phone || "").replace(/\D/g, "").slice(-10);
+        return pId === cleanId || (cleanDigits.length === 10 && pPhone === cleanDigits);
+      });
+      if (!p) {
+        return { ok: false, error: "Patient record not found. Please check your ID or registered mobile number." };
+      }
+      const dummyToken = "local_patient_token_" + p.patientId;
+      localStorage.setItem(PATIENT_TOKEN_KEY, dummyToken);
+      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
+      return { ok: true, token: dummyToken, patient: p };
+    }
+  },
+
+  async getProfile() {
+    const token = this.getStoredToken();
+    if (!token) return { ok: false, error: "Not logged in" };
+    try {
+      const res = await fetch("/api/patient/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(data.patient));
+        return data;
+      }
+    } catch (e) {}
+    const p = this.getStoredPatient();
+    return { ok: true, patient: p };
+  },
+
+  async getRecords() {
+    const token = this.getStoredToken();
+    if (!token) return { ok: false, error: "Not logged in" };
+    try {
+      const res = await fetch("/api/patient/records", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        return data;
+      }
+    } catch (e) {}
+
+    const p = this.getStoredPatient();
+    if (!p) return { ok: false, error: "No patient session found." };
+    const visits = getLocal(KEYS.VISITS, []).filter(v => v.patientId === p.patientId);
+    const enquiries = getLocal(KEYS.ENQUIRIES, []).filter(e => {
+      const pPhone = String(p.phone || "").replace(/\D/g, "").slice(-10);
+      const ePhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+      return (pPhone.length === 10 && ePhone === pPhone) || e.linkedPatientId === p.patientId;
+    });
+
+    return {
+      ok: true,
+      patient: p,
+      stats: {
+        totalVisits: Math.max(p.totalVisits || 1, visits.length),
+        firstVisitDate: p.registrationDate,
+        lastVisitDate: visits[0]?.date || p.lastVisitDate || p.registrationDate,
+        daysInRecovery: 1,
+        activeCondition: visits[0]?.diagnosis || p.firstVisitReason || "Under Evaluation",
+        nextFollowUp: visits[0]?.followUpDate || null
+      },
+      visits,
+      appointments: enquiries
+    };
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    const token = this.getStoredToken();
+    if (!token) return { ok: false, error: "Not logged in" };
+    try {
+      const res = await fetch("/api/patient/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) return data;
+      return { ok: false, error: data.error || "Password change failed" };
+    } catch (e) {
+      return { ok: false, error: e.message || "Network error" };
+    }
+  },
+
+  async resetPasswordWithPin(identifier, recoveryPin, newPassword) {
+    try {
+      const res = await fetch("/api/patient/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, recoveryPin, newPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) return data;
+      return { ok: false, error: data.error || "Password reset failed" };
+    } catch (e) {
+      return { ok: false, error: e.message || "Network error" };
+    }
   }
 };

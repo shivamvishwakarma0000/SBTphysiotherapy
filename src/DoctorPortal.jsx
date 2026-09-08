@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import jsPDF from "jspdf";
 import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets";
 import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets } from "./apiService";
+import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly } from "./receiptUtils";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
 
@@ -78,6 +79,18 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [locationLngInput, setLocationLngInput] = useState(() => clinicLocation.lng);
   const [locationSearchLoading, setLocationSearchLoading] = useState(false);
   const [locationSavedMsg, setLocationSavedMsg] = useState("");
+
+  // Patient Portal Security Account State (Doctor Controls)
+  const [patientAccountData, setPatientAccountData] = useState(null);
+  const [accountActionLoading, setAccountActionLoading] = useState(false);
+  const [accountActionMsg, setAccountActionMsg] = useState({ text: "", isError: false });
+  const [newPatientPassInput, setNewPatientPassInput] = useState("");
+  const [copiedPatientPin, setCopiedPatientPin] = useState(false);
+
+  // Link Enquiry to Existing Patient State
+  const [linkingEnquiry, setLinkingEnquiry] = useState(null);
+  const [linkSearchQuery, setLinkSearchQuery] = useState("");
+  const [showSpamFilter, setShowSpamFilter] = useState(false);
 
   const handleSearchPlaceLocation = async (e) => {
     if (e) e.preventDefault();
@@ -581,9 +594,81 @@ export default function DoctorPortal({ onClose, themeProps }) {
       if (data.ok) {
         setSelectedPatient(data.patient);
         setPatientVisits(data.visits);
+        setNewPatientPassInput("");
+        setAccountActionMsg({ text: "", isError: false });
+        api.getPatientAccount(patientId).then(accRes => {
+          if (accRes && accRes.ok) {
+            setPatientAccountData(accRes);
+          }
+        });
       }
     } catch (err) {
       alert("Failed to load patient profile.");
+    }
+  };
+
+  const handleDoctorResetPatientPassword = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedPatient || !newPatientPassInput || newPatientPassInput.length < 4) {
+      setAccountActionMsg({ text: "Please enter a password with at least 4 characters.", isError: true });
+      return;
+    }
+    setAccountActionLoading(true);
+    setAccountActionMsg({ text: "", isError: false });
+    try {
+      const res = await api.setPatientPassword(selectedPatient.patientId, newPatientPassInput);
+      if (res.ok) {
+        setAccountActionMsg({ text: "✅ Password updated successfully for patient.", isError: false });
+        setNewPatientPassInput("");
+        const acc = await api.getPatientAccount(selectedPatient.patientId);
+        if (acc.ok) setPatientAccountData(acc);
+      } else {
+        setAccountActionMsg({ text: res.error || "Failed to set password.", isError: true });
+      }
+    } catch (err) {
+      setAccountActionMsg({ text: err.message, isError: true });
+    } finally {
+      setAccountActionLoading(false);
+    }
+  };
+
+  const handleTogglePatientAccountStatus = async (currentStatus) => {
+    if (!selectedPatient) return;
+    const targetStatus = currentStatus === "disabled" ? "active" : "disabled";
+    setAccountActionLoading(true);
+    setAccountActionMsg({ text: "", isError: false });
+    try {
+      const res = await api.togglePatientAccountStatus(selectedPatient.patientId, targetStatus);
+      if (res.ok) {
+        setAccountActionMsg({ text: `✅ Patient portal account is now ${targetStatus}.`, isError: false });
+        const acc = await api.getPatientAccount(selectedPatient.patientId);
+        if (acc.ok) setPatientAccountData(acc);
+      } else {
+        setAccountActionMsg({ text: res.error || "Failed to toggle status.", isError: true });
+      }
+    } catch (err) {
+      setAccountActionMsg({ text: err.message, isError: true });
+    } finally {
+      setAccountActionLoading(false);
+    }
+  };
+
+  const handleMarkEnquirySpam = async (enquiry) => {
+    const isCurrentlySpam = enquiry.status === "Hidden / Spam";
+    const newStatus = isCurrentlySpam ? "New" : "Hidden / Spam";
+    const res = await api.updateEnquiryStatus(enquiry.id, newStatus);
+    if (res.ok) {
+      fetchEnquiries();
+    }
+  };
+
+  const handleLinkEnquiryToPatient = async (enquiry, targetPatient) => {
+    const status = `Linked: ${targetPatient.patientId}`;
+    const res = await api.updateEnquiryStatus(enquiry.id, status, targetPatient.patientId);
+    if (res.ok) {
+      setLinkingEnquiry(null);
+      fetchEnquiries();
+      alert(`Enquiry linked successfully to ${targetPatient.name} (${targetPatient.patientId}) without creating duplicate records.`);
     }
   };
 
@@ -674,200 +759,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
-  const buildReceiptPDF = (receipt) => {
-    const { patient, visit } = receipt;
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4"
-    });
-
-    // Dark Header Banner
-    doc.setFillColor(7, 25, 39);
-    doc.rect(0, 0, 210, 44, "F");
-
-    // Clinic Official Receipt Logo (Rendered with natural 3.067:1 aspect ratio)
-    try {
-      if (CLINIC_LOGO_B64) {
-        doc.addImage(CLINIC_LOGO_B64, "PNG", 14, 6, 58, 18.91);
-      }
-    } catch (err) {
-      console.log("Could not render logo in PDF:", err);
-    }
-
-    // Emerald & Gold Accent Lines
-    doc.setFillColor(16, 185, 129);
-    doc.rect(0, 44, 105, 2.5, "F");
-    doc.setFillColor(234, 179, 8);
-    doc.rect(105, 44, 105, 2.5, "F");
-
-    // Address & Phone below logo on left (No duplicate title text to prevent collision)
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(200, 220, 230);
-    doc.text("Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)", 14, 32);
-    doc.text("Phone: +91 9793093316  |  WhatsApp: +91 8382024264", 14, 38);
-
-    // Doctor Details on Top Right (Cleanly separated on the right)
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(255, 255, 255);
-    doc.text("DR. SATYAM VISHWAKARMA", 196, 18, { align: "right" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(180, 210, 220);
-    doc.text("Consultant Physiotherapist", 196, 25, { align: "right" });
-    doc.text("Regd. Clinical Practitioner", 196, 31, { align: "right" });
-
-    // Document Title
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.setTextColor(7, 25, 39);
-    doc.text("OFFICIAL PATIENT REGISTRATION & CONSULTATION RECEIPT", 105, 56, { align: "center" });
-
-    // Summary Box
-    doc.setFillColor(241, 245, 249);
-    doc.setDrawColor(203, 213, 225);
-    doc.roundedRect(15, 62, 180, 16, 2, 2, "FD");
-
-    doc.setFontSize(9.5);
-    doc.setTextColor(7, 25, 39);
-    doc.text(`Patient ID: ${patient.patientId}`, 22, 72);
-    doc.text(`Visit No: #${visit.visitNumber || 1}`, 85, 72);
-    doc.text(`Date & Time: ${cleanDateOnly(visit.date)} ${visit.time || ""}`, 130, 72);
-
-    // Demographics Section Box
-    doc.roundedRect(15, 86, 180, 130, 2, 2, "D");
-
-    // Subsection 1: Patient Information
-    doc.setFillColor(220, 240, 235);
-    doc.rect(15, 86, 180, 7.5, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.5);
-    doc.setTextColor(10, 80, 60);
-    doc.text("1. PATIENT DEMOGRAPHICS", 20, 91.5);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-
-    doc.text("Full Name:", 20, 101);
-    doc.setFont("helvetica", "bold");
-    doc.text(patient.name, 60, 101);
-    doc.setFont("helvetica", "normal");
-
-    doc.text("Age / Gender:", 120, 101);
-    doc.text(`${patient.age} Yrs / ${patient.gender}`, 155, 101);
-
-    doc.text("Contact Phone:", 20, 109);
-    doc.text(`+91 ${patient.phone}`, 60, 109);
-
-    doc.text("Alternate Phone:", 120, 109);
-    doc.text(patient.altPhone ? `+91 ${patient.altPhone}` : "N/A", 155, 109);
-
-    doc.text("Address:", 20, 117);
-    doc.text(patient.address || "Vindhyachal, Mirzapur", 60, 117);
-
-    doc.text("Total Visits to Date:", 120, 117);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(16, 185, 129);
-    doc.text(`${patient.totalVisits || 1} Completed Visit(s)`, 155, 117);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(30, 41, 59);
-
-    // Subsection 2: Clinical Assessment & Prescription
-    doc.setFillColor(220, 240, 235);
-    doc.rect(15, 126, 180, 7.5, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.5);
-    doc.setTextColor(10, 80, 60);
-    doc.text("2. CLINICAL ASSESSMENT & REHABILITATION RECORD", 20, 131.5);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-
-    doc.text("Reason for Visit:", 20, 141);
-    doc.setFont("helvetica", "bold");
-    doc.text(visit.reason || "Physiotherapy Rehabilitation", 60, 141);
-    doc.setFont("helvetica", "normal");
-
-    doc.text("Reported Complaint:", 20, 149);
-    doc.text(visit.complaint || "Pain / Mobility limitation", 60, 149);
-
-    doc.text("Clinical Diagnosis:", 20, 157);
-    doc.setFont("helvetica", "bold");
-    doc.text(visit.diagnosis || "Under Active Physiotherapy Management", 60, 157);
-    doc.setFont("helvetica", "normal");
-
-    doc.text("Therapy Provided:", 20, 165);
-    const splitNotes = doc.splitTextToSize(visit.treatmentNotes || "Mobilization, targeted stretches, strengthening exercises, and home care protocol.", 125);
-    doc.text(splitNotes, 60, 165);
-
-    const feeY = 165 + (splitNotes.length * 5.2);
-    
-    // Fee Box inside Section 2 (Using clean "Rs." to avoid font encoding issues in jsPDF)
-    const cleanFeeNum = String(visit.fee || "500").replace(/[^0-9]/g, "");
-    doc.setFillColor(240, 249, 255);
-    doc.roundedRect(20, feeY, 170, 14, 1.5, 1.5, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(3, 105, 161);
-    doc.text("Consultation & Treatment Fee:", 25, feeY + 9);
-    doc.setFontSize(10.5);
-    doc.setTextColor(5, 150, 105);
-    doc.text(`Rs. ${cleanFeeNum}`, 78, feeY + 9);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text("Status: Paid & Settled (Cash / UPI)", 118, feeY + 9);
-
-    const nextY = feeY + 20;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-    doc.text("Next Follow-up:", 20, nextY);
-    doc.setFont("helvetica", "bold");
-    if (visit.followUpDate) {
-      doc.setTextColor(16, 185, 129);
-      doc.text(`${visit.followUpDate} ${visit.followUpTime ? `(${visit.followUpTime})` : "(Regular Session)"}`, 60, nextY);
-    } else {
-      doc.setTextColor(100, 116, 139);
-      doc.text("None Required / SOS (Only Today Consultation Completed)", 60, nextY);
-    }
-
-    // Doctor Official Signature & Sign-off Box
-    try {
-      if (DOCTOR_SIGNATURE_B64) {
-        doc.addImage(DOCTOR_SIGNATURE_B64, "PNG", 146, 214, 23, 21);
-      }
-    } catch (err) {
-      console.log("Could not render signature in PDF:", err);
-    }
-
-    doc.line(130, 236, 185, 236);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.5);
-    doc.setTextColor(7, 25, 39);
-    doc.text("Dr. Satyam Vishwakarma", 157.5, 241, { align: "center" });
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(71, 85, 105);
-    doc.text("Consultant Physiotherapist", 157.5, 245, { align: "center" });
-    doc.text("Vindhya Physio & Rehab Center", 157.5, 249, { align: "center" });
-
-    // Footer
-    doc.setFillColor(7, 25, 39);
-    doc.rect(0, 276, 210, 21, "F");
-    doc.setFontSize(8.5);
-    doc.setTextColor(255, 255, 255);
-    doc.text("Thank you for choosing Vindhya Physio & Rehab Center", 105, 283, { align: "center" });
-    doc.setFontSize(7);
-    doc.setTextColor(180, 200, 210);
-    doc.text("For appointments & medical inquiries: Call 9793093316 | WhatsApp: 8382024264 | Amravati Chauraha, Vindhyachal", 105, 289, { align: "center" });
-
-    return doc;
-  };
+  // Note: buildReceiptPDF and downloadReceiptPDF are imported from ./receiptUtils
 
   const handleDownloadPDF = (receipt) => {
     if (!receipt || !receipt.patient || !receipt.visit) return;
@@ -2054,11 +1946,21 @@ _(Saved in patient clinic records)_`;
             <div className="section-header-row">
               <div>
                 <h2>Website Consultation Bookings ({enquiries.length})</h2>
-                <p>All direct patient consultation requests submitted from the website form.</p>
+                <p>Manage patient consultation requests, convert to patients, or link to existing records without duplication.</p>
               </div>
-              <button className="secondary-btn" onClick={() => handleExportCSV("enquiries")}>
-                📥 Export Enquiries (CSV)
-              </button>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "var(--text-secondary, #64748b)" }}>
+                  <input
+                    type="checkbox"
+                    checked={showSpamFilter}
+                    onChange={(e) => setShowSpamFilter(e.target.checked)}
+                  />
+                  Show Hidden / Spam
+                </label>
+                <button className="secondary-btn" onClick={() => handleExportCSV("enquiries")}>
+                  📥 Export Enquiries (CSV)
+                </button>
+              </div>
             </div>
 
             <div className="table-responsive">
@@ -2068,35 +1970,79 @@ _(Saved in patient clinic records)_`;
                     <th>Date / Time</th>
                     <th>Patient Name</th>
                     <th>Phone</th>
-                    <th>Condition / Pain Area</th>
-                    <th>Duration</th>
+                    <th>Condition / Pain</th>
                     <th>Preferred Date</th>
-                    <th>Symptoms & Message</th>
-                    <th>Action</th>
+                    <th>Message</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {enquiries.map(e => (
-                    <tr key={e.id}>
-                      <td><strong>{e.date}</strong><br /><small>{e.time}</small></td>
-                      <td><strong>{e.name}</strong></td>
-                      <td>
-                        <a href={`tel:${e.phone}`} className="phone-link">+91 {e.phone}</a>
-                      </td>
-                      <td><span className="condition-tag">{e.painArea}</span></td>
-                      <td>{e.duration}</td>
-                      <td>{e.appointmentDate || "Flexible"}</td>
-                      <td style={{ maxWidth: "240px" }}>{e.concern}</td>
-                      <td>
-                        <button
-                          className="table-action-btn primary-action"
-                          onClick={() => convertEnquiryToPatient(e)}
-                        >
-                          ➕ Enroll as Patient
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {enquiries
+                    .filter(e => showSpamFilter || e.status !== "Hidden / Spam")
+                    .map(e => {
+                      const isSpam = e.status === "Hidden / Spam";
+                      const isLinked = String(e.status || "").startsWith("Linked:");
+                      return (
+                        <tr key={e.id} style={{ opacity: isSpam ? 0.55 : 1 }}>
+                          <td><strong>{e.date}</strong><br /><small>{e.time}</small></td>
+                          <td><strong>{e.name}</strong></td>
+                          <td>
+                            <a href={`tel:${e.phone}`} className="phone-link">+91 {e.phone}</a>
+                          </td>
+                          <td><span className="condition-tag">{e.painArea}</span></td>
+                          <td>{e.appointmentDate || "Flexible"}</td>
+                          <td style={{ maxWidth: "200px" }}>{e.concern}</td>
+                          <td>
+                            <span style={{
+                              fontSize: "11px",
+                              fontWeight: "700",
+                              padding: "3px 8px",
+                              borderRadius: "6px",
+                              whiteSpace: "nowrap",
+                              background: isSpam ? "#fee2e2" : isLinked ? "#f3e8ff" : (e.status === "Converted" ? "#dcfce7" : "#e0f2fe"),
+                              color: isSpam ? "#dc2626" : isLinked ? "#7e22ce" : (e.status === "Converted" ? "#15803d" : "#0369a1")
+                            }}>
+                              {e.status || "New"}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                              <button
+                                className="table-action-btn primary-action"
+                                onClick={() => convertEnquiryToPatient(e)}
+                                title="Enroll as a new patient record"
+                              >
+                                ➕ Enroll
+                              </button>
+                              <button
+                                className="table-action-btn"
+                                style={{ background: "rgba(126, 34, 206, 0.12)", color: "#9333ea", borderColor: "rgba(126, 34, 206, 0.3)" }}
+                                onClick={() => {
+                                  setLinkingEnquiry(e);
+                                  setLinkSearchQuery("");
+                                }}
+                                title="Link this request to an existing patient"
+                              >
+                                🔗 Link
+                              </button>
+                              <button
+                                className="table-action-btn"
+                                style={{
+                                  background: isSpam ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                                  color: isSpam ? "#10b981" : "#ef4444",
+                                  borderColor: isSpam ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"
+                                }}
+                                onClick={() => handleMarkEnquirySpam(e)}
+                                title={isSpam ? "Unhide enquiry" : "Hide spam enquiry"}
+                              >
+                                {isSpam ? "Unhide" : "🚫 Hide"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   {enquiries.length === 0 && (
                     <tr>
                       <td colSpan="8" className="empty-cell">No online consultation requests yet.</td>
@@ -2105,6 +2051,74 @@ _(Saved in patient clinic records)_`;
                 </tbody>
               </table>
             </div>
+
+            {/* Link Enquiry to Patient Modal */}
+            {linkingEnquiry && (
+              <div className="patient-submodal-overlay" onClick={() => setLinkingEnquiry(null)}>
+                <div className="patient-submodal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "520px" }}>
+                  <div className="submodal-head">
+                    <h3>Link Enquiry to Existing Patient</h3>
+                    <button className="submodal-close" onClick={() => setLinkingEnquiry(null)}>✕</button>
+                  </div>
+                  <p className="submodal-desc">
+                    Link enquiry from <strong>{linkingEnquiry.name}</strong> (+91 {linkingEnquiry.phone}) to an existing patient file to prevent duplicate patient IDs.
+                  </p>
+
+                  <div style={{ margin: "14px 0" }}>
+                    <input
+                      type="text"
+                      placeholder="Search patient by Name, ID, or Phone..."
+                      value={linkSearchQuery}
+                      onChange={(e) => setLinkSearchQuery(e.target.value)}
+                      style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid var(--border)" }}
+                    />
+                  </div>
+
+                  <div style={{ maxHeight: "260px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {patients
+                      .filter(p => {
+                        const q = linkSearchQuery.toLowerCase();
+                        return !q || p.name.toLowerCase().includes(q) || (p.patientId && p.patientId.toLowerCase().includes(q)) || p.phone.includes(q);
+                      })
+                      .slice(0, 10)
+                      .map(p => (
+                        <div
+                          key={p.patientId}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "10px 14px",
+                            borderRadius: "8px",
+                            background: "var(--card-bg, #f8fafc)",
+                            border: "1px solid var(--border, #e2e8f0)"
+                          }}
+                        >
+                          <div>
+                            <strong>{p.name}</strong> <span className="patient-id-badge">{p.patientId}</span>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted, #64748b)" }}>
+                              +91 {p.phone} • {p.age} Yrs • {p.gender}
+                            </div>
+                          </div>
+                          <button
+                            className="primary-btn"
+                            style={{ fontSize: "12px", padding: "6px 12px" }}
+                            onClick={() => handleLinkEnquiryToPatient(linkingEnquiry, p)}
+                          >
+                            🔗 Link Here
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+
+                  <div className="submodal-actions" style={{ marginTop: "16px" }}>
+                    <button className="secondary-btn" onClick={() => setLinkingEnquiry(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2567,6 +2581,123 @@ _(Saved in patient clinic records)_`;
                 <div>
                   <label>Completed Visits</label>
                   <span className="visit-count-tag">{selectedPatient.totalVisits || (patientVisits.length > 0 ? patientVisits.length : 1)} Visits</span>
+                </div>
+              </div>
+
+              {/* Patient Portal Account & Recovery PIN (Doctor Control) */}
+              <div className="patient-portal-account-card" style={{
+                background: "linear-gradient(135deg, rgba(8, 120, 201, 0.08), rgba(118, 184, 42, 0.08))",
+                border: "1px solid rgba(8, 120, 201, 0.25)",
+                borderRadius: "10px",
+                padding: "14px 16px",
+                marginTop: "16px",
+                marginBottom: "20px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "18px" }}>🔐</span>
+                    <strong style={{ fontSize: "14px", color: "var(--text-primary, #0f172a)" }}>
+                      Patient Portal Access & 4-Digit Recovery PIN
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      textTransform: "uppercase",
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                      background: (patientAccountData?.status === "disabled") ? "#fee2e2" : "#dcfce7",
+                      color: (patientAccountData?.status === "disabled") ? "#dc2626" : "#15803d"
+                    }}>
+                      Account: {patientAccountData?.status || "Active"}
+                    </span>
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      style={{ fontSize: "11px", padding: "4px 8px" }}
+                      onClick={() => handleTogglePatientAccountStatus(patientAccountData?.status || "active")}
+                      disabled={accountActionLoading}
+                    >
+                      {patientAccountData?.status === "disabled" ? "Activate Account" : "Deactivate Account"}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted, #64748b)", display: "block" }}>4-Digit Recovery PIN</span>
+                      <strong style={{
+                        fontSize: "20px",
+                        letterSpacing: "3px",
+                        color: "#0878C9",
+                        fontFamily: "monospace",
+                        background: "rgba(8, 120, 201, 0.12)",
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        display: "inline-block"
+                      }}>
+                        {patientAccountData?.recoveryPin || "----"}
+                      </strong>
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      style={{ fontSize: "12px", padding: "6px 10px" }}
+                      onClick={() => {
+                        if (patientAccountData?.recoveryPin) {
+                          navigator.clipboard.writeText(patientAccountData.recoveryPin);
+                          setCopiedPatientPin(true);
+                          setTimeout(() => setCopiedPatientPin(false), 2500);
+                        }
+                      }}
+                    >
+                      {copiedPatientPin ? "✅ Copied" : "📋 Copy PIN"}
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={handleDoctorResetPatientPassword}
+                    style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}
+                  >
+                    <input
+                      type="text"
+                      placeholder="Set new patient password"
+                      value={newPatientPassInput}
+                      onChange={(e) => setNewPatientPassInput(e.target.value)}
+                      style={{
+                        padding: "6px 10px",
+                        fontSize: "12px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--border, #cbd5e1)",
+                        width: "180px"
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="primary-btn"
+                      style={{ fontSize: "12px", padding: "6px 12px" }}
+                      disabled={accountActionLoading || !newPatientPassInput}
+                    >
+                      Set Password
+                    </button>
+                  </form>
+                </div>
+
+                {accountActionMsg.text && (
+                  <div style={{
+                    marginTop: "8px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: accountActionMsg.isError ? "#dc2626" : "#16a34a"
+                  }}>
+                    {accountActionMsg.text}
+                  </div>
+                )}
+
+                <div style={{ marginTop: "8px", fontSize: "11px", color: "var(--text-muted, #64748b)" }}>
+                  💡 Patient can log into the Patient Portal at any time using <strong>{selectedPatient.patientId}</strong> or Registered Mobile <strong>+91 {selectedPatient.phone}</strong> and their Recovery PIN / password.
                 </div>
               </div>
 

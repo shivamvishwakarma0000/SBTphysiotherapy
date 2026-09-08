@@ -301,14 +301,15 @@ textarea {
   top: 0;
   z-index: 50;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 20px;
-  padding: 12px clamp(16px, 4vw, 48px);
+  gap: 16px;
+  padding: 10px clamp(14px, 3vw, 40px);
   background: var(--header-bg);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(20px);
   box-shadow: var(--header-shadow);
+  box-sizing: border-box;
 }
 
 .brand,
@@ -317,11 +318,13 @@ textarea {
   align-items: center;
   gap: 12px;
   font-weight: 800;
+  flex-shrink: 0;
 }
 
 .clinic-logo-wrap {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .clinic-logo-img {
@@ -334,18 +337,32 @@ textarea {
 
 nav {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 18px;
+  gap: 16px;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
 }
 
+nav::-webkit-scrollbar {
+  display: none;
+}
+
 nav a {
   white-space: nowrap;
+  flex-shrink: 0;
   color: var(--text-secondary);
   transition: color 150ms ease;
+  padding: 4px 0;
 }
 
 nav a:hover {
@@ -355,7 +372,8 @@ nav a:hover {
 .header-actions-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* ================= THEME TOGGLE CONTROL ================= */
@@ -421,15 +439,20 @@ nav a:hover {
 .patient-portal-pill-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  height: 38px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 13px;
   background: rgba(8, 120, 201, 0.12);
   border: 1px solid rgba(8, 120, 201, 0.35);
   border-radius: 20px;
   color: #0878C9;
   font-size: 12.5px;
   font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
+  box-sizing: border-box;
   cursor: pointer;
   transition: all 180ms ease;
 }
@@ -444,15 +467,20 @@ nav a:hover {
 .doctor-portal-pill-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  height: 38px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 13px;
   background: var(--emerald-bg);
   border: 1px solid var(--emerald-border);
   border-radius: 20px;
   color: var(--emerald);
   font-size: 12.5px;
   font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
+  box-sizing: border-box;
   cursor: pointer;
   transition: all 180ms ease;
 }
@@ -462,6 +490,19 @@ nav a:hover {
   color: #fff;
   transform: translateY(-1px);
   box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.portal-pill-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.portal-pill-text {
+  display: inline;
+}
+
+.portal-pill-text-short {
+  display: none;
 }
 
 .header-cta,
@@ -2677,38 +2718,74 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .site-header {
     grid-template-columns: 1fr auto;
-    gap: 10px;
-    padding: 10px 16px;
+    gap: 8px;
+    padding: 8px 12px;
   }
 
   .clinic-logo-img {
-    height: 38px;
+    height: 34px;
+    max-width: 170px;
   }
 
   .header-actions-group {
     justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
-  .doctor-portal-pill-btn {
-    padding: 0 12px;
+  /* User requested: remove book consultation from top header on mobile */
+  .header-cta,
+  .desktop-only-cta {
+    display: none !important;
+  }
+
+  /* User requested: fix patient portal & doctor portal text out of box on mobile */
+  .portal-pill-text {
+    display: none !important;
+  }
+
+  .portal-pill-text-short {
+    display: inline !important;
     font-size: 11.5px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
   }
 
-  .header-cta {
-    font-size: 12px;
-    padding: 0 12px;
+  .patient-portal-pill-btn,
+  .doctor-portal-pill-btn {
+    height: 32px !important;
+    padding: 0 9px !important;
+    font-size: 11.5px !important;
+    gap: 4px !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+  }
+
+  .portal-pill-icon {
+    font-size: 12px !important;
+    line-height: 1 !important;
   }
 
   nav {
+    grid-column: 1 / -1;
     display: flex !important;
     flex-wrap: nowrap !important;
     gap: 14px !important;
     overflow-x: auto !important;
+    overflow-y: hidden !important;
     padding-bottom: 6px !important;
     width: 100% !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  nav::-webkit-scrollbar {
+    display: none;
   }
 
   .treatment-grid,

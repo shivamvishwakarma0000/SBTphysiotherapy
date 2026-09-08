@@ -172,7 +172,7 @@ function WhatsAppIcon() {
   );
 }
 
-function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, themeProps }) {
+function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, showDownloadBtn, themeProps }) {
   const { themePreference, setTheme, isDark } = themeProps;
   return (
     <header className="site-header">
@@ -189,33 +189,39 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, th
           themePreference={themePreference}
           setTheme={setTheme}
         />
-        <button
-          className="download-app-icon-btn"
-          onClick={onOpenDownloadApp}
-          title="Install / Download Clinic App"
-          aria-label="Download App"
-        >
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-        </button>
+        {showDownloadBtn && (
+          <button
+            className="download-app-icon-btn"
+            onClick={onOpenDownloadApp}
+            title="Install Clinic App"
+            aria-label="Download App"
+          >
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+        )}
         <button
           className="patient-portal-pill-btn"
           onClick={onOpenPatientPortal}
           title="Patient Portal — Visits, Receipts & Recovery Plan"
         >
-          👤 Patient Portal
+          <span className="portal-pill-icon">👤</span>
+          <span className="portal-pill-text">Patient Portal</span>
+          <span className="portal-pill-text-short">Patient</span>
         </button>
         <button
           className="doctor-portal-pill-btn"
           onClick={onOpenDoctorPortal}
           title="Doctor Login & Clinic Management"
         >
-          🔒 Doctor Portal
+          <span className="portal-pill-icon">🔒</span>
+          <span className="portal-pill-text">Doctor Portal</span>
+          <span className="portal-pill-text-short">Doctor</span>
         </button>
-        <a className="header-cta" href="#consultation">Book Consultation</a>
+        <a className="header-cta desktop-only-cta" href="#consultation">Book Consultation</a>
       </div>
     </header>
   );
@@ -695,33 +701,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
         <a href="#treatments">Sports Injury & Post-Surgical</a>
       </div>
       <div>
-        <h3>Patient & Doctor Portals</h3>
-        <button
-          className="footer-patient-portal-btn"
-          onClick={onOpenPatientPortal}
-          style={{
-            display: "block",
-            width: "100%",
-            padding: "10px 14px",
-            marginBottom: "8px",
-            background: "linear-gradient(135deg, #0878C9, #0284c7)",
-            color: "#ffffff",
-            fontWeight: "700",
-            fontSize: "13px",
-            borderRadius: "8px",
-            border: "none",
-            cursor: "pointer",
-            textAlign: "center"
-          }}
-        >
-          👤 Patient Recovery Portal
-        </button>
-        <button
-          className="footer-doctor-portal-btn"
-          onClick={onOpenDoctorPortal}
-        >
-          🔒 Doctor Portal Login
-        </button>
+        <h3>Clinic Location & Map</h3>
         <iframe
           className="map-frame"
           title="Vindhyachal Mirzapur Uttar Pradesh clinic location map"
@@ -741,7 +721,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
   );
 }
 
-function AppDownloadModal({ isOpen, onClose, deferredPrompt }) {
+function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
@@ -758,6 +738,8 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt }) {
         const choice = await deferredPrompt.userChoice;
         if (choice && choice.outcome === 'accepted') {
           sessionStorage.setItem('vindhya_download_prompt_dismissed', 'true');
+          localStorage.setItem('vindhya_app_installed', 'true');
+          if (onInstalled) onInstalled();
         }
       } catch (err) {
         console.log("Install prompt error:", err);
@@ -833,6 +815,19 @@ function App() {
   });
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [isAppInstalled, setIsAppInstalled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true ||
+      localStorage.getItem("vindhya_app_installed") === "true"
+    );
+  });
+  const [isMobileDevice, setIsMobileDevice] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  });
+
   const themeProps = useTheme();
 
   useEffect(() => {
@@ -843,13 +838,23 @@ function App() {
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Auto-prompt on mobile devices after 1.5 seconds if not previously dismissed in this session
-    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    const handleAppInstalled = () => {
+      setIsAppInstalled(true);
+      localStorage.setItem('vindhya_app_installed', 'true');
+      setShowDownloadModal(false);
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    const handleResize = () => {
+      setIsMobileDevice(/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     const dismissed = sessionStorage.getItem('vindhya_download_prompt_dismissed');
 
     let timer;
-    if (isMobile && !isStandalone && !dismissed) {
+    if (isMobileDevice && !isStandalone && !isAppInstalled && !dismissed) {
       timer = setTimeout(() => {
         setShowDownloadModal(true);
       }, 1500);
@@ -869,14 +874,18 @@ function App() {
     return () => {
       if (timer) clearTimeout(timer);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+      window.removeEventListener("resize", handleResize);
       window.removeEventListener("hashchange", checkHash);
     };
-  }, []);
+  }, [isMobileDevice, isAppInstalled]);
 
   const handleDismissDownload = () => {
     sessionStorage.setItem('vindhya_download_prompt_dismissed', 'true');
     setShowDownloadModal(false);
   };
+
+  const canShowDownloadBtn = isMobileDevice && !isAppInstalled;
 
   return (
     <div className={`app-root ${themeProps.resolvedTheme}`}>
@@ -884,6 +893,7 @@ function App() {
         onOpenDoctorPortal={() => setShowDoctorPortal(true)}
         onOpenPatientPortal={() => setShowPatientPortal(true)}
         onOpenDownloadApp={() => setShowDownloadModal(true)}
+        showDownloadBtn={canShowDownloadBtn}
         themeProps={themeProps}
       />
       <main>
@@ -895,18 +905,17 @@ function App() {
         <Assessment />
         <Testimonials />
       </main>
-      <Footer
-        onOpenDoctorPortal={() => setShowDoctorPortal(true)}
-        onOpenPatientPortal={() => setShowPatientPortal(true)}
-        isDark={themeProps.isDark}
-      />
+      <Footer isDark={themeProps.isDark} />
 
-      {/* App Download / Install Modal */}
+      <WhatsAppFloating />
+
       <AppDownloadModal
-        isOpen={showDownloadModal}
+        isOpen={showDownloadModal && canShowDownloadBtn}
         onClose={handleDismissDownload}
         deferredPrompt={deferredPrompt}
+        onInstalled={() => setIsAppInstalled(true)}
       />
+
 
       {/* Doctor Portal Modal / View */}
       {showDoctorPortal && (

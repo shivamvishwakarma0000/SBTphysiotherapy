@@ -35,26 +35,8 @@ function MoonIcon() {
   );
 }
 
-function SystemIcon() {
-  return (
-    <svg
-      className="theme-icon system-icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect width="20" height="14" x="2" y="3" rx="2" />
-      <line x1="8" x2="16" y1="21" y2="21" />
-      <line x1="12" x2="12" y1="17" y2="21" />
-    </svg>
-  );
-}
-
 export default function ThemeToggle({ themePreference, setTheme, compact = false }) {
+  const isLight = themePreference === "light";
   return (
     <div
       className={`theme-toggle-group ${compact ? "compact" : ""}`}
@@ -64,8 +46,8 @@ export default function ThemeToggle({ themePreference, setTheme, compact = false
       <button
         type="button"
         role="radio"
-        aria-checked={themePreference === "light"}
-        className={`theme-btn ${themePreference === "light" ? "active" : ""}`}
+        aria-checked={isLight}
+        className={`theme-btn ${isLight ? "active" : ""}`}
         onClick={() => setTheme("light")}
         title="Light Mode"
         aria-label="Light mode"
@@ -77,27 +59,14 @@ export default function ThemeToggle({ themePreference, setTheme, compact = false
       <button
         type="button"
         role="radio"
-        aria-checked={themePreference === "dark"}
-        className={`theme-btn ${themePreference === "dark" ? "active" : ""}`}
+        aria-checked={!isLight}
+        className={`theme-btn ${!isLight ? "active" : ""}`}
         onClick={() => setTheme("dark")}
         title="Dark Mode"
         aria-label="Dark mode"
       >
         <MoonIcon />
         <span className="theme-btn-text">Dark</span>
-      </button>
-
-      <button
-        type="button"
-        role="radio"
-        aria-checked={themePreference === "system"}
-        className={`theme-btn ${themePreference === "system" ? "active" : ""}`}
-        onClick={() => setTheme("system")}
-        title="Follow System OS Preference"
-        aria-label="System mode"
-      >
-        <SystemIcon />
-        <span className="theme-btn-text">Auto</span>
       </button>
     </div>
   );

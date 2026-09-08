@@ -20,6 +20,7 @@ export default function PatientPortal({ onClose, themeProps }) {
   const isDark = themeProps?.isDark !== undefined
     ? themeProps.isDark
     : (document.documentElement.getAttribute("data-theme") !== "light");
+  const isDarkMode = isDark;
 
   const [patientToken, setPatientToken] = useState(() => patientApi.getStoredToken() || "");
   const [patientProfile, setPatientProfile] = useState(() => patientApi.getStoredPatient() || null);
@@ -73,10 +74,10 @@ export default function PatientPortal({ onClose, themeProps }) {
           appointments: recordsRes.appointments || [],
           stats: recordsRes.stats || {
             totalVisits: recordsRes.visits?.length || 1,
-            firstVisitDate: profileRes.patient?.registrationDate,
-            lastVisitDate: recordsRes.visits?.[0]?.date || profileRes.patient?.registrationDate,
+            firstVisitDate: profileRes?.patient?.registrationDate || recordsRes.patient?.registrationDate,
+            lastVisitDate: recordsRes.visits?.[0]?.date || profileRes?.patient?.registrationDate,
             daysInRecovery: 1,
-            activeCondition: recordsRes.visits?.[0]?.diagnosis || profileRes.patient?.firstVisitReason || "Under Evaluation",
+            activeCondition: recordsRes.visits?.[0]?.diagnosis || profileRes?.patient?.firstVisitReason || "Under Evaluation",
             nextFollowUp: recordsRes.visits?.[0]?.followUpDate || null
           }
         });
@@ -150,7 +151,7 @@ export default function PatientPortal({ onClose, themeProps }) {
     return {
       receiptNumber: `REC-${v.visitId || "01"}`,
       receiptDate: v.date || new Date().toISOString().slice(0, 10),
-      fee: v.fee || 500,
+      fee: v.fee || 300,
       paymentMode: v.paymentMode || "Cash",
       patient: {
         patientId: patientProfile?.patientId || v.patientId,
@@ -171,7 +172,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         treatmentNotes: v.treatmentNotes || "Physiotherapy & Rehabilitation",
         followUpDate: v.followUpDate || "As advised",
         doctor: v.doctor || "Dr. Satyam Vishwakarma",
-        fee: v.fee || 500
+        fee: v.fee || 300
       }
     };
   };
@@ -258,9 +259,9 @@ export default function PatientPortal({ onClose, themeProps }) {
   // =========================================================================
   // VIEW B: PATIENT PORTAL DASHBOARD & SECTIONS
   // =========================================================================
-  const patientFirstName = (patientProfile.name || "Patient").split(" ")[0];
-  const totalVisitsCount = recordsData.stats.totalVisits || recordsData.visits.length || 1;
-  const latestVisit = recordsData.visits[0] || null;
+  const patientFirstName = (patientProfile?.name || "Patient").split(" ")[0];
+  const totalVisitsCount = recordsData?.stats?.totalVisits || recordsData?.visits?.length || 1;
+  const latestVisit = recordsData?.visits?.[0] || null;
 
   return (
     <div className="patient-portal-root">
@@ -284,8 +285,8 @@ export default function PatientPortal({ onClose, themeProps }) {
           <div className="patient-user-chip">
             <span className="avatar-circle">👤</span>
             <div className="user-text">
-              <span className="user-name">{patientProfile.name}</span>
-              <span className="user-id">{patientProfile.patientId}</span>
+              <span className="user-name">{patientProfile?.name || "Patient"}</span>
+              <span className="user-id">{patientProfile?.patientId || "VPR"}</span>
             </div>
           </div>
 
@@ -324,7 +325,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         >
           <span className="tab-icon">📅</span>
           <span className="tab-label">Appointments</span>
-          {recordsData.appointments.length > 0 && (
+          {recordsData?.appointments?.length > 0 && (
             <span className="tab-bubble">{recordsData.appointments.length}</span>
           )}
         </button>
@@ -335,7 +336,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         >
           <span className="tab-icon">🩺</span>
           <span className="tab-label">My Visits</span>
-          <span className="tab-bubble">{recordsData.visits.length}</span>
+          <span className="tab-bubble">{recordsData?.visits?.length || 0}</span>
         </button>
 
         <button
@@ -388,7 +389,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
               <div className="patient-quick-badge">
                 <span className="badge-title">PATIENT ID</span>
-                <span className="badge-value">{patientProfile.patientId}</span>
+                <span className="badge-value">{patientProfile?.patientId || "VPR"}</span>
               </div>
             </div>
 
@@ -408,7 +409,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <div className="card-info">
                   <span className="card-label">Active Condition</span>
                   <strong className="card-value condition-text">
-                    {recordsData.stats.activeCondition || "Under Assessment"}
+                    {recordsData?.stats?.activeCondition || "Under Assessment"}
                   </strong>
                   <span className="card-subtext">Primary rehabilitation focus</span>
                 </div>
@@ -418,9 +419,9 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <span className="card-icon">🗓️</span>
                 <div className="card-info">
                   <span className="card-label">Days in Care</span>
-                  <strong className="card-value">{recordsData.stats.daysInRecovery} Days</strong>
+                  <strong className="card-value">{recordsData?.stats?.daysInRecovery || 1} Days</strong>
                   <span className="card-subtext">
-                    Since {cleanDateOnly(recordsData.stats.firstVisitDate || patientProfile.registrationDate)}
+                    Since {cleanDateOnly(recordsData?.stats?.firstVisitDate || patientProfile?.registrationDate)}
                   </span>
                 </div>
               </div>
@@ -430,7 +431,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <div className="card-info">
                   <span className="card-label">Next Follow-Up</span>
                   <strong className="card-value follow-text">
-                    {recordsData.stats.nextFollowUp || "As Advised / SOS"}
+                    {recordsData?.stats?.nextFollowUp || "As Advised / SOS"}
                   </strong>
                   <span className="card-subtext">Dr. Satyam Vishwakarma</span>
                 </div>
@@ -1003,35 +1004,35 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="patient-details-grid">
                 <div className="detail-cell">
                   <label>Full Name</label>
-                  <strong>{patientProfile.name}</strong>
+                  <strong>{patientProfile?.name || "Patient"}</strong>
                 </div>
                 <div className="detail-cell">
                   <label>Patient ID</label>
-                  <strong className="accent-id">{patientProfile.patientId}</strong>
+                  <strong className="accent-id">{patientProfile?.patientId || "VPR"}</strong>
                 </div>
                 <div className="detail-cell">
                   <label>Age / Gender</label>
-                  <span>{patientProfile.age} Yrs • {patientProfile.gender}</span>
+                  <span>{patientProfile?.age || "--"} Yrs • {patientProfile?.gender || "--"}</span>
                 </div>
                 <div className="detail-cell">
                   <label>Registered Mobile</label>
-                  <span>+91 {patientProfile.phone}</span>
+                  <span>+91 {patientProfile?.phone || ""}</span>
                 </div>
                 <div className="detail-cell">
                   <label>Alternate Mobile</label>
-                  <span>{patientProfile.altPhone ? `+91 ${patientProfile.altPhone}` : "Not provided"}</span>
+                  <span>{patientProfile?.altPhone ? `+91 ${patientProfile.altPhone}` : "Not provided"}</span>
                 </div>
                 <div className="detail-cell">
                   <label>Clinic Address</label>
-                  <span>{patientProfile.address || "Vindhyachal, Mirzapur"}</span>
+                  <span>{patientProfile?.address || "Vindhyachal, Mirzapur"}</span>
                 </div>
                 <div className="detail-cell">
                   <label>Emergency Contact</label>
-                  <span>{patientProfile.emergencyContact || "Not provided"}</span>
+                  <span>{patientProfile?.emergencyContact || "Not provided"}</span>
                 </div>
                 <div className="detail-cell">
                   <label>Registration Date</label>
-                  <span>{cleanDateOnly(patientProfile.registrationDate)}</span>
+                  <span>{cleanDateOnly(patientProfile?.registrationDate)}</span>
                 </div>
               </div>
             </div>
@@ -1053,7 +1054,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="patient-details-grid" style={{ marginTop: "14px" }}>
                 <div className="detail-cell">
                   <label>Login ID</label>
-                  <strong style={{ color: "#0878C9" }}>+91 {patientProfile.phone} <small style={{ color: "var(--text-muted)", fontWeight: "normal" }}>or {patientProfile.patientId}</small></strong>
+                  <strong style={{ color: "#0878C9" }}>+91 {patientProfile?.phone || ""} <small style={{ color: "var(--text-muted)", fontWeight: "normal" }}>or {patientProfile?.patientId || "VPR"}</small></strong>
                 </div>
                 <div className="detail-cell">
                   <label>Initial Universal Password</label>

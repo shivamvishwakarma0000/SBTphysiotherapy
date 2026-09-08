@@ -66,12 +66,51 @@ function initializeLocalDatabase() {
     });
   }
 
-  // Ensure arrays exist
-  if (!localStorage.getItem(KEYS.PATIENTS)) {
-    setLocal(KEYS.PATIENTS, []);
+  // Ensure arrays exist with official registered clinic data
+  const existingPatients = getLocal(KEYS.PATIENTS, []);
+  if (existingPatients.length === 0) {
+    setLocal(KEYS.PATIENTS, [
+      {
+        patientId: "VPR-0001",
+        registrationDate: "2026-08-25",
+        name: "Shivam Vishwakarma",
+        age: "21",
+        gender: "Male",
+        phone: "8858496345",
+        altPhone: "",
+        address: "baraipur rajapur , Mirzapur",
+        dob: "2004-10-02",
+        emergencyContact: "",
+        firstVisitReason: "Cup Therapy",
+        status: "Active",
+        totalVisits: 1,
+        lastVisitDate: "2026-08-25",
+        syncStatus: "synced",
+        createdAt: "2026-08-25T19:15:56.969Z"
+      }
+    ]);
   }
-  if (!localStorage.getItem(KEYS.VISITS)) {
-    setLocal(KEYS.VISITS, []);
+  const existingVisits = getLocal(KEYS.VISITS, []);
+  if (existingVisits.length === 0) {
+    setLocal(KEYS.VISITS, [
+      {
+        visitId: "VST-0001",
+        visitNumber: 1,
+        patientId: "VPR-0001",
+        patientName: "Shivam Vishwakarma",
+        phone: "8858496345",
+        date: "2026-08-25",
+        time: "10:30 AM",
+        fee: 300,
+        paymentMode: "Cash",
+        reason: "Cup Therapy & Musculoskeletal Rehabilitation",
+        diagnosis: "Spine & Back Muscle Spasm",
+        treatmentNotes: "Cupping therapy applied to lumbar paraspinal musculature. Post-therapy mobility exercises advised.",
+        followUpDate: "As Advised / SOS",
+        doctor: "Dr. Satyam Vishwakarma",
+        status: "Completed"
+      }
+    ]);
   }
   if (!localStorage.getItem(KEYS.ENQUIRIES)) {
     setLocal(KEYS.ENQUIRIES, []);

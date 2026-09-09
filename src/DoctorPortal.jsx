@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import jsPDF from "jspdf";
 import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets";
 import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets } from "./apiService";
-import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly } from "./receiptUtils";
+import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
 
@@ -965,9 +965,6 @@ _(Saved in patient clinic records)_`;
     return (
       <div className="doctor-portal-modal-overlay">
         <div className="doctor-login-card">
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
-            <ThemeToggle themePreference={themePreference} setTheme={setTheme} compact={true} />
-          </div>
           <div className="login-header">
             <img
               src="/vindhya-receipt-logo.png"
@@ -2091,14 +2088,15 @@ _(Saved in patient clinic records)_`;
                 <h2>Website Consultation Bookings ({enquiries.length})</h2>
                 <p>Manage patient consultation requests, convert to patients, or link to existing records without duplication.</p>
               </div>
-              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "var(--text-secondary, #64748b)" }}>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginBottom: "14px" }}>
+                <label className="checkbox-filter-label" style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#0f172a", fontWeight: "600" }}>
                   <input
                     type="checkbox"
                     checked={showSpamFilter}
                     onChange={(e) => setShowSpamFilter(e.target.checked)}
+                    style={{ width: "18px", height: "18px", minHeight: "18px", margin: 0, accentColor: "#0878C9", cursor: "pointer" }}
                   />
-                  Show Hidden / Spam
+                  <span>Show Hidden / Spam</span>
                 </label>
                 <button className="secondary-btn" onClick={() => handleExportCSV("enquiries")}>
                   📥 Export Enquiries (CSV)
@@ -2106,7 +2104,100 @@ _(Saved in patient clinic records)_`;
               </div>
             </div>
 
-            <div className="table-responsive">
+            {/* Mobile Cards View (Visible on Phones) */}
+            <div className="mobile-enquiry-cards hide-on-desktop">
+              {enquiries
+                .filter(e => showSpamFilter || e.status !== "Hidden / Spam")
+                .map(e => {
+                  const isSpam = e.status === "Hidden / Spam";
+                  const isLinked = String(e.status || "").startsWith("Linked:");
+                  const cleanPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+                  return (
+                    <div key={e.id} className="mobile-enquiry-card" style={{ opacity: isSpam ? 0.6 : 1 }}>
+                      <div className="enquiry-card-header">
+                        <div className="enquiry-date-block">
+                          <span className="enquiry-date-pill">📅 {cleanDateOnly(e.date)}</span>
+                          {e.time && <span className="enquiry-time-sub">⏰ {cleanTimeOnly(e.time) || e.time}</span>}
+                        </div>
+                        <span className={`enquiry-status-pill ${isSpam ? "spam" : isLinked ? "linked" : (e.status === "Converted" ? "converted" : "new")}`}>
+                          {e.status || "New"}
+                        </span>
+                      </div>
+
+                      <div className="enquiry-patient-meta">
+                        <h4 className="enquiry-patient-name">{e.name}</h4>
+                        <div className="enquiry-contact-row">
+                          <a href={`tel:${cleanPhone}`} className="enquiry-phone-btn">
+                            📞 +91 {cleanPhone}
+                          </a>
+                          <a
+                            href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${e.name}, thank you for contacting Vindhya Physio & Rehab Center. Dr. Satyam Vishwakarma is reviewing your consultation enquiry.`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="enquiry-wa-btn"
+                          >
+                            💬 WhatsApp
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="enquiry-details-grid">
+                        <div className="enquiry-detail-row">
+                          <span className="enquiry-detail-label">Concern:</span>
+                          <span className="condition-tag">{e.painArea || "General Physiotherapy"}</span>
+                        </div>
+                        <div className="enquiry-detail-row">
+                          <span className="enquiry-detail-label">Preferred Date:</span>
+                          <span className="enquiry-pref-date">{cleanDateOnly(e.appointmentDate) || "Flexible"}</span>
+                        </div>
+                        {e.concern && (
+                          <div className="enquiry-message-box">
+                            "{e.concern}"
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="enquiry-actions-row">
+                        <button
+                          type="button"
+                          className="enquiry-action-btn enroll"
+                          onClick={() => convertEnquiryToPatient(e)}
+                          title="Enroll as a new patient record"
+                        >
+                          ➕ Enroll
+                        </button>
+                        <button
+                          type="button"
+                          className="enquiry-action-btn link"
+                          onClick={() => {
+                            setLinkingEnquiry(e);
+                            setLinkSearchQuery("");
+                          }}
+                          title="Link this request to an existing patient"
+                        >
+                          🔗 Link
+                        </button>
+                        <button
+                          type="button"
+                          className="enquiry-action-btn spam"
+                          onClick={() => handleMarkEnquirySpam(e)}
+                          title={isSpam ? "Unhide enquiry" : "Hide spam enquiry"}
+                        >
+                          {isSpam ? "Unhide" : "🚫 Hide"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              {enquiries.length === 0 && (
+                <div className="empty-state-box">
+                  <p>No online consultation requests yet.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Scannable Table (Visible on Tablets & Laptops) */}
+            <div className="table-responsive hide-on-mobile">
               <table className="doctor-table">
                 <thead>
                   <tr>
@@ -2128,13 +2219,13 @@ _(Saved in patient clinic records)_`;
                       const isLinked = String(e.status || "").startsWith("Linked:");
                       return (
                         <tr key={e.id} style={{ opacity: isSpam ? 0.55 : 1 }}>
-                          <td><strong>{e.date}</strong><br /><small>{e.time}</small></td>
+                          <td><strong>{cleanDateOnly(e.date)}</strong><br /><small>{cleanTimeOnly(e.time) || e.time}</small></td>
                           <td><strong>{e.name}</strong></td>
                           <td>
                             <a href={`tel:${e.phone}`} className="phone-link">+91 {e.phone}</a>
                           </td>
                           <td><span className="condition-tag">{e.painArea}</span></td>
-                          <td>{e.appointmentDate || "Flexible"}</td>
+                          <td>{cleanDateOnly(e.appointmentDate) || "Flexible"}</td>
                           <td style={{ maxWidth: "200px" }}>{e.concern}</td>
                           <td>
                             <span style={{

@@ -1144,7 +1144,7 @@ label {
   font-weight: 700;
 }
 
-input, select, textarea {
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   width: 100%;
   min-height: 46px;
   padding: 0 14px;
@@ -1154,6 +1154,19 @@ input, select, textarea {
   border-radius: var(--radius);
   outline: none;
   transition: all 0.2s ease;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  accent-color: #0878C9 !important;
+  cursor: pointer !important;
+  background: transparent !important;
 }
 
 textarea {
@@ -2812,11 +2825,12 @@ input:focus, select:focus, textarea:focus {
   }
 
   .patient-portal-pill-btn,
-  .doctor-portal-pill-btn {
-    height: 32px !important;
-    padding: 0 8px !important;
-    font-size: 11px !important;
-    gap: 4px !important;
+  .doctor-portal-pill-btn,
+  .download-app-pill-btn {
+    height: 30px !important;
+    padding: 0 6px !important;
+    font-size: 10.5px !important;
+    gap: 3px !important;
     white-space: nowrap !important;
     box-sizing: border-box !important;
     line-height: 1 !important;
@@ -6767,19 +6781,19 @@ input:focus, select:focus, textarea:focus {
     display: none !important;
   }
 
-  /* 1. App Greeting Hero Card (Top Blue Section Matching Image 5 strictly) */
+  /* 1. App Greeting Hero Card (Top Deep Blue Zone) */
   .mobile-app-greeting-card {
-    margin: 0 0 16px 0 !important;
-    border-radius: 0 0 30px 30px !important;
-    padding: 26px 18px 22px 18px !important;
-    gap: 12px !important;
-    background: radial-gradient(circle at 88% 60%, rgba(16, 185, 129, 0.22) 0%, transparent 65%), linear-gradient(170deg, #031322 0%, #072545 45%, #0b3866 100%) !important;
+    margin: 0 !important;
+    border-radius: 0 0 32px 32px !important;
+    padding: 24px 18px 60px 18px !important;
+    gap: 8px !important;
+    background: linear-gradient(180deg, #041B2B 0%, #06304A 55%, #0878C9 100%) !important;
     box-shadow: 0 12px 36px rgba(4, 20, 36, 0.35) !important;
     flex-shrink: 0 !important;
   }
 
   .mobile-app-greeting-card.doctor-greeting {
-    background: radial-gradient(circle at 88% 60%, rgba(16, 185, 129, 0.25) 0%, transparent 65%), linear-gradient(170deg, #031622 0%, #062f36 45%, #0a463e 100%) !important;
+    background: linear-gradient(180deg, #041B2B 0%, #063842 55%, #0d9488 100%) !important;
   }
 
   .mobile-hero-brand {
@@ -6833,31 +6847,34 @@ input:focus, select:focus, textarea:focus {
     color: #cbd5e1 !important;
   }
 
-  /* 2. Exactly Six Prominent Touch Boxes (2x3 Grid Matching Image 5 - Fills Vertical Area) */
+  /* 2. Exactly Six Prominent Touch Boxes (2x3 Grid Overlapping Blue Hero) */
   .mobile-app-grid-6 {
     flex: 1 1 auto !important;
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     grid-template-rows: repeat(3, 1fr) !important;
-    gap: 14px !important;
-    padding: 0 16px 16px 16px !important;
+    gap: 12px !important;
+    padding: 0 16px 20px 16px !important;
+    margin-top: -34px !important;
+    position: relative !important;
+    z-index: 10 !important;
     margin-bottom: 0 !important;
   }
 
   .mobile-app-card {
     height: 100% !important;
-    min-height: 105px !important;
+    min-height: 108px !important;
     background: #ffffff !important;
-    border: 1.5px solid #e2e8f0 !important;
-    border-radius: 22px !important;
-    padding: 16px 12px 14px 12px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 20px !important;
+    padding: 14px 12px 12px 12px !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
     gap: 6px !important;
-    box-shadow: 0 8px 24px rgba(11, 43, 77, 0.08) !important;
+    box-shadow: 0 8px 24px rgba(0, 30, 60, 0.10) !important;
     cursor: pointer !important;
     user-select: none !important;
     transition: transform 120ms ease, box-shadow 120ms ease !important;
@@ -7777,6 +7794,334 @@ input:focus, select:focus, textarea:focus {
   align-items: center !important;
   justify-content: center !important;
 }
+
+/* ==========================================================================
+   DOWNLOAD APP PILL BUTTON (HEADER BESIDE PATIENT & DOCTOR)
+   ========================================================================== */
+
+.download-app-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  border-radius: 16px;
+  color: #0284c7;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.download-app-pill-btn:hover {
+  background: #0284c7;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
+}
+
+.download-app-pill-btn svg {
+  flex-shrink: 0;
+}
+
+.download-btn-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+@media (max-width: 600px) {
+  .download-app-pill-btn {
+    height: 32px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    gap: 4px !important;
+  }
+}
+
+/* ==========================================================================
+   PATIENT HERO ID BADGE (DYNAMIC ID UNDER GREETING)
+   ========================================================================== */
+
+.patient-hero-id-badge {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1px !important;
+  margin-top: 6px !important;
+  padding: 4px 16px !important;
+  background: rgba(8, 120, 201, 0.25) !important;
+  border: 1px solid rgba(56, 189, 248, 0.5) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+.patient-hero-id-badge .id-sub-label {
+  font-size: 9.5px !important;
+  font-weight: 800 !important;
+  color: #93c5fd !important;
+  letter-spacing: 0.8px !important;
+  line-height: 1.1 !important;
+}
+
+.patient-hero-id-badge .id-main-code {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  letter-spacing: 0.5px !important;
+  line-height: 1.2 !important;
+}
+
+/* ==========================================================================
+   MOBILE CONSULTATION ENQUIRIES / BOOKINGS (SOLVES IMAGE 1 ISSUES)
+   ========================================================================== */
+
+.mobile-enquiry-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.mobile-enquiry-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  box-shadow: 0 4px 16px rgba(0, 30, 60, 0.06) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  transition: all 150ms ease !important;
+  box-sizing: border-box !important;
+}
+
+.enquiry-card-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding-bottom: 8px !important;
+}
+
+.enquiry-date-block {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+}
+
+.enquiry-date-pill {
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: #0369a1 !important;
+  background: #e0f2fe !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  white-space: nowrap !important;
+}
+
+.enquiry-time-sub {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  white-space: nowrap !important;
+}
+
+.enquiry-status-pill {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  white-space: nowrap !important;
+}
+
+.enquiry-status-pill.new {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+}
+
+.enquiry-status-pill.linked {
+  background: #f3e8ff !important;
+  color: #7e22ce !important;
+}
+
+.enquiry-status-pill.converted {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+}
+
+.enquiry-status-pill.spam {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.enquiry-patient-meta {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.enquiry-patient-name {
+  margin: 0 !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.enquiry-contact-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.enquiry-phone-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  background: rgba(8, 120, 201, 0.1) !important;
+  border: 1px solid rgba(8, 120, 201, 0.3) !important;
+  color: #0878C9 !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+}
+
+.enquiry-wa-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  background: rgba(37, 211, 102, 0.12) !important;
+  border: 1px solid rgba(37, 211, 102, 0.35) !important;
+  color: #15803d !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+}
+
+.enquiry-details-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+}
+
+.enquiry-detail-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 12.5px !important;
+}
+
+.enquiry-detail-label {
+  color: #64748b !important;
+  font-weight: 600 !important;
+  min-width: 95px !important;
+}
+
+.enquiry-pref-date {
+  font-weight: 700 !important;
+  color: #0f172a !important;
+}
+
+.enquiry-message-box {
+  margin-top: 4px !important;
+  font-size: 12px !important;
+  font-style: italic !important;
+  color: #475569 !important;
+  line-height: 1.4 !important;
+  border-top: 1px dashed #cbd5e1 !important;
+  padding-top: 6px !important;
+}
+
+.enquiry-actions-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-top: 4px !important;
+}
+
+.enquiry-action-btn {
+  flex: 1 !important;
+  min-height: 38px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  border-radius: 8px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  border: 1px solid transparent !important;
+  transition: all 120ms ease !important;
+}
+
+.enquiry-action-btn.enroll {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+}
+
+.enquiry-action-btn.enroll:active {
+  background: #059669 !important;
+  transform: scale(0.97) !important;
+}
+
+.enquiry-action-btn.link {
+  background: #f3e8ff !important;
+  color: #7e22ce !important;
+  border-color: #d8b4fe !important;
+}
+
+.enquiry-action-btn.link:active {
+  background: #e9d5ff !important;
+  transform: scale(0.97) !important;
+}
+
+.enquiry-action-btn.spam {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+  flex: 0.8 !important;
+}
+
+.enquiry-action-btn.spam:active {
+  background: #fecaca !important;
+  transform: scale(0.97) !important;
+}
+
+/* ==========================================================================
+   GLOBAL CRISP BORDERS ON WHITE CARDS FOR HIGH VISIBILITY & CONTRAST
+   ========================================================================== */
+
+.patient-visit-card,
+.doctor-patient-card,
+.metric-card,
+.table-responsive,
+.dashboard-card,
+.stat-card,
+.consult-card {
+  border: 1.5px solid #cbd5e1 !important;
+}
+
 
 
 

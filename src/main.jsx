@@ -187,20 +187,6 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
         ))}
       </nav>
       <div className="header-actions-group">
-        {showDownloadBtn && (
-          <button
-            className="download-app-icon-btn"
-            onClick={onOpenDownloadApp}
-            title="Install Clinic App"
-            aria-label="Download App"
-          >
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
-        )}
         <button
           className="patient-portal-pill-btn"
           onClick={onOpenPatientPortal}
@@ -219,6 +205,21 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
           <span className="portal-pill-text">Doctor Portal</span>
           <span className="portal-pill-text-short">Doctor</span>
         </button>
+        {showDownloadBtn && (
+          <button
+            className="download-app-pill-btn"
+            onClick={onOpenDownloadApp}
+            title="Download & Install Clinic App"
+            aria-label="Download App"
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span className="download-btn-label">Download</span>
+          </button>
+        )}
         <a className="header-cta desktop-only-cta" href="#consultation">Book Consultation</a>
       </div>
     </header>
@@ -1085,7 +1086,15 @@ function App() {
     const dismissed = sessionStorage.getItem('vindhya_download_prompt_dismissed');
 
     let timer;
-    if (isMobileDevice && !isStandalone && !isAppInstalled && !dismissed) {
+    const isPortalActive =
+      window.location.hash === "#doctor" ||
+      window.location.hash === "#patient" ||
+      window.location.pathname.startsWith("/doctor") ||
+      window.location.pathname.startsWith("/patient") ||
+      showDoctorPortal ||
+      showPatientPortal;
+
+    if (isMobileDevice && !isStandalone && !isAppInstalled && !dismissed && !isPortalActive) {
       timer = setTimeout(() => {
         setShowDownloadModal(true);
       }, 1500);
@@ -1098,10 +1107,12 @@ function App() {
         try { localStorage.setItem("active_portal", "doctor"); } catch (e) {}
         setShowDoctorPortal(true);
         setShowPatientPortal(false);
+        setShowDownloadModal(false);
       } else if (hash === "#patient" || path.startsWith("/patient")) {
         try { localStorage.setItem("active_portal", "patient"); } catch (e) {}
         setShowPatientPortal(true);
         setShowDoctorPortal(false);
+        setShowDownloadModal(false);
       }
     };
     checkHash();
@@ -1114,7 +1125,7 @@ function App() {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("hashchange", checkHash);
     };
-  }, [isMobileDevice, isAppInstalled]);
+  }, [isMobileDevice, isAppInstalled, showDoctorPortal, showPatientPortal]);
 
   // Automatic Enquiry Pop-up Form after 5 seconds of exploring
   // Constraints:
@@ -1165,7 +1176,7 @@ function App() {
     setShowDownloadModal(false);
   };
 
-  const canShowDownloadBtn = isMobileDevice && !isAppInstalled;
+  const canShowDownloadBtn = !isAppInstalled && !showDoctorPortal && !showPatientPortal;
 
   return (
     <div className={`app-root ${themeProps.resolvedTheme}`}>

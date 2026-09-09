@@ -465,8 +465,13 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
 
               <div className="greeting-text-col">
-                <span className="greeting-salutation">Hello, {patientDisplayName}!</span>
+                <span className="greeting-salutation">👋 Hello, {patientFirstName}</span>
                 <h2 className="greeting-headline">Take Charge of<br />Your Recovery!</h2>
+
+                <div className="patient-hero-id-badge">
+                  <span className="id-sub-label">PATIENT ID</span>
+                  <span className="id-main-code">{patientProfile?.patientId || "VPR-2026-1007"}</span>
+                </div>
               </div>
             </div>
 

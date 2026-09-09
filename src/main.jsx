@@ -196,22 +196,6 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
           </nav>
 
           <div className="header-actions-group">
-            {showDownloadBtn && (
-              <button
-                className="header-rect-btn download-app-rect-btn"
-                onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
-                title="Download & Install Clinic App"
-                aria-label="Download App"
-              >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-                <span className="rect-btn-text">Download App</span>
-                <span className="rect-btn-text-short">App</span>
-              </button>
-            )}
             <button
               className="header-rect-btn patient-portal-rect-btn"
               onClick={() => { setMobileMenuOpen(false); onOpenPatientPortal(); }}
@@ -221,6 +205,22 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
               <span className="rect-btn-text">Patient Portal</span>
               <span className="rect-btn-text-short">Patient</span>
             </button>
+
+            {showDownloadBtn && (
+              <button
+                className="header-rect-btn download-arrow-icon-btn"
+                onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
+                title="Download Clinic App"
+                aria-label="Download App"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+            )}
+
             <button
               className="header-rect-btn doctor-portal-rect-btn desktop-only-portal-btn"
               onClick={() => { setMobileMenuOpen(false); onOpenDoctorPortal(); }}
@@ -341,10 +341,6 @@ function Hero() {
               className="hero-rehab-photo"
               alt="Targeted physiotherapy rehabilitation session"
             />
-            <div className="hero-rehab-badge">
-              <span className="rehab-pulse-dot"></span>
-              <span>Targeted Mobility & Pain Recovery</span>
-            </div>
           </div>
         </div>
         <div className="hero-actions hero-actions-centered">
@@ -916,14 +912,6 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
           <p className="footer-address">
             📍 {clinicLoc.address || clinicAddress}
           </p>
-          <div className="footer-portal-buttons">
-            <button className="footer-pill-btn patient" onClick={onOpenPatientPortal}>
-              👤 Patient Portal
-            </button>
-            <button className="footer-pill-btn doctor" onClick={onOpenDoctorPortal}>
-              🔒 Doctor Portal
-            </button>
-          </div>
         </div>
         <div className="footer-col contact-col">
           <h3>Clinic Contact & Timings</h3>
@@ -1358,7 +1346,7 @@ function App() {
     if (!isStandalone && !isAppInstalled && !dismissed && !isPortalActive) {
       timer = setTimeout(() => {
         setShowDownloadModal(true);
-      }, 1200);
+      }, 700);
     }
 
     const checkHash = () => {

@@ -464,7 +464,7 @@ export default function PatientPortal({ onClose, themeProps }) {
 
               <div className="greeting-text-col">
                 <span className="greeting-salutation">👋 Hello, {patientFirstName}</span>
-                <h2 className="greeting-headline">Take Charge of<br />Your Recovery!</h2>
+                <h2 className="greeting-headline">Take Charge of Your Recovery!</h2>
 
                 <div className="patient-hero-id-badge">
                   <span className="id-sub-label">PATIENT ID</span>
@@ -728,7 +728,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                         </div>
                         <div className="date-meta">
                           <strong>{cleanDateOnly(v.date)}</strong>
-                          <span>{v.time || ""}</span>
+                          <span>{cleanTimeOnly(v.time) || v.time || ""}</span>
                         </div>
                       </div>
 
@@ -761,7 +761,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                           </div>
                           <div className="split-item">
                             <label>Next Follow-Up</label>
-                            <strong>{v.followUpDate || "As needed / SOS"}</strong>
+                            <strong>{cleanDateOnly(v.followUpDate) || v.followUpDate || "As needed / SOS"}</strong>
                           </div>
                         </div>
                       </div>

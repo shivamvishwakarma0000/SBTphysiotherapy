@@ -786,13 +786,18 @@ h1, h2, h3, p {
   50% { transform: scale(1.3); opacity: 0.75; }
 }
 
+.stats-strip,
 .hero-stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  margin-top: 36px;
+  margin-top: 28px;
   position: relative;
   z-index: 1;
+  width: 100%;
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .stat-box-3d {
@@ -1104,22 +1109,6 @@ h1, h2, h3, p {
   padding-top: 54px;
 }
 
-.treatments-section::before {
-  content: "";
-  position: absolute;
-  top: 10px;
-  right: -30px;
-  width: 480px;
-  height: 480px;
-  background-image: url("/vindhya-symbol-dark-hd.png");
-  background-repeat: no-repeat;
-  background-size: contain;
-  opacity: 0.045;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  z-index: 0;
-}
-
 .treatment-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1233,22 +1222,6 @@ h1, h2, h3, p {
   position: relative;
   overflow: hidden;
   padding-top: 54px;
-}
-
-.body-section::before {
-  content: "";
-  position: absolute;
-  top: 20px;
-  left: -20px;
-  width: 440px;
-  height: 440px;
-  background-image: url("/vindhya-symbol-dark-hd.png");
-  background-repeat: no-repeat;
-  background-size: contain;
-  opacity: 0.045;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  z-index: 0;
 }
 
 .body-grid {
@@ -1454,22 +1427,6 @@ h1, h2, h3, p {
   padding-top: 54px;
 }
 
-.heritage-section::before {
-  content: "";
-  position: absolute;
-  top: 20px;
-  right: -20px;
-  width: 420px;
-  height: 420px;
-  background-image: url("/vindhya-symbol-dark-hd.png");
-  background-repeat: no-repeat;
-  background-size: contain;
-  opacity: 0.045;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  z-index: 0;
-}
-
 .heritage-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1515,23 +1472,28 @@ h1, h2, h3, p {
 
 .timeline {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+  padding-left: 8px;
 }
 
 .timeline article {
   display: grid;
-  grid-template-columns: 20px 1fr;
+  grid-template-columns: 28px minmax(0, 1fr);
   gap: 14px;
-  align-items: start;
+  align-items: flex-start;
 }
 
 .timeline-node {
   width: 14px;
   height: 14px;
-  margin-top: 6px;
+  margin-top: 22px;
+  margin-left: 6px;
   background: #0878c9;
   border-radius: 50%;
-  box-shadow: 0 0 0 6px rgba(8, 120, 201, 0.15);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 5px rgba(8, 120, 201, 0.20);
+  box-sizing: border-box;
+  display: inline-block;
 }
 
 .timeline-box {
@@ -1700,7 +1662,7 @@ h1, h2, h3, p {
 label {
   display: grid;
   gap: 6px;
-  color: #082b45;
+  color: var(--heading);
   font-size: 13px;
   font-weight: 700;
 }
@@ -1822,22 +1784,6 @@ textarea:focus {
   position: relative;
   overflow: hidden;
   padding-top: 54px;
-}
-
-.testimonials-section::before {
-  content: "";
-  position: absolute;
-  top: 10px;
-  left: -20px;
-  width: 440px;
-  height: 440px;
-  background-image: url("/vindhya-symbol-dark-hd.png");
-  background-repeat: no-repeat;
-  background-size: contain;
-  opacity: 0.045;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  z-index: 0;
 }
 
 .trust-head {
@@ -2256,6 +2202,8 @@ textarea:focus {
   }
   .hero-actions {
     flex-direction: column;
+    gap: 14px;
+    margin-bottom: 24px;
   }
   .hero-actions a,
   .hero-actions button {
@@ -2875,12 +2823,23 @@ textarea:focus {
   box-shadow: var(--shadow);
 }
 
+.enroll-form-card label,
+.add-visit-card label,
+.consult-form label {
+  color: var(--heading);
+  font-size: 13px;
+  font-weight: 700;
+  display: grid;
+  gap: 6px;
+}
+
 .form-section-title {
   margin: 0 0 16px;
   font-size: 15px;
   color: var(--emerald);
   border-bottom: 1px solid var(--line);
   padding-bottom: 8px;
+  font-weight: 800;
 }
 
 .form-row-3 {
@@ -4920,10 +4879,14 @@ textarea:focus {
 .app-download-benefits li {
   font-size: 13px;
   line-height: 1.4;
-  color: #102a43;
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+[data-theme="dark"] .app-download-benefits li {
+  color: #f1f5f9 !important;
 }
 
 .download-modal-actions {
@@ -6952,14 +6915,16 @@ textarea:focus {
 @media (max-width: 600px) {
   .stats-strip {
     grid-template-columns: 1fr !important;
-    gap: 1px !important;
+    gap: 12px !important;
+    margin-top: 24px !important;
   }
 
   .stats-strip div {
-    padding: 12px 16px !important;
+    padding: 14px 18px !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
+    border-radius: 14px !important;
   }
 
   .stats-strip strong {
@@ -6980,6 +6945,25 @@ textarea:focus {
 
   .doctor-photo-wrapper {
     height: 240px !important;
+  }
+
+  .timeline {
+    padding-left: 10px !important;
+    padding-right: 4px !important;
+  }
+
+  .timeline article {
+    grid-template-columns: 28px minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .timeline-node {
+    width: 14px !important;
+    height: 14px !important;
+    margin-top: 22px !important;
+    margin-left: 4px !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 0 0 5px rgba(8, 120, 201, 0.20) !important;
   }
 }
 
@@ -8303,47 +8287,135 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   HIGH CONTRAST TEXT & READABILITY FIX (IMAGES 3 & 4)
-   Ensure crisp, dark legible text across light background portal views
+   HIGH CONTRAST TEXT & READABILITY FIX
+   Ensure crisp, legible text across BOTH light and dark background portal views
    ========================================================================== */
-.doctor-main-content,
-.patient-main-container,
-.today-visits-view,
-.patients-directory-view,
-.enquiries-view,
-.settings-view,
-.enroll-view,
-.tab-pane,
-.section-header-row,
-.section-title-box,
-.dashboard-view {
+[data-theme="light"] .doctor-main-content,
+[data-theme="light"] .patient-main-container,
+[data-theme="light"] .today-visits-view,
+[data-theme="light"] .patients-directory-view,
+[data-theme="light"] .enquiries-view,
+[data-theme="light"] .settings-view,
+[data-theme="light"] .enroll-view,
+[data-theme="light"] .tab-pane,
+[data-theme="light"] .section-header-row,
+[data-theme="light"] .section-title-box,
+[data-theme="light"] .dashboard-view {
   color: #0f172a !important;
 }
 
-.doctor-main-content h1,
-.doctor-main-content h2,
-.doctor-main-content h3,
-.doctor-main-content h4,
-.patient-main-container h1,
-.patient-main-container h2,
-.patient-main-container h3,
-.patient-main-container h4,
-.section-header-row h1,
-.section-header-row h2,
-.section-header-row h3,
-.section-header-row h4,
-.section-title-box h1,
-.section-title-box h2,
-.section-title-box h3,
-.section-title-box h4 {
+[data-theme="light"] .doctor-main-content h1,
+[data-theme="light"] .doctor-main-content h2,
+[data-theme="light"] .doctor-main-content h3,
+[data-theme="light"] .doctor-main-content h4,
+[data-theme="light"] .patient-main-container h1,
+[data-theme="light"] .patient-main-container h2,
+[data-theme="light"] .patient-main-container h3,
+[data-theme="light"] .patient-main-container h4,
+[data-theme="light"] .section-header-row h1,
+[data-theme="light"] .section-header-row h2,
+[data-theme="light"] .section-header-row h3,
+[data-theme="light"] .section-header-row h4,
+[data-theme="light"] .section-title-box h1,
+[data-theme="light"] .section-title-box h2,
+[data-theme="light"] .section-title-box h3,
+[data-theme="light"] .section-title-box h4 {
   color: #0f172a !important;
 }
 
-.doctor-main-content p,
-.patient-main-container p,
-.section-header-row p,
-.section-title-box p {
+[data-theme="light"] .doctor-main-content p,
+[data-theme="light"] .patient-main-container p,
+[data-theme="light"] .section-header-row p,
+[data-theme="light"] .section-title-box p {
   color: #334155 !important;
+}
+
+/* DARK THEME READABILITY FIX (IMAGES 2 & 3) */
+[data-theme="dark"] .doctor-main-content,
+[data-theme="dark"] .patient-main-container,
+[data-theme="dark"] .today-visits-view,
+[data-theme="dark"] .patients-directory-view,
+[data-theme="dark"] .enquiries-view,
+[data-theme="dark"] .settings-view,
+[data-theme="dark"] .enroll-view,
+[data-theme="dark"] .tab-pane,
+[data-theme="dark"] .section-header-row,
+[data-theme="dark"] .section-title-box,
+[data-theme="dark"] .dashboard-view,
+[data-theme="dark"] .enroll-form-card,
+[data-theme="dark"] .settings-card,
+[data-theme="dark"] .add-visit-card,
+[data-theme="dark"] .consult-form {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .doctor-main-content h1,
+[data-theme="dark"] .doctor-main-content h2,
+[data-theme="dark"] .doctor-main-content h3,
+[data-theme="dark"] .doctor-main-content h4,
+[data-theme="dark"] .patient-main-container h1,
+[data-theme="dark"] .patient-main-container h2,
+[data-theme="dark"] .patient-main-container h3,
+[data-theme="dark"] .patient-main-container h4,
+[data-theme="dark"] .section-header-row h1,
+[data-theme="dark"] .section-header-row h2,
+[data-theme="dark"] .section-header-row h3,
+[data-theme="dark"] .section-header-row h4,
+[data-theme="dark"] .section-title-box h1,
+[data-theme="dark"] .section-title-box h2,
+[data-theme="dark"] .section-title-box h3,
+[data-theme="dark"] .section-title-box h4,
+[data-theme="dark"] .settings-card h3,
+[data-theme="dark"] .enroll-form-card h3,
+[data-theme="dark"] .add-visit-card h3 {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .doctor-main-content p,
+[data-theme="dark"] .patient-main-container p,
+[data-theme="dark"] .section-header-row p,
+[data-theme="dark"] .section-title-box p,
+[data-theme="dark"] .settings-card p,
+[data-theme="dark"] .enroll-form-card p,
+[data-theme="dark"] .add-visit-card p,
+[data-theme="dark"] .enroll-view p,
+[data-theme="dark"] .settings-view p {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] label,
+[data-theme="dark"] .enroll-form-card label,
+[data-theme="dark"] .settings-card label,
+[data-theme="dark"] .add-visit-card label,
+[data-theme="dark"] .consult-form label,
+[data-theme="dark"] .demographics-grid label,
+[data-theme="dark"] .inner-modal-card label,
+[data-theme="dark"] .login-form label,
+[data-theme="dark"] .patient-login-form label,
+[data-theme="dark"] .grid-box label,
+[data-theme="dark"] .detail-cell label {
+  color: #f1f5f9 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="dark"] .form-section-title {
+  color: #34d399 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="dark"] .status-row span,
+[data-theme="dark"] .status-row span:first-child {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .status-row strong {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .sync-status-indicator {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
 }
 
 /* Search bars, input boxes, and dropdowns */

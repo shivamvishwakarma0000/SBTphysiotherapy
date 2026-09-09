@@ -102,10 +102,9 @@ const bodyProblems = [
 ];
 
 const programs = [
-  ["Comprehensive Clinical Screen", "In-depth diagnostic movement screen, pain history, joint biomechanics, and recovery mapping."],
-  ["Personalized Therapy Protocol", "A staged rehabilitation blueprint progressing from acute pain relief to strength, mobility, and confidence."],
-  ["Hands-On Advanced Modalities", "Manual therapy, joint mobilization, cupping therapy, IFT/TENS, and neuromuscular retraining."],
-  ["Long-Term Strength & Prevention", "Targeted corrective exercises, ergonomic posture strategy, and home exercise routines to prevent relapse."]
+  ["Clinical Assessment", "In-depth diagnostic movement screen, pain history, joint biomechanics, and recovery mapping."],
+  ["Personalized Therapy", "A staged rehabilitation blueprint progressing from acute pain relief to strength, mobility, and confidence."],
+  ["Recovery & Progress", "Targeted corrective exercises, ergonomic posture strategy, and home exercise routines to prevent relapse."]
 ];
 
 const timeline = [
@@ -175,54 +174,148 @@ function WhatsAppIcon() {
 }
 
 function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, showDownloadBtn, themeProps }) {
-  const isDark = themeProps?.isDark ?? true;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isDark = false; // Public site is cleanly rendered in light medical theme
+
+  const handleNavClick = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <header className="site-header">
-      <a className="brand" href="#home" aria-label="Vindhya Physio & Rehab Center home">
-        <ClinicLogo isDark={isDark} />
-      </a>
-      <nav aria-label="Primary navigation">
-        {navItems.map(([label, href]) => (
-          <a href={href} key={href}>{label}</a>
-        ))}
-      </nav>
-      <div className="header-actions-group">
-        <button
-          className="patient-portal-pill-btn"
-          onClick={onOpenPatientPortal}
-          title="Patient Portal — Visits, Receipts & Recovery Plan"
-        >
-          <span className="portal-pill-icon">👤</span>
-          <span className="portal-pill-text">Patient Portal</span>
-          <span className="portal-pill-text-short">Patient</span>
-        </button>
-        <button
-          className="doctor-portal-pill-btn"
-          onClick={onOpenDoctorPortal}
-          title="Doctor Login & Clinic Management"
-        >
-          <span className="portal-pill-icon">🔒</span>
-          <span className="portal-pill-text">Doctor Portal</span>
-          <span className="portal-pill-text-short">Doctor</span>
-        </button>
-        {showDownloadBtn && (
-          <button
-            className="download-app-pill-btn"
-            onClick={onOpenDownloadApp}
-            title="Download & Install Clinic App"
-            aria-label="Download App"
-          >
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <span className="download-btn-label">Download</span>
-          </button>
-        )}
-        <a className="header-cta desktop-only-cta" href="#consultation">Book Consultation</a>
-      </div>
-    </header>
+    <>
+      <header className="site-header">
+        <div className="header-inner">
+          <a className="brand" href="#home" aria-label="Vindhya Physio & Rehab Center home" onClick={handleNavClick}>
+            <ClinicLogo isDark={isDark} />
+          </a>
+
+          <nav className="desktop-nav" aria-label="Primary navigation">
+            {navItems.map(([label, href]) => (
+              <a href={href} key={href}>{label}</a>
+            ))}
+          </nav>
+
+          <div className="header-actions-group">
+            <button
+              className="patient-portal-pill-btn"
+              onClick={() => { setMobileMenuOpen(false); onOpenPatientPortal(); }}
+              title="Patient Portal — Visits, Receipts & Recovery Plan"
+            >
+              <span className="portal-pill-icon">👤</span>
+              <span className="portal-pill-text">Patient Portal</span>
+              <span className="portal-pill-text-short">Patient</span>
+            </button>
+            <button
+              className="doctor-portal-pill-btn"
+              onClick={() => { setMobileMenuOpen(false); onOpenDoctorPortal(); }}
+              title="Doctor Login & Clinic Management"
+            >
+              <span className="portal-pill-icon">🔒</span>
+              <span className="portal-pill-text">Doctor Portal</span>
+              <span className="portal-pill-text-short">Doctor</span>
+            </button>
+            {showDownloadBtn && (
+              <button
+                className="download-app-pill-btn"
+                onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
+                title="Download & Install Clinic App"
+                aria-label="Download App"
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span className="download-btn-label">App</span>
+              </button>
+            )}
+            <a className="header-cta desktop-only-cta" href="#consultation">Book Consultation</a>
+
+            <button
+              className="mobile-menu-toggle-btn"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? (
+                <span className="menu-icon-cross">✕</span>
+              ) : (
+                <span className="menu-icon-bars">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Drawer Menu outside header so backdrop-filter does not trap position:fixed */}
+      {mobileMenuOpen && (
+        <div className="mobile-drawer-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-drawer-header">
+              <ClinicLogo isDark={false} />
+              <button
+                className="mobile-drawer-close"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mobile-drawer-nav">
+              {navItems.map(([label, href]) => (
+                <a
+                  href={href}
+                  key={href}
+                  className="mobile-drawer-link"
+                  onClick={handleNavClick}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
+            <div className="mobile-drawer-actions">
+              <button
+                className="mobile-drawer-btn patient-btn"
+                onClick={() => { setMobileMenuOpen(false); onOpenPatientPortal(); }}
+              >
+                <span>👤</span> Patient Portal
+              </button>
+              <button
+                className="mobile-drawer-btn doctor-btn"
+                onClick={() => { setMobileMenuOpen(false); onOpenDoctorPortal(); }}
+              >
+                <span>🔒</span> Doctor Portal
+              </button>
+              {showDownloadBtn && (
+                <button
+                  className="mobile-drawer-btn download-btn"
+                  onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
+                >
+                  <span>📲</span> Download Clinic App
+                </button>
+              )}
+              <a
+                href="#consultation"
+                className="mobile-drawer-cta"
+                onClick={handleNavClick}
+              >
+                Book In-Clinic Consultation
+              </a>
+              <a
+                href={`tel:${phonePrimary}`}
+                className="mobile-drawer-call"
+              >
+                <CallIcon /> Call +91 9793093316
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -231,19 +324,21 @@ function Hero({ onOpenDownloadApp, showDownloadBtn }) {
     <section id="home" className="hero">
       <div className="live-clinic-status-bar">
         <span className="status-live-dot"></span>
-        <strong>CLINIC OPEN IN VINDHYACHAL, MIRZAPUR</strong> • Timings: 9:00 AM – 8:00 PM • Call: +91 9793093316
+        <span className="status-text">
+          <strong>CLINIC OPEN</strong> • Vindhyachal, Mirzapur • 9:00 AM – 8:00 PM • Call: <a href={`tel:${phonePrimary}`} className="status-phone-link">+91 9793093316</a>
+        </span>
       </div>
 
       <div className="hero-inner">
-        <div className="hero-copy fade-up">
+        <div className="hero-copy">
           <p className="eyebrow">ADVANCED PHYSIOTHERAPY & REHABILITATION CENTER</p>
           <h1>Move Better.<br />Feel Better.<br />Live Better.</h1>
           <p className="lead">
-            Expert clinical rehabilitation for acute & chronic pain, cupping therapy, neuro & paralysis recovery, sports injury conditioning, and post-surgical rehabilitation under <strong>DR. SATYAM VISHWAKARMA</strong>.
+            Personalized physiotherapy and rehabilitation care for pain, mobility, recovery and stronger movement under Dr. Satyam Vishwakarma.
           </p>
           <div className="hero-actions">
-            <a className="primary-btn" href="#consultation">Start Free Consultation</a>
-            <a className="secondary-btn" href={`tel:${phonePrimary}`}><CallIcon /> Call +91 9793093316</a>
+            <a className="primary-btn hero-consult-btn" href="#consultation">Book Consultation</a>
+            <a className="secondary-btn hero-call-btn" href={`tel:${phonePrimary}`}><CallIcon /> Call Clinic</a>
             {showDownloadBtn && (
               <button
                 type="button"
@@ -261,21 +356,22 @@ function Hero({ onOpenDownloadApp, showDownloadBtn }) {
             )}
           </div>
         </div>
-        <aside className="doctor-card fade-up">
+        <aside className="doctor-card">
           <div className="doctor-photo-wrapper">
             <img src="/doctor.png" className="doctor-photo" alt="Dr. Satyam Vishwakarma - Consultant Physiotherapist" />
+            <div className="doctor-photo-badge">Lead Consultant</div>
           </div>
           <div className="doctor-card-content">
-            <p>Lead Clinician & Consultant</p>
+            <p className="doctor-card-eyebrow">CHIEF PHYSIOTHERAPIST</p>
             <h2>DR. SATYAM VISHWAKARMA</h2>
-            <span>Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</span>
+            <span className="doctor-qualification">Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</span>
             <div className="mini-tags">
-              <strong>Spine & Back Pain</strong>
-              <strong>Cupping Therapy</strong>
-              <strong>Neuro & Paralysis</strong>
-              <strong>CP Child Rehab</strong>
-              <strong>Sports Injury</strong>
-              <strong>Post-Surgical</strong>
+              <span>Spine & Back Pain</span>
+              <span>Cupping Therapy</span>
+              <span>Neuro & Paralysis</span>
+              <span>CP Child Rehab</span>
+              <span>Sports Injury</span>
+              <span>Post-Surgical</span>
             </div>
           </div>
         </aside>
@@ -292,20 +388,90 @@ function Hero({ onOpenDownloadApp, showDownloadBtn }) {
   );
 }
 
-function Treatments() {
+function QuickActions() {
+  const quickItems = [
+    {
+      icon: "🩺",
+      title: "Clinical Services",
+      desc: "Specialized pain relief, spine & neuro therapies",
+      href: "#treatments",
+      badge: "8 Services"
+    },
+    {
+      icon: "🎯",
+      title: "Find Pain Area",
+      desc: "Pinpoint symptoms across 12 body regions",
+      href: "#body-map",
+      badge: "12 Regions"
+    },
+    {
+      icon: "📋",
+      title: "Rehab Pathways",
+      desc: "3-step structured recovery methodology",
+      href: "#programs",
+      badge: "Methodology"
+    },
+    {
+      icon: "📅",
+      title: "Book Consultation",
+      desc: "Direct appointment triage with clinic team",
+      href: "#consultation",
+      badge: "Fast Triage"
+    }
+  ];
+
   return (
-    <section id="treatments" className="section">
-      <div className="section-heading">
-        <p className="eyebrow">SPECIALIZED CLINICAL SERVICES</p>
-        <h2>Targeted rehabilitation pathways designed for rapid pain relief & long-term mobility.</h2>
+    <section className="quick-actions-section">
+      <div className="quick-actions-grid">
+        {quickItems.map((item) => (
+          <a href={item.href} className="quick-action-card" key={item.title}>
+            <div className="quick-action-top">
+              <span className="quick-action-icon">{item.icon}</span>
+              <span className="quick-action-badge">{item.badge}</span>
+            </div>
+            <h3>{item.title}</h3>
+            <p>{item.desc}</p>
+            <span className="quick-action-arrow">Explore ➔</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Treatments() {
+  const handleBookService = (title) => {
+    window.dispatchEvent(new CustomEvent("prefill-assessment", { detail: title }));
+    const el = document.getElementById("consultation");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
+  return (
+    <section id="treatments" className="section treatments-section">
+      <div className="section-heading center">
+        <p className="eyebrow">CLINICAL SERVICES</p>
+        <h2>Specialized rehabilitation pathways designed for rapid pain relief & lasting mobility.</h2>
       </div>
       <div className="treatment-grid">
         {treatments.map(([icon, title, copy, image, tag]) => (
-          <article className="treatment-card" key={title} style={{ "--treatment-image": `url("${image}")` }}>
-            <span className="card-badge">{tag}</span>
-            <LineIcon type={icon} />
+          <article className="treatment-card" key={title}>
+            <div className="treatment-card-header">
+              <div className="treatment-icon-wrap">
+                <LineIcon type={icon} />
+              </div>
+              <span className="card-badge">{tag}</span>
+            </div>
             <h3>{title}</h3>
             <p>{copy}</p>
+            <div className="treatment-card-footer">
+              <button
+                type="button"
+                className="treatment-action-btn"
+                onClick={() => handleBookService(title)}
+              >
+                Explore & Consult ➔
+              </button>
+            </div>
           </article>
         ))}
       </div>
@@ -321,14 +487,15 @@ function BodyMap() {
   return (
     <section id="body-map" className="section body-section">
       <div className="section-heading center">
-        <p className="eyebrow">12 BODY REGIONS & DIAGNOSTICS</p>
+        <p className="eyebrow">FIND YOUR PAIN AREA</p>
         <h2>Select your pain region to pinpoint targeted clinical care.</h2>
       </div>
       <div className="body-grid">
         {bodyProblems.map(([icon, title, copy, number, image]) => (
           <article className="new-body-card" key={title}>
             <div className="card-image-box">
-              {image ? <img src={image} alt={title} /> : <div className="placeholder-img" />}
+              {image ? <img src={image} alt={title} loading="lazy" /> : <div className="placeholder-img" />}
+              <span className="card-number-tag">{number}</span>
             </div>
             <div className="card-info-box">
               <h3>{title}</h3>
@@ -356,22 +523,20 @@ function BodyMap() {
 
 function Programs() {
   return (
-    <section id="programs" className="programs">
-      <div className="program-copy">
+    <section id="programs" className="section programs-section">
+      <div className="section-heading center">
         <p className="eyebrow">CLINICAL METHODOLOGY</p>
         <h2>Structured therapy programs engineered for lasting recovery.</h2>
-        <p>
+        <p className="section-sublead">
           At <strong>Vindhya Physio & Rehab Center</strong>, every patient journey begins with diagnostic evaluation, progressing systematically through pain management, tissue healing, functional strengthening, and relapse prevention.
         </p>
       </div>
-      <div className="program-stack">
+      <div className="programs-grid">
         {programs.map(([title, copy], index) => (
-          <article key={title}>
-            <span>0{index + 1}</span>
-            <div>
-              <h3>{title}</h3>
-              <p>{copy}</p>
-            </div>
+          <article className="methodology-card" key={title}>
+            <div className="methodology-step-badge">Step 0{index + 1}</div>
+            <h3>{title}</h3>
+            <p>{copy}</p>
           </article>
         ))}
       </div>
@@ -381,30 +546,32 @@ function Programs() {
 
 function Heritage() {
   return (
-    <section id="heritage" className="section heritage">
-      <div>
-        <p className="eyebrow">BANARAS HINDU UNIVERSITY DEPTH</p>
-        <h2>Clinical diagnostic rigor paired with therapeutic movement science.</h2>
-        <p>
-          <strong>DR. SATYAM VISHWAKARMA</strong> combines clinical physiotherapy education (BPT, DPT) with CCYP training from Banaras Hindu University (BHU), creating an integrative model of care focused on musculoskeletal health, neuromuscular retraining, and long-term functional recovery.
-        </p>
-        <div className="credential-row">
-          <span>BPT</span>
-          <span>DPT</span>
-          <span>CCYP (BHU)</span>
-          <span>Consultant Physiotherapist</span>
+    <section id="heritage" className="section heritage-section">
+      <div className="heritage-grid">
+        <div className="heritage-content">
+          <p className="eyebrow">BANARAS HINDU UNIVERSITY DEPTH</p>
+          <h2>Clinical diagnostic rigor paired with therapeutic movement science.</h2>
+          <p>
+            <strong>DR. SATYAM VISHWAKARMA</strong> combines clinical physiotherapy education (BPT, DPT) with CCYP training from Banaras Hindu University (BHU), creating an integrative model of care focused on musculoskeletal health, neuromuscular retraining, and long-term functional recovery.
+          </p>
+          <div className="credential-row">
+            <span>BPT</span>
+            <span>DPT</span>
+            <span>CCYP (BHU)</span>
+            <span>Consultant Physiotherapist</span>
+          </div>
         </div>
-      </div>
-      <div className="timeline">
-        {timeline.map(([title, copy]) => (
-          <article key={title}>
-            <span></span>
-            <div>
-              <h3>{title}</h3>
-              <p>{copy}</p>
-            </div>
-          </article>
-        ))}
+        <div className="timeline">
+          {timeline.map(([title, copy]) => (
+            <article key={title}>
+              <span className="timeline-node"></span>
+              <div className="timeline-box">
+                <h3>{title}</h3>
+                <p>{copy}</p>
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -426,7 +593,9 @@ function Assessment() {
 
   useEffect(() => {
     const handlePrefill = (e) => {
-      setSelectedPainArea(e.detail);
+      if (e.detail) {
+        setSelectedPainArea(e.detail);
+      }
     };
     window.addEventListener("prefill-assessment", handlePrefill);
     return () => window.removeEventListener("prefill-assessment", handlePrefill);
@@ -457,9 +626,7 @@ function Assessment() {
     };
 
     try {
-      // Direct Cloud & Google Sheets Sync Engine
       await api.createEnquiry(payload);
-
       setStatus("success");
       setForm({ name: "", phone: "", appointmentDate: "", concern: "" });
       setCustomPainArea("");
@@ -470,26 +637,30 @@ function Assessment() {
   };
 
   return (
-    <section id="consultation" className="portal">
+    <section id="consultation" className="portal consultation-section">
       <div className="portal-shell">
         <div className="portal-info">
           <p className="eyebrow">DIRECT CLINIC CONSULTATION</p>
-          <h2>Book your clinical appointment today.</h2>
-          <p>
-            Share your symptoms and preferred date. Dr. Satyam Vishwakarma and the clinic team will reach out directly for your appointment triage.
+          <h2>Book Your Consultation</h2>
+          <p className="portal-lead">
+            Share your concern and preferred date. Dr. Satyam Vishwakarma and our clinic team will contact you directly for appointment triage.
           </p>
           <div className="contact-panel">
-            <a href={`tel:${phonePrimary}`}><CallIcon /> Call +91 9793093316</a>
-            <a href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I would like to book a physiotherapy consultation.")}`}><WhatsAppIcon /> WhatsApp +91 8382024264</a>
+            <a href={`tel:${phonePrimary}`} className="contact-call-btn"><CallIcon /> Call: +91 9793093316</a>
+            <a href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I would like to book a physiotherapy consultation.")}`} target="_blank" rel="noreferrer" className="contact-wa-btn"><WhatsAppIcon /> WhatsApp: +91 8382024264</a>
           </div>
           <div className="location-badge-box">
-            <strong>📍 Clinic Address:</strong>
+            <strong>📍 Clinic Location:</strong>
             <span>{clinicAddress}</span>
+            <span className="timing-note">Mon – Sat: 9:00 AM – 8:00 PM</span>
           </div>
         </div>
         <form className="assessment-card" onSubmit={submit}>
+          <div className="form-heading-row">
+            <h3>Consultation Request</h3>
+            <span className="form-subnote">Direct Clinic Triage</span>
+          </div>
           <div className="form-grid">
-            
             {/* Condition Dropdown with Custom option */}
             <label>
               Pain Area / Clinical Condition *
@@ -619,7 +790,7 @@ function Testimonials() {
   };
 
   return (
-    <section className="section">
+    <section className="section testimonials-section">
       <div className="trust-head">
         <div className="section-heading">
           <p className="eyebrow">PATIENT TESTIMONIALS & TRUST</p>
@@ -644,7 +815,6 @@ function Testimonials() {
         </form>
       </div>
 
-      {/* Infinite Auto-Scrolling Testimonial Marquee (Pauses on Hover) */}
       <div className="testimonial-window">
         <div className="testimonial-track">
           {[...allTestimonials, ...allTestimonials, ...allTestimonials].map(([name, condition, quote, rating], index) => (
@@ -687,49 +857,64 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
   const mapSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.02}%2C${lat - 0.02}%2C${lng + 0.02}%2C${lat + 0.02}&layer=mapnik&marker=${lat}%2C${lng}`;
 
   return (
-    <footer id="contact" className="footer">
-      <div>
-        <div className="footer-brand">
-          <ClinicLogo isDark={isDark} />
-          <h2>DR. SATYAM VISHWAKARMA</h2>
+    <footer id="contact" className="site-footer">
+      <div className="footer-inner">
+        <div className="footer-col brand-col">
+          <div className="footer-brand">
+            <ClinicLogo isDark={isDark} />
+            <h2>DR. SATYAM VISHWAKARMA</h2>
+          </div>
+          <p className="footer-credentials">Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</p>
+          <p className="footer-address">
+            📍 {clinicLoc.address || clinicAddress}
+          </p>
+          <div className="footer-portal-buttons">
+            <button className="footer-pill-btn patient" onClick={onOpenPatientPortal}>
+              👤 Patient Portal
+            </button>
+            <button className="footer-pill-btn doctor" onClick={onOpenDoctorPortal}>
+              🔒 Doctor Portal
+            </button>
+          </div>
         </div>
-        <p>Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</p>
-        <p style={{ marginTop: '8px', color: 'var(--muted)', fontSize: '0.9rem' }}>
-          📍 {clinicLoc.address || clinicAddress}
-        </p>
+        <div className="footer-col contact-col">
+          <h3>Clinic Contact & Timings</h3>
+          <a href={`tel:${phonePrimary}`} className="footer-link"><CallIcon /> Call: +91 9793093316</a>
+          <a href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I want to connect regarding physiotherapy appointment.")}`} target="_blank" rel="noreferrer" className="footer-link"><WhatsAppIcon /> WhatsApp: +91 8382024264</a>
+          <div className="footer-hours">
+            🗓️ Monday – Saturday<br />
+            ⏰ 9:00 AM – 8:00 PM
+          </div>
+        </div>
+        <div className="footer-col services-col">
+          <h3>Key Clinical Services</h3>
+          <a href="#treatments">Spine & Sciatica Care</a>
+          <a href="#treatments">Hijama & Cupping Therapy</a>
+          <a href="#treatments">Paralysis & Neuro Rehab</a>
+          <a href="#treatments">Pediatric (CP Child) Care</a>
+          <a href="#treatments">Sports Injury Conditioning</a>
+          <a href="#treatments">Post-Surgical Joint Rehab</a>
+        </div>
+        <div className="footer-col map-col">
+          <h3>Clinic Location</h3>
+          <iframe
+            className="footer-map-frame"
+            title="Vindhyachal Mirzapur clinic location map"
+            loading="lazy"
+            src={mapSrc}
+          ></iframe>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+            target="_blank"
+            rel="noreferrer"
+            className="footer-map-link"
+          >
+            ↗ Open in Google Maps
+          </a>
+        </div>
       </div>
-      <div>
-        <h3>Clinic Contact</h3>
-        <a href={`tel:${phonePrimary}`}><CallIcon /> Call: +91 9793093316</a>
-        <a href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I want to connect regarding physiotherapy appointment.")}`}><WhatsAppIcon /> WhatsApp: +91 8382024264</a>
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: '10px' }}>
-          Open Monday – Saturday | Timing: 9:00 AM – 8:00 PM
-        </p>
-      </div>
-      <div>
-        <h3>Clinical Services</h3>
-        <a href="#treatments">Spine & Back Pain</a>
-        <a href="#treatments">Cupping Therapy</a>
-        <a href="#treatments">Neuro & Paralysis Rehab</a>
-        <a href="#treatments">CP (Child) Therapy</a>
-        <a href="#treatments">Sports Injury & Post-Surgical</a>
-      </div>
-      <div>
-        <h3>Clinic Location & Map</h3>
-        <iframe
-          className="map-frame"
-          title="Vindhyachal Mirzapur Uttar Pradesh clinic location map"
-          loading="lazy"
-          src={mapSrc}
-        ></iframe>
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
-          target="_blank"
-          rel="noreferrer"
-          style={{ display: 'inline-block', marginTop: '6px', fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'underline' }}
-        >
-          ↗ Open in Google Maps
-        </a>
+      <div className="footer-bottom-bar">
+        <p>© {new Date().getFullYear()} Vindhya Physio & Rehab Center. All rights reserved. Dr. Satyam Vishwakarma (BPT, DPT, CCYP BHU).</p>
       </div>
     </footer>
   );
@@ -789,14 +974,16 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
             className="app-download-logo"
           />
           <div className="app-download-meta">
-            <h3>Vindhya Physio App</h3>
+            <h3>Get the Vindhya App 📱</h3>
             <span className="app-download-badge">Official Clinic App</span>
           </div>
         </div>
 
-        <p className="app-download-desc">
-          Download our clinic app on your device for instant appointment booking, WhatsApp doctor helpline, and live recovery guidance.
-        </p>
+        <ul className="app-download-benefits">
+          <li>✓ Fast consultation booking & appointment tracking</li>
+          <li>✓ View visits, receipts & doctor notes in Patient Portal</li>
+          <li>✓ Access guided home exercises & recovery plans</li>
+        </ul>
 
         {isIOS ? (
           <div className="ios-install-steps">
@@ -808,7 +995,7 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
             </ol>
             <div className="download-modal-actions" style={{ marginTop: "14px" }}>
               <button className="primary-btn download-btn" onClick={handleIOSGotIt} style={{ width: "100%" }}>
-                Got It & Install
+                Got It & Continue
               </button>
             </div>
           </div>
@@ -820,7 +1007,7 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Download App
+              Install App
             </button>
             <button className="secondary-btn later-btn" onClick={onClose}>
               Maybe Later
@@ -1218,6 +1405,7 @@ function App() {
           onOpenDownloadApp={() => setShowDownloadModal(true)}
           showDownloadBtn={canShowDownloadBtn}
         />
+        <QuickActions />
         <Treatments />
         <BodyMap />
         <Programs />
@@ -1225,7 +1413,11 @@ function App() {
         <Assessment />
         <Testimonials />
       </main>
-      <Footer isDark={themeProps.isDark} />
+      <Footer
+        onOpenDoctorPortal={openDoctorPortal}
+        onOpenPatientPortal={openPatientPortal}
+        isDark={themeProps.isDark}
+      />
 
       <WhatsAppFloating />
 

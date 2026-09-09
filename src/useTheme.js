@@ -7,13 +7,13 @@ export function useTheme() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === "light" || saved === "dark") return saved;
-      return "dark"; // Standard modern clinic dark aesthetic by default
+      return "light"; // Clean medical white + blue + green clinic aesthetic by default
     } catch {
-      return "dark";
+      return "light";
     }
   });
 
-  const resolvedTheme = themePreference === "light" ? "light" : "dark";
+  const resolvedTheme = themePreference === "dark" ? "dark" : "light";
 
   useEffect(() => {
     const root = document.documentElement;

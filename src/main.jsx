@@ -333,10 +333,6 @@ function Hero() {
           <p className="hero-lead">
             Personalized clinical physiotherapy, spinal decompression, and targeted rehabilitation designed to restore natural pain-free mobility under Dr. Satyam Vishwakarma.
           </p>
-          <div className="hero-actions">
-            <a className="primary-btn hero-consult-btn" href="#consultation">Book Consultation</a>
-            <a className="secondary-btn hero-call-btn" href={`tel:${phonePrimary}`}><CallIcon /> Call Clinic</a>
-          </div>
         </div>
         <div className="hero-visual-frame">
           <div className="hero-rehab-card-3d">
@@ -350,6 +346,10 @@ function Hero() {
               <span>Targeted Mobility & Pain Recovery</span>
             </div>
           </div>
+        </div>
+        <div className="hero-actions hero-actions-centered">
+          <a className="primary-btn hero-consult-btn" href="#consultation">Book Consultation</a>
+          <a className="secondary-btn hero-call-btn" href={`tel:${phonePrimary}`}><CallIcon /> Call Clinic</a>
         </div>
       </div>
       <div className="stats-strip">

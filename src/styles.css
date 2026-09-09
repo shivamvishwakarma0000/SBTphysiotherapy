@@ -226,9 +226,9 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  width: min(1200px, calc(100% - 32px));
+  width: min(1240px, calc(100% - 20px));
   margin: 0 auto;
-  padding: 10px 0;
+  padding: 10px 4px;
 }
 
 .brand {
@@ -243,7 +243,7 @@ textarea {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 3px 6px;
+  padding: 2px 4px 2px 0;
   border-radius: 8px;
   transition: opacity 150ms ease;
 }
@@ -253,9 +253,9 @@ textarea {
 }
 
 .clinic-logo-img {
-  height: 40px;
+  height: 48px;
   width: auto;
-  max-width: 180px;
+  max-width: 220px;
   object-fit: contain;
   display: block;
 }
@@ -443,7 +443,7 @@ textarea {
   background: #ffffff;
   border-left: 1px solid #d9e6ef;
   box-shadow: -8px 0 28px rgba(7, 43, 69, 0.2);
-  padding: 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -464,28 +464,40 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #d9e6ef;
-  margin-bottom: 16px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #072B45 0%, #0A4360 45%, #0C5852 100%);
+  border-bottom: 1px solid rgba(24, 184, 120, 0.35);
+  margin-bottom: 14px;
+}
+
+.mobile-drawer-header .clinic-logo-img {
+  height: 42px;
+  max-width: 190px;
 }
 
 .mobile-drawer-close {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid #d9e6ef;
-  background: #f5f9fc;
-  color: #082b45;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
   font-size: 16px;
   cursor: pointer;
   display: grid;
   place-items: center;
+  transition: all 150ms ease;
+}
+
+.mobile-drawer-close:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .mobile-drawer-nav {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding: 0 16px;
 }
 
 .mobile-drawer-link {
@@ -506,8 +518,8 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 24px;
-  padding-top: 20px;
+  margin-top: 20px;
+  padding: 18px 16px 28px;
   border-top: 1px solid #d9e6ef;
 }
 
@@ -592,19 +604,23 @@ textarea {
 }
 
 .hero-inner {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: clamp(32px, 5vw, 60px);
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  width: min(1200px, 100%);
+  text-align: center;
+  width: min(880px, 100%);
   margin: 0 auto;
   position: relative;
   z-index: 1;
+  gap: 16px;
 }
 
 .hero-copy {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
 }
 
 h1, h2, h3, p {
@@ -612,13 +628,14 @@ h1, h2, h3, p {
 }
 
 .hero-headline {
-  margin-bottom: 18px;
-  font-size: clamp(34px, 4.4vw, 56px);
+  margin-bottom: 14px;
+  font-size: clamp(34px, 4.6vw, 56px);
   line-height: 1.12;
   font-family: "Outfit", sans-serif;
   font-weight: 800;
   color: #082B45;
   letter-spacing: -0.5px;
+  text-align: center;
 }
 
 .hero-headline-blue {
@@ -629,18 +646,29 @@ h1, h2, h3, p {
 }
 
 .hero-lead {
-  max-width: 52ch;
+  max-width: 66ch;
   color: #355770;
-  font-size: 16.5px;
-  line-height: 1.65;
-  margin-bottom: 0;
+  font-size: clamp(15px, 2vw, 17px);
+  line-height: 1.6;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  margin-top: 30px;
+  margin-top: 24px;
+}
+
+.hero-actions.hero-actions-centered {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 6px;
+  width: 100%;
 }
 
 .primary-btn,
@@ -686,6 +714,9 @@ h1, h2, h3, p {
 
 /* 3D Physiotherapy Hero Visual Card */
 .hero-visual-frame {
+  width: 100%;
+  max-width: 760px;
+  margin: 6px auto 4px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -697,8 +728,8 @@ h1, h2, h3, p {
   border-radius: 20px;
   overflow: hidden;
   background: #ffffff;
-  border: 1px solid rgba(8, 120, 201, 0.2);
-  box-shadow: 0 18px 40px -10px rgba(8, 43, 69, 0.16), 0 4px 12px rgba(8, 43, 69, 0.06);
+  border: 1.5px solid #cce0f0;
+  box-shadow: 0 18px 40px -10px rgba(7, 43, 69, 0.16), 0 4px 12px rgba(7, 43, 69, 0.06);
   transition: transform 250ms ease, box-shadow 250ms ease;
 }
 
@@ -709,7 +740,7 @@ h1, h2, h3, p {
 
 .hero-rehab-photo {
   width: 100%;
-  height: 330px;
+  height: 380px;
   object-fit: cover;
   display: block;
 }
@@ -760,16 +791,16 @@ h1, h2, h3, p {
 .stat-box-3d {
   padding: 18px 22px;
   background: #ffffff;
-  border: 1px solid rgba(8, 120, 201, 0.16);
+  border: 1.5px solid #cce0f0;
   border-radius: 14px;
-  box-shadow: 0 6px 18px rgba(8, 43, 69, 0.06);
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 6px 18px -3px rgba(7, 43, 69, 0.10);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .stat-box-3d:hover {
   transform: translateY(-3px);
   border-color: #0878c9;
-  box-shadow: 0 10px 24px rgba(8, 120, 201, 0.14);
+  box-shadow: 0 12px 24px rgba(8, 120, 201, 0.18);
 }
 
 .stat-box-3d strong {
@@ -806,9 +837,9 @@ h1, h2, h3, p {
   flex-direction: column;
   padding: 20px;
   background: #ffffff;
-  border: 1px solid rgba(8, 120, 201, 0.14);
+  border: 1.5px solid #cce0f0;
   border-radius: 16px;
-  box-shadow: 0 8px 24px -4px rgba(8, 43, 69, 0.08);
+  box-shadow: 0 8px 20px -3px rgba(7, 43, 69, 0.10), 0 3px 8px -2px rgba(7, 43, 69, 0.05);
   transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
   cursor: pointer;
 }
@@ -816,7 +847,7 @@ h1, h2, h3, p {
 .quick-action-card:hover {
   transform: translateY(-4px);
   border-color: #0878c9;
-  box-shadow: 0 16px 36px -6px rgba(8, 120, 201, 0.18);
+  box-shadow: 0 16px 36px -6px rgba(8, 120, 201, 0.22);
 }
 
 .quick-action-top {
@@ -882,8 +913,8 @@ h1, h2, h3, p {
   background: #ffffff;
   border-radius: 24px;
   padding: 32px;
-  border: 1px solid rgba(8, 120, 201, 0.18);
-  box-shadow: 0 20px 48px -12px rgba(8, 43, 69, 0.14), 0 4px 16px rgba(8, 43, 69, 0.05);
+  border: 1.5px solid #cce0f0;
+  box-shadow: 0 20px 48px -12px rgba(7, 43, 69, 0.16), 0 4px 16px rgba(7, 43, 69, 0.05);
 }
 
 .consultant-photo-container {
@@ -1075,16 +1106,16 @@ h1, h2, h3, p {
   flex-direction: column;
   padding: 24px;
   background: #ffffff;
-  border: 1px solid rgba(8, 120, 201, 0.14);
+  border: 1.5px solid #cce0f0;
   border-radius: 16px;
-  box-shadow: 0 8px 24px -4px rgba(8, 43, 69, 0.06);
+  box-shadow: 0 8px 20px -3px rgba(7, 43, 69, 0.10), 0 3px 8px -2px rgba(7, 43, 69, 0.05);
   transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
 .treatment-card:hover {
   transform: translateY(-5px);
   border-color: #0878c9;
-  box-shadow: 0 16px 36px -6px rgba(8, 120, 201, 0.16);
+  box-shadow: 0 16px 36px -6px rgba(8, 120, 201, 0.22);
 }
 
 .treatment-card-header {
@@ -1098,7 +1129,8 @@ h1, h2, h3, p {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: #eaf5fc;
+  background: linear-gradient(135deg, #eaf5fc 0%, #f0f9ff 100%);
+  border: 1.5px solid #d4e8f7;
   display: grid;
   place-items: center;
 }
@@ -1114,9 +1146,9 @@ h1, h2, h3, p {
 }
 
 .card-badge {
-  padding: 3px 8px;
-  background: #eaf9f3;
-  border: 1px solid #a3e7cb;
+  padding: 4px 10px;
+  background: #ecfdf5;
+  border: 1.5px solid #a3e7cb;
   color: #149b64;
   border-radius: 6px;
   font-size: 10.5px;
@@ -1148,12 +1180,12 @@ h1, h2, h3, p {
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 38px;
-  background: #eaf5fc;
+  height: 40px;
+  background: #f0f8fd;
   color: #0878c9;
-  border: 1px solid rgba(8, 120, 201, 0.2);
+  border: 1.5px solid #c2def4;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease;
@@ -1183,16 +1215,16 @@ h1, h2, h3, p {
   height: 390px;
   overflow: hidden;
   background: #ffffff;
-  border: 1px solid rgba(8, 120, 201, 0.14);
+  border: 1.5px solid #cce0f0;
   border-radius: 16px;
-  box-shadow: 0 8px 24px -4px rgba(8, 43, 69, 0.06);
+  box-shadow: 0 8px 20px -3px rgba(7, 43, 69, 0.10), 0 3px 8px -2px rgba(7, 43, 69, 0.05);
   transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
 .new-body-card:hover {
   transform: translateY(-5px);
   border-color: #0878c9;
-  box-shadow: 0 16px 36px -6px rgba(8, 120, 201, 0.16);
+  box-shadow: 0 16px 36px -6px rgba(8, 120, 201, 0.22);
 }
 
 .card-image-box {
@@ -1200,6 +1232,7 @@ h1, h2, h3, p {
   position: relative;
   overflow: hidden;
   background: #edf4f9;
+  border-bottom: 1.5px solid #ddecfa;
 }
 
 .card-image-box img {
@@ -1269,8 +1302,8 @@ h1, h2, h3, p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
-  font-size: 12px;
+  height: 38px;
+  font-size: 12.5px;
   font-weight: 700;
   border-radius: 8px;
   transition: all 150ms ease;
@@ -1279,7 +1312,7 @@ h1, h2, h3, p {
 
 .explore-btn {
   color: #082b45;
-  border: 1px solid #d9e6ef;
+  border: 1.5px solid #c7ddec;
   background: #f5f9fc;
 }
 
@@ -1291,7 +1324,7 @@ h1, h2, h3, p {
 
 .book-btn {
   color: #ffffff;
-  border: 1px solid #0878c9;
+  border: 1.5px solid #0878c9;
   background: linear-gradient(135deg, #0878C9 0%, #0562a4 100%);
   box-shadow: 0 2px 8px rgba(8, 120, 201, 0.25);
 }
@@ -1317,15 +1350,16 @@ h1, h2, h3, p {
 .methodology-card {
   padding: 28px;
   background: #ffffff;
-  border: 1px solid rgba(8, 120, 201, 0.14);
+  border: 1.5px solid #cce0f0;
   border-radius: 16px;
-  box-shadow: 0 8px 24px -4px rgba(8, 43, 69, 0.06);
-  transition: transform 220ms ease, box-shadow 220ms ease;
+  box-shadow: 0 8px 20px -3px rgba(7, 43, 69, 0.10), 0 3px 8px -2px rgba(7, 43, 69, 0.05);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
 
 .methodology-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 14px 32px rgba(8, 120, 201, 0.12);
+  border-color: #0878c9;
+  box-shadow: 0 16px 36px -6px rgba(8, 120, 201, 0.22);
 }
 
 .methodology-step-badge {
@@ -1545,9 +1579,9 @@ h1, h2, h3, p {
 .assessment-card {
   padding: clamp(24px, 4vw, 36px);
   background: #ffffff;
-  border: 1px solid rgba(8, 120, 201, 0.18);
+  border: 1.5px solid #cce0f0;
   border-radius: 20px;
-  box-shadow: 0 16px 40px -10px rgba(8, 43, 69, 0.12);
+  box-shadow: 0 16px 40px -10px rgba(7, 43, 69, 0.14);
 }
 
 .form-heading-row {
@@ -1769,9 +1803,9 @@ textarea:focus {
   min-height: 200px;
   padding: 24px;
   background: #ffffff;
-  border: 1px solid rgba(8, 120, 201, 0.14);
+  border: 1.5px solid #cce0f0;
   border-radius: 16px;
-  box-shadow: 0 8px 24px -4px rgba(8, 43, 69, 0.06);
+  box-shadow: 0 8px 20px -3px rgba(7, 43, 69, 0.10), 0 3px 8px -2px rgba(7, 43, 69, 0.05);
   flex-shrink: 0;
 }
 
@@ -4836,23 +4870,27 @@ textarea:focus {
   position: fixed;
   inset: 0;
   z-index: 10000;
-  background: rgba(11, 31, 42, 0.88);
-  backdrop-filter: blur(8px);
+  background: rgba(7, 43, 69, 0.90);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 16px;
+  padding: 24px 16px 60px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .patient-login-modal {
   width: 100%;
   max-width: 480px;
+  margin: auto 0;
   background: var(--bg-card, #ffffff);
-  border: 1px solid var(--line, #e2e8f0);
+  border: 1.5px solid rgba(8, 120, 201, 0.25);
   border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
-  padding: 32px 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  padding: 28px 24px 24px;
   text-align: center;
   animation: fadeIn 220ms ease;
   color: var(--text, #0f172a);
@@ -5004,14 +5042,15 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 42px;
+  min-height: 44px;
+  width: 100%;
   padding: 0 16px;
   border-radius: 10px;
   background: var(--panel-bg, #f1f5f9);
-  color: var(--text-primary, #334155);
-  border: 1px solid var(--border, #cbd5e1);
-  font-size: 13.5px;
-  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  border: 1.5px solid var(--border, #cbd5e1);
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
   text-decoration: none;
   transition: all 180ms ease;
@@ -5019,6 +5058,18 @@ textarea:focus {
 
 .patient-secondary-btn:hover {
   background: var(--panel-hover, #e2e8f0);
+  border-color: #94a3b8;
+}
+
+[data-theme="dark"] .patient-secondary-btn {
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1.5px solid #475569;
+}
+
+[data-theme="dark"] .patient-secondary-btn:hover {
+  background: #334155;
+  border-color: #64748b;
 }
 
 .patient-alert {

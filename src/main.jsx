@@ -175,7 +175,7 @@ function WhatsAppIcon() {
 
 function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, showDownloadBtn, themeProps }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isDark = false; // Public site is cleanly rendered in light medical theme
+  const isDark = false;
 
   const handleNavClick = () => {
     setMobileMenuOpen(false);
@@ -196,39 +196,39 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
           </nav>
 
           <div className="header-actions-group">
-            <button
-              className="patient-portal-pill-btn"
-              onClick={() => { setMobileMenuOpen(false); onOpenPatientPortal(); }}
-              title="Patient Portal — Visits, Receipts & Recovery Plan"
-            >
-              <span className="portal-pill-icon">👤</span>
-              <span className="portal-pill-text">Patient Portal</span>
-              <span className="portal-pill-text-short">Patient</span>
-            </button>
-            <button
-              className="doctor-portal-pill-btn"
-              onClick={() => { setMobileMenuOpen(false); onOpenDoctorPortal(); }}
-              title="Doctor Login & Clinic Management"
-            >
-              <span className="portal-pill-icon">🔒</span>
-              <span className="portal-pill-text">Doctor Portal</span>
-              <span className="portal-pill-text-short">Doctor</span>
-            </button>
             {showDownloadBtn && (
               <button
-                className="download-app-pill-btn"
+                className="header-rect-btn download-app-rect-btn"
                 onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
                 title="Download & Install Clinic App"
                 aria-label="Download App"
               >
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                <span className="download-btn-label">App</span>
+                <span className="rect-btn-text">Download App</span>
+                <span className="rect-btn-text-short">App</span>
               </button>
             )}
+            <button
+              className="header-rect-btn patient-portal-rect-btn"
+              onClick={() => { setMobileMenuOpen(false); onOpenPatientPortal(); }}
+              title="Patient Portal — Visits, Receipts & Recovery Plan"
+            >
+              <span className="portal-rect-icon">👤</span>
+              <span className="rect-btn-text">Patient Portal</span>
+              <span className="rect-btn-text-short">Patient</span>
+            </button>
+            <button
+              className="header-rect-btn doctor-portal-rect-btn desktop-only-portal-btn"
+              onClick={() => { setMobileMenuOpen(false); onOpenDoctorPortal(); }}
+              title="Doctor Login & Clinic Management"
+            >
+              <span className="portal-rect-icon">🔒</span>
+              <span className="rect-btn-text">Doctor Portal</span>
+            </button>
             <a className="header-cta desktop-only-cta" href="#consultation">Book Consultation</a>
 
             <button
@@ -278,6 +278,14 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
               ))}
             </div>
             <div className="mobile-drawer-actions">
+              {showDownloadBtn && (
+                <button
+                  className="mobile-drawer-btn download-btn"
+                  onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
+                >
+                  <span>📲</span> Download Clinic App
+                </button>
+              )}
               <button
                 className="mobile-drawer-btn patient-btn"
                 onClick={() => { setMobileMenuOpen(false); onOpenPatientPortal(); }}
@@ -290,14 +298,6 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
               >
                 <span>🔒</span> Doctor Portal
               </button>
-              {showDownloadBtn && (
-                <button
-                  className="mobile-drawer-btn download-btn"
-                  onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
-                >
-                  <span>📲</span> Download Clinic App
-                </button>
-              )}
               <a
                 href="#consultation"
                 className="mobile-drawer-cta"
@@ -319,70 +319,87 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
   );
 }
 
-function Hero({ onOpenDownloadApp, showDownloadBtn }) {
+function Hero() {
   return (
     <section id="home" className="hero">
-      <div className="live-clinic-status-bar">
-        <span className="status-live-dot"></span>
-        <span className="status-text">
-          <strong>CLINIC OPEN</strong> • Vindhyachal, Mirzapur • 9:00 AM – 8:00 PM • Call: <a href={`tel:${phonePrimary}`} className="status-phone-link">+91 9793093316</a>
-        </span>
-      </div>
-
+      <div className="hero-bg-overlay"></div>
       <div className="hero-inner">
         <div className="hero-copy">
-          <p className="eyebrow">ADVANCED PHYSIOTHERAPY & REHABILITATION CENTER</p>
-          <h1>Move Better.<br />Feel Better.<br />Live Better.</h1>
-          <p className="lead">
-            Personalized physiotherapy and rehabilitation care for pain, mobility, recovery and stronger movement under Dr. Satyam Vishwakarma.
+          <h1 className="hero-headline">
+            Move Better.<br />
+            Feel Better.<br />
+            <span className="hero-headline-blue">Live Better.</span>
+          </h1>
+          <p className="hero-lead">
+            Personalized clinical physiotherapy, spinal decompression, and targeted rehabilitation designed to restore natural pain-free mobility under Dr. Satyam Vishwakarma.
           </p>
           <div className="hero-actions">
             <a className="primary-btn hero-consult-btn" href="#consultation">Book Consultation</a>
             <a className="secondary-btn hero-call-btn" href={`tel:${phonePrimary}`}><CallIcon /> Call Clinic</a>
-            {showDownloadBtn && (
-              <button
-                type="button"
-                className="secondary-btn hero-download-btn"
-                onClick={onOpenDownloadApp}
-                title="Download & Install Vindhya Physio App"
-              >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "6px" }}>
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-                Download App
-              </button>
-            )}
           </div>
         </div>
-        <aside className="doctor-card">
-          <div className="doctor-photo-wrapper">
-            <img src="/doctor.png" className="doctor-photo" alt="Dr. Satyam Vishwakarma - Consultant Physiotherapist" />
-            <div className="doctor-photo-badge">Lead Consultant</div>
-          </div>
-          <div className="doctor-card-content">
-            <p className="doctor-card-eyebrow">CHIEF PHYSIOTHERAPIST</p>
-            <h2>DR. SATYAM VISHWAKARMA</h2>
-            <span className="doctor-qualification">Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</span>
-            <div className="mini-tags">
-              <span>Spine & Back Pain</span>
-              <span>Cupping Therapy</span>
-              <span>Neuro & Paralysis</span>
-              <span>CP Child Rehab</span>
-              <span>Sports Injury</span>
-              <span>Post-Surgical</span>
+        <div className="hero-visual-frame">
+          <div className="hero-rehab-card-3d">
+            <img
+              src="/physio_rehab_hero.jpg"
+              className="hero-rehab-photo"
+              alt="Targeted physiotherapy rehabilitation session"
+            />
+            <div className="hero-rehab-badge">
+              <span className="rehab-pulse-dot"></span>
+              <span>Targeted Mobility & Pain Recovery</span>
             </div>
           </div>
-        </aside>
+        </div>
       </div>
       <div className="stats-strip">
         {stats.map(([value, label]) => (
-          <div key={value}>
+          <div key={value} className="stat-box-3d">
             <strong>{value}</strong>
             <span>{label}</span>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function LeadConsultant() {
+  return (
+    <section id="doctor" className="section consultant-section">
+      <div className="consultant-shell-3d">
+        <div className="consultant-photo-side">
+          <div className="consultant-photo-container">
+            <img
+              src="/doctor_satyam_green.png"
+              alt="Dr. Satyam Vishwakarma - Chief Physiotherapist"
+              className="consultant-main-photo"
+            />
+            <div className="consultant-lead-badge">Lead Consultant</div>
+          </div>
+        </div>
+        <div className="consultant-info-side">
+          <p className="consultant-eyebrow">CHIEF PHYSIOTHERAPIST & FOUNDER</p>
+          <h2>Dr. Satyam Vishwakarma</h2>
+          <p className="consultant-qualification">
+            Consultant Physiotherapist • BPT, DPT, CCYP (BHU)
+          </p>
+          <p className="consultant-bio">
+            Dedicated to restoring natural, pain-free movement through clinical diagnostics and advanced rehabilitation. Trained at Banaras Hindu University (BHU), Dr. Satyam specializes in non-surgical spine decompression, paralysis rehabilitation, cupping therapy, pediatric care, and sports injury recovery.
+          </p>
+          <div className="consultant-specialties">
+            <span>Spine & Back Pain</span>
+            <span>Cupping Therapy</span>
+            <span>Neuro & Paralysis</span>
+            <span>CP Child Rehab</span>
+            <span>Sports Injury</span>
+            <span>Post-Surgical</span>
+          </div>
+          <div className="consultant-btn-group">
+            <a href="#consultation" className="primary-btn consultant-book-btn">Book Consultation With Dr. Satyam</a>
+            <a href={`tel:${phonePrimary}`} className="secondary-btn consultant-call-btn"><CallIcon /> Direct Call</a>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -480,8 +497,16 @@ function Treatments() {
 }
 
 function BodyMap() {
-  const handleBook = (title) => {
+  const handleSelectPainRegion = (title) => {
     window.dispatchEvent(new CustomEvent("prefill-assessment", { detail: title }));
+    const el = document.getElementById("consultation");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+      setTimeout(() => {
+        const nameInput = document.querySelector('input[name="name"]');
+        if (nameInput) nameInput.focus();
+      }, 400);
+    }
   };
 
   return (
@@ -492,7 +517,13 @@ function BodyMap() {
       </div>
       <div className="body-grid">
         {bodyProblems.map(([icon, title, copy, number, image]) => (
-          <article className="new-body-card" key={title}>
+          <article
+            className="new-body-card"
+            key={title}
+            onClick={() => handleSelectPainRegion(title)}
+            style={{ cursor: "pointer" }}
+            title={`Select ${title} and book consultation`}
+          >
             <div className="card-image-box">
               {image ? <img src={image} alt={title} loading="lazy" /> : <div className="placeholder-img" />}
               <span className="card-number-tag">{number}</span>
@@ -506,12 +537,20 @@ function BodyMap() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="explore-btn"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   Explore
                 </a>
-                <a href="#consultation" className="book-btn" onClick={() => handleBook(title)}>
+                <button
+                  type="button"
+                  className="book-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectPainRegion(title);
+                  }}
+                >
                   Consult Now
-                </a>
+                </button>
               </div>
             </div>
           </article>
@@ -668,6 +707,9 @@ function Assessment() {
                 value={selectedPainArea}
                 onChange={(e) => setSelectedPainArea(e.target.value)}
               >
+                {!["Spine & Back Pain", "Cup Therapy / Cupping", "Neuro Rehabilitation", "Paralysis Rehabilitation", "Stroke Recovery", "CP (Child) Therapy", "Sports Injury Rehab", "Post-Surgical Rehab", "Neck & Cervical", "Shoulder & Rotator Cuff", "Elbow & Forearm", "Wrist & Hand", "Upper Back & Thoracic", "Lower Back & Sciatica", "Hip & Pelvis", "Knee & ACL", "Ankle & Foot", "Sports Trauma", "Paralysis & Neuro Care", "Post-Surgery Recovery", "General Physiotherapy"].includes(selectedPainArea) && selectedPainArea !== "custom" && (
+                  <option value={selectedPainArea}>{selectedPainArea}</option>
+                )}
                 <option value="Spine & Back Pain">Spine & Back Pain (Slip Disc / Sciatica)</option>
                 <option value="Cup Therapy / Cupping">Cup Therapy / Cupping Therapy</option>
                 <option value="Neuro Rehabilitation">Neuro Rehabilitation (Parkinson's / Balance)</option>
@@ -676,12 +718,18 @@ function Assessment() {
                 <option value="CP (Child) Therapy">CP (Child) Therapy / Pediatric Rehab</option>
                 <option value="Sports Injury Rehab">Sports Injury & Ligament Recovery</option>
                 <option value="Post-Surgical Rehab">Post-Surgical Knee / Shoulder Rehab</option>
-                <option value="Neck & Cervical Spondylosis">Neck & Cervical Spondylosis</option>
-                <option value="Frozen Shoulder">Frozen Shoulder & Rotator Cuff</option>
-                <option value="Knee Arthritis & ACL">Knee Arthritis & ACL Pain</option>
-                <option value="Hip & Pelvis Pain">Hip & Pelvis Pain</option>
-                <option value="Wrist / Hand / Tennis Elbow">Wrist / Hand / Tennis Elbow</option>
-                <option value="Ankle Sprain & Heel Pain">Ankle Sprain & Plantar Fasciitis</option>
+                <option value="Neck & Cervical">Neck & Cervical Spondylosis</option>
+                <option value="Shoulder & Rotator Cuff">Shoulder & Rotator Cuff / Frozen Shoulder</option>
+                <option value="Elbow & Forearm">Elbow & Forearm (Tennis / Golfer's Elbow)</option>
+                <option value="Wrist & Hand">Wrist & Hand (Carpal Tunnel / Tendonitis)</option>
+                <option value="Upper Back & Thoracic">Upper Back & Thoracic Pain</option>
+                <option value="Lower Back & Sciatica">Lower Back & Sciatica (L4-L5 Disc)</option>
+                <option value="Hip & Pelvis">Hip & Pelvis Pain</option>
+                <option value="Knee & ACL">Knee & ACL / Arthritis Rehabilitation</option>
+                <option value="Ankle & Foot">Ankle & Foot (Sprain / Plantar Fasciitis)</option>
+                <option value="Sports Trauma">Sports Trauma & Performance Recovery</option>
+                <option value="Paralysis & Neuro Care">Paralysis & Neuro Care</option>
+                <option value="Post-Surgery Recovery">Post-Surgery Recovery</option>
                 <option value="General Physiotherapy">General Physiotherapy / Body Aches</option>
                 <option value="custom">✏️ Other / Custom Condition (Write Your Own)...</option>
               </select>
@@ -1401,11 +1449,9 @@ function App() {
         themeProps={themeProps}
       />
       <main>
-        <Hero
-          onOpenDownloadApp={() => setShowDownloadModal(true)}
-          showDownloadBtn={canShowDownloadBtn}
-        />
+        <Hero />
         <QuickActions />
+        <LeadConsultant />
         <Treatments />
         <BodyMap />
         <Programs />

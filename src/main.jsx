@@ -226,7 +226,7 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
   );
 }
 
-function Hero() {
+function Hero({ onOpenDownloadApp, showDownloadBtn }) {
   return (
     <section id="home" className="hero">
       <div className="live-clinic-status-bar">
@@ -244,6 +244,21 @@ function Hero() {
           <div className="hero-actions">
             <a className="primary-btn" href="#consultation">Start Free Consultation</a>
             <a className="secondary-btn" href={`tel:${phonePrimary}`}><CallIcon /> Call +91 9793093316</a>
+            {showDownloadBtn && (
+              <button
+                type="button"
+                className="secondary-btn hero-download-btn"
+                onClick={onOpenDownloadApp}
+                title="Download & Install Vindhya Physio App"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "6px" }}>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Download App
+              </button>
+            )}
           </div>
         </div>
         <aside className="doctor-card fade-up">
@@ -745,11 +760,21 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
       }
       onClose();
     } else if (isIOS) {
-      // Steps are rendered in card
+      localStorage.setItem('vindhya_app_installed', 'true');
+      if (onInstalled) onInstalled();
+      onClose();
     } else {
-      alert("To install the app, tap your browser's menu (⋮ or Share) and select 'Install app' or 'Add to Home Screen'.");
+      localStorage.setItem('vindhya_app_installed', 'true');
+      if (onInstalled) onInstalled();
+      alert("To install the official app, tap your browser's menu (⋮ or Share icon) and select 'Install app' or 'Add to Home Screen'.");
       onClose();
     }
+  };
+
+  const handleIOSGotIt = () => {
+    localStorage.setItem('vindhya_app_installed', 'true');
+    if (onInstalled) onInstalled();
+    onClose();
   };
 
   return (
@@ -770,7 +795,7 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
         </div>
 
         <p className="app-download-desc">
-          Download our clinic app on your phone for instant appointment booking, WhatsApp doctor helpline, and exercise guidance.
+          Download our clinic app on your device for instant appointment booking, WhatsApp doctor helpline, and live recovery guidance.
         </p>
 
         {isIOS ? (
@@ -782,8 +807,8 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
               <li>Tap <strong>Add</strong> at top right corner.</li>
             </ol>
             <div className="download-modal-actions" style={{ marginTop: "14px" }}>
-              <button className="primary-btn download-btn" onClick={onClose} style={{ width: "100%" }}>
-                Got It
+              <button className="primary-btn download-btn" onClick={handleIOSGotIt} style={{ width: "100%" }}>
+                Got It & Install
               </button>
             </div>
           </div>
@@ -795,7 +820,7 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Download
+              Download App
             </button>
             <button className="secondary-btn later-btn" onClick={onClose}>
               Maybe Later
@@ -1094,10 +1119,11 @@ function App() {
       showDoctorPortal ||
       showPatientPortal;
 
-    if (isMobileDevice && !isStandalone && !isAppInstalled && !dismissed && !isPortalActive) {
+    // Trigger Download App popup on first visit for anyone landing on the website
+    if (!isStandalone && !isAppInstalled && !dismissed && !isPortalActive) {
       timer = setTimeout(() => {
         setShowDownloadModal(true);
-      }, 1500);
+      }, 1200);
     }
 
     const checkHash = () => {
@@ -1188,7 +1214,10 @@ function App() {
         themeProps={themeProps}
       />
       <main>
-        <Hero />
+        <Hero
+          onOpenDownloadApp={() => setShowDownloadModal(true)}
+          showDownloadBtn={canShowDownloadBtn}
+        />
         <Treatments />
         <BodyMap />
         <Programs />

@@ -541,8 +541,32 @@ export const api = {
     return { ok: true, visits: todayList };
   },
 
+  // 1.1 AUTH HELPERS
+  getToken() {
+    try {
+      return localStorage.getItem("doctor_token") || "";
+    } catch (e) {
+      return "";
+    }
+  },
+
   // 5. ENQUIRIES
   async getEnquiries() {
+    const token = this.getToken();
+    if (token) {
+      try {
+        const res = await fetch("/api/doctor/enquiries", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ok && Array.isArray(data.enquiries)) {
+            setLocal(KEYS.ENQUIRIES, data.enquiries);
+            return { ok: true, enquiries: data.enquiries };
+          }
+        }
+      } catch (e) {}
+    }
     const enquiries = getLocal(KEYS.ENQUIRIES, []);
     return { ok: true, enquiries };
   },
@@ -679,28 +703,35 @@ export const api = {
 
   async updateEnquiryStatus(enquiryId, status, linkedPatientId = null) {
     const token = this.getToken();
-    try {
-      const res = await fetch(`/api/doctor/enquiries/${enquiryId}/status`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ status, linkedPatientId })
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) return data;
-    } catch (e) {}
+    let serverData = null;
+    if (token) {
+      try {
+        const res = await fetch(`/api/doctor/enquiries/${enquiryId}/status`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ status, linkedPatientId })
+        });
+        if (res.ok) {
+          serverData = await res.json();
+        }
+      } catch (e) {
+        console.warn("Server update failed, updating locally:", e);
+      }
+    }
 
-    // Fallback local
+    // Always update local storage so UI is immediately 100% consistent
     const enquiries = getLocal(KEYS.ENQUIRIES, []);
-    const enq = enquiries.find(e => e.id === enquiryId);
+    const enq = enquiries.find(e => String(e.id) === String(enquiryId));
     if (enq) {
       enq.status = status;
       if (linkedPatientId) enq.linkedPatientId = linkedPatientId;
+      enq.updatedAt = new Date().toISOString();
       setLocal(KEYS.ENQUIRIES, enquiries);
     }
-    return { ok: true };
+    return serverData || { ok: true, status, linkedPatientId };
   }
 };
 

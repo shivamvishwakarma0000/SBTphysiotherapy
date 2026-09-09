@@ -741,21 +741,42 @@ export default function DoctorPortal({ onClose, themeProps }) {
   };
 
   const handleMarkEnquirySpam = async (enquiry) => {
+    if (!enquiry || !enquiry.id) return;
     const isCurrentlySpam = enquiry.status === "Hidden / Spam";
     const newStatus = isCurrentlySpam ? "New" : "Hidden / Spam";
-    const res = await api.updateEnquiryStatus(enquiry.id, newStatus);
-    if (res.ok) {
-      fetchEnquiries();
+
+    // Optimistic UI update so the action responds instantly
+    setEnquiries(prev => prev.map(e => String(e.id) === String(enquiry.id) ? { ...e, status: newStatus } : e));
+
+    try {
+      const res = await api.updateEnquiryStatus(enquiry.id, newStatus);
+      if (res.ok) {
+        fetchEnquiries();
+      }
+    } catch (err) {
+      console.error("Failed to update enquiry status:", err);
+      fetchEnquiries(); // rollback on error
     }
   };
 
   const handleLinkEnquiryToPatient = async (enquiry, targetPatient) => {
+    if (!enquiry || !enquiry.id || !targetPatient) return;
     const status = `Linked: ${targetPatient.patientId}`;
-    const res = await api.updateEnquiryStatus(enquiry.id, status, targetPatient.patientId);
-    if (res.ok) {
-      setLinkingEnquiry(null);
+
+    // Optimistic UI update
+    setEnquiries(prev => prev.map(e => String(e.id) === String(enquiry.id) ? { ...e, status, linkedPatientId: targetPatient.patientId } : e));
+    setLinkingEnquiry(null);
+
+    try {
+      const res = await api.updateEnquiryStatus(enquiry.id, status, targetPatient.patientId);
+      if (res.ok) {
+        fetchEnquiries();
+        alert(`✓ Enquiry linked successfully to ${targetPatient.name} (${targetPatient.patientId}) without creating duplicate records.`);
+      }
+    } catch (err) {
+      console.error("Failed to link enquiry:", err);
+      alert("Failed to link enquiry: " + err.message);
       fetchEnquiries();
-      alert(`Enquiry linked successfully to ${targetPatient.name} (${targetPatient.patientId}) without creating duplicate records.`);
     }
   };
 
@@ -967,9 +988,9 @@ _(Saved in patient clinic records)_`;
         <div className="doctor-login-card">
           <div className="login-header">
             <img
-              src="/vindhya-receipt-logo.png"
+              src={CLINIC_LOGO_B64 || "/vindhya-receipt-logo.png"}
               alt="Vindhya Physio & Rehab Center"
-              className="login-logo-img"
+              className="login-logo-img prominent-landing-logo"
             />
             <h2>Doctor Portal Login</h2>
             <p>Authorized access for Dr. Satyam Vishwakarma</p>
@@ -2170,6 +2191,7 @@ _(Saved in patient clinic records)_`;
                           type="button"
                           className="enquiry-action-btn link"
                           onClick={() => {
+                            if (patients.length === 0) fetchPatients();
                             setLinkingEnquiry(e);
                             setLinkSearchQuery("");
                           }}
@@ -2253,6 +2275,7 @@ _(Saved in patient clinic records)_`;
                                 className="table-action-btn"
                                 style={{ background: "rgba(126, 34, 206, 0.12)", color: "#9333ea", borderColor: "rgba(126, 34, 206, 0.3)" }}
                                 onClick={() => {
+                                  if (patients.length === 0) fetchPatients();
                                   setLinkingEnquiry(e);
                                   setLinkSearchQuery("");
                                 }}
@@ -2288,33 +2311,38 @@ _(Saved in patient clinic records)_`;
 
             {/* Link Enquiry to Patient Modal */}
             {linkingEnquiry && (
-              <div className="patient-submodal-overlay" onClick={() => setLinkingEnquiry(null)}>
-                <div className="patient-submodal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "520px" }}>
+              <div className="patient-submodal-overlay doctor-link-overlay" onClick={() => setLinkingEnquiry(null)}>
+                <div className="patient-submodal-card doctor-link-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "540px", width: "94%" }}>
                   <div className="submodal-head">
                     <h3>Link Enquiry to Existing Patient</h3>
                     <button className="submodal-close" onClick={() => setLinkingEnquiry(null)}>✕</button>
                   </div>
-                  <p className="submodal-desc">
+                  <p className="submodal-desc" style={{ marginTop: "4px", fontSize: "13px", color: "#64748b" }}>
                     Link enquiry from <strong>{linkingEnquiry.name}</strong> (+91 {linkingEnquiry.phone}) to an existing patient file to prevent duplicate patient IDs.
                   </p>
 
-                  <div style={{ margin: "14px 0" }}>
+                  <div style={{ margin: "14px 0 10px 0" }}>
                     <input
                       type="text"
                       placeholder="Search patient by Name, ID, or Phone..."
                       value={linkSearchQuery}
                       onChange={(e) => setLinkSearchQuery(e.target.value)}
-                      style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid var(--border)" }}
+                      style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #cbd5e1", fontSize: "14px", boxSizing: "border-box" }}
+                      autoFocus
                     />
                   </div>
 
-                  <div style={{ maxHeight: "260px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ maxHeight: "280px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px", paddingRight: "4px" }}>
                     {patients
                       .filter(p => {
-                        const q = linkSearchQuery.toLowerCase();
-                        return !q || p.name.toLowerCase().includes(q) || (p.patientId && p.patientId.toLowerCase().includes(q)) || p.phone.includes(q);
+                        const q = (linkSearchQuery || "").trim().toLowerCase();
+                        if (!q) return true;
+                        const matchName = (p.name || "").toLowerCase().includes(q);
+                        const matchId = (p.patientId || "").toLowerCase().includes(q);
+                        const matchPhone = (p.phone ? String(p.phone) : "").includes(q);
+                        return matchName || matchId || matchPhone;
                       })
-                      .slice(0, 10)
+                      .slice(0, 15)
                       .map(p => (
                         <div
                           key={p.patientId}
@@ -2323,30 +2351,50 @@ _(Saved in patient clinic records)_`;
                             justifyContent: "space-between",
                             alignItems: "center",
                             padding: "10px 14px",
-                            borderRadius: "8px",
-                            background: "var(--card-bg, #f8fafc)",
-                            border: "1px solid var(--border, #e2e8f0)"
+                            borderRadius: "10px",
+                            background: "#f8fafc",
+                            border: "1px solid #e2e8f0",
+                            gap: "10px"
                           }}
                         >
-                          <div>
-                            <strong>{p.name}</strong> <span className="patient-id-badge">{p.patientId}</span>
-                            <div style={{ fontSize: "12px", color: "var(--text-muted, #64748b)" }}>
-                              +91 {p.phone} • {p.age} Yrs • {p.gender}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                              <strong style={{ color: "#0f172a", fontSize: "14px" }}>{p.name}</strong>
+                              <span className="patient-id-badge" style={{ fontSize: "11px", fontWeight: "700" }}>{p.patientId}</span>
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                              +91 {p.phone} • {p.age || "—"} Yrs • {p.gender || "Patient"}
                             </div>
                           </div>
                           <button
                             className="primary-btn"
-                            style={{ fontSize: "12px", padding: "6px 12px" }}
+                            style={{ fontSize: "12px", padding: "7px 14px", borderRadius: "8px", whiteSpace: "nowrap", flexShrink: 0 }}
                             onClick={() => handleLinkEnquiryToPatient(linkingEnquiry, p)}
                           >
                             🔗 Link Here
                           </button>
                         </div>
                       ))}
+
+                    {patients.length === 0 && (
+                      <div style={{ textAlign: "center", padding: "20px", color: "#64748b", fontSize: "13.5px" }}>
+                        No existing patients found in registry yet.
+                      </div>
+                    )}
+
+                    {patients.length > 0 && patients.filter(p => {
+                      const q = (linkSearchQuery || "").trim().toLowerCase();
+                      if (!q) return true;
+                      return (p.name || "").toLowerCase().includes(q) || (p.patientId || "").toLowerCase().includes(q) || (p.phone && String(p.phone).includes(q));
+                    }).length === 0 && (
+                      <div style={{ textAlign: "center", padding: "20px", color: "#64748b", fontSize: "13.5px" }}>
+                        No patients matching "<strong>{linkSearchQuery}</strong>".
+                      </div>
+                    )}
                   </div>
 
-                  <div className="submodal-actions" style={{ marginTop: "16px" }}>
-                    <button className="secondary-btn" onClick={() => setLinkingEnquiry(null)}>
+                  <div className="submodal-actions" style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end" }}>
+                    <button className="secondary-btn" onClick={() => setLinkingEnquiry(null)} style={{ padding: "8px 18px" }}>
                       Cancel
                     </button>
                   </div>

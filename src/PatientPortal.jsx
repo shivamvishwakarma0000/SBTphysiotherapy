@@ -264,13 +264,11 @@ export default function PatientPortal({ onClose, themeProps }) {
         <div className="patient-login-modal">
           <div className="patient-login-header">
             <div className="patient-portal-badge">PATIENT RECOVERY PORTAL</div>
-            {CLINIC_LOGO_B64 && (
-              <img
-                src={CLINIC_LOGO_B64}
-                alt="Vindhya Physio & Rehab Center Logo"
-                className="patient-portal-logo"
-              />
-            )}
+            <img
+              src={CLINIC_LOGO_B64 || "/vindhya-receipt-logo.png"}
+              alt="Vindhya Physio & Rehab Center Logo"
+              className="patient-portal-logo prominent-landing-logo"
+            />
             <h2>Vindhya Physio & Rehab Center</h2>
             <p className="subtext">Dr. Satyam Vishwakarma • Amravati Chauraha, Vindhyachal</p>
           </div>

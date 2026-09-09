@@ -1255,69 +1255,41 @@ _(Saved in patient clinic records)_`;
             <div className="mobile-app-grid-6">
               <div className="mobile-app-card" onClick={() => selectDoctorTab("new-patient")}>
                 <div className="card-icon-bubble blue">➕</div>
-                <div className="card-content">
-                  <h3 className="card-title">Intake Patient</h3>
-                  <p className="card-desc">Register new case</p>
-                </div>
+                <strong className="card-title">Intake Patient</strong>
               </div>
 
               <div className="mobile-app-card" onClick={() => selectDoctorTab("waiting")}>
                 <div className="card-icon-bubble amber">⏳</div>
-                <div className="card-content">
-                  <div className="card-header-row">
-                    <h3 className="card-title">Waiting Queue</h3>
-                    <span className="card-count-badge amber">
-                      {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length}
-                    </span>
-                  </div>
-                  <p className="card-desc">Awaiting consult</p>
-                </div>
+                <strong className="card-title">Waiting Queue</strong>
+                <span className="card-count-badge amber">
+                  {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length}
+                </span>
               </div>
 
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("patients"); fetchPatients(); }}>
                 <div className="card-icon-bubble teal">👥</div>
-                <div className="card-content">
-                  <div className="card-header-row">
-                    <h3 className="card-title">All Patients</h3>
-                    <span className="card-count-badge teal">{stats.totalPatients || patients.length}</span>
-                  </div>
-                  <p className="card-desc">Full patient registry</p>
-                </div>
+                <strong className="card-title">All Patients</strong>
+                <span className="card-count-badge teal">{stats.totalPatients || patients.length}</span>
               </div>
 
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}>
                 <div className="card-icon-bubble green">📅</div>
-                <div className="card-content">
-                  <div className="card-header-row">
-                    <h3 className="card-title">Today's Visits</h3>
-                    <span className="card-count-badge green">{stats.todayVisitsCount || todayVisits.length}</span>
-                  </div>
-                  <p className="card-desc">Scheduled sessions</p>
-                </div>
+                <strong className="card-title">Today's Visits</strong>
+                <span className="card-count-badge green">{stats.todayVisitsCount || todayVisits.length}</span>
               </div>
 
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
                 <div className="card-icon-bubble purple">📩</div>
-                <div className="card-content">
-                  <div className="card-header-row">
-                    <h3 className="card-title">Online Bookings</h3>
-                    <span className="card-count-badge purple">{stats.totalEnquiriesCount || enquiries.length}</span>
-                  </div>
-                  <p className="card-desc">Web appointment leads</p>
-                </div>
+                <strong className="card-title">Online Bookings</strong>
+                <span className="card-count-badge purple">{stats.totalEnquiriesCount || enquiries.length}</span>
               </div>
 
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
                 <div className="card-icon-bubble cyan">🌐</div>
-                <div className="card-content">
-                  <div className="card-header-row">
-                    <h3 className="card-title">Website Enquiries</h3>
-                    <span className="card-count-badge cyan">
-                      {enquiries.filter(e => e.status !== "Resolved").length || enquiries.length}
-                    </span>
-                  </div>
-                  <p className="card-desc">Pending questions</p>
-                </div>
+                <strong className="card-title">Website Enquiries</strong>
+                <span className="card-count-badge cyan">
+                  {enquiries.filter(e => e.status !== "Resolved").length || enquiries.length}
+                </span>
               </div>
             </div>
 

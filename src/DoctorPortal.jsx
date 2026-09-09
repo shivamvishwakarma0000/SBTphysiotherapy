@@ -1955,8 +1955,8 @@ _(Saved in patient clinic records)_`;
                   <div className="mobile-patient-top">
                     <div>
                       <span className="patient-id-badge">{p.patientId}</span>
-                      <h3 className="mobile-patient-name">{p.name}</h3>
-                      <p className="mobile-patient-sub">{p.age}y • {p.gender} • +91 {p.phone}</p>
+                      <h3 className="mobile-patient-name" style={{ color: "#0f172a" }}>{p.name || p.patientName || "Patient"}</h3>
+                      <p className="mobile-patient-sub" style={{ color: "#0f172a" }}>{p.age}y • {p.gender} • +91 {p.phone}</p>
                     </div>
                     <span className={`status-badge ${(p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`}>
                       {p.status || "Active"}

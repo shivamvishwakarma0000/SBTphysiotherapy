@@ -649,8 +649,8 @@ export default function PatientPortal({ onClose, themeProps }) {
 
             <div className="appointment-booking-card">
               <div className="booking-info">
-                <h3>Need to schedule your next session?</h3>
-                <p>
+                <h3 className="appointment-schedule-title" style={{ color: "#0f172a" }}>Need to schedule your next session?</h3>
+                <p style={{ color: "#334155" }}>
                   You can directly message Dr. Satyam Vishwakarma or clinic reception to reserve your preferred morning or evening physiotherapy slot.
                 </p>
               </div>
@@ -670,7 +670,7 @@ export default function PatientPortal({ onClose, themeProps }) {
             </div>
 
             <div className="appointments-list-container">
-              <h3>Appointment History & Booking Enquiries ({recordsData.appointments.length})</h3>
+              <h3 className="appointments-history-title" style={{ color: "#0f172a" }}>Appointment History & Booking Enquiries ({recordsData.appointments.length})</h3>
               {recordsData.appointments.length === 0 ? (
                 <div className="empty-state-box">
                   <span>📅</span>

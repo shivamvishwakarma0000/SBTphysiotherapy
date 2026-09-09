@@ -8351,12 +8351,8 @@ textarea:focus {
 
 [data-theme="dark"] .doctor-main-content h1,
 [data-theme="dark"] .doctor-main-content h2,
-[data-theme="dark"] .doctor-main-content h3,
+[data-theme="dark"] .doctor-main-content h3:not(.mobile-patient-name),
 [data-theme="dark"] .doctor-main-content h4,
-[data-theme="dark"] .patient-main-container h1,
-[data-theme="dark"] .patient-main-container h2,
-[data-theme="dark"] .patient-main-container h3,
-[data-theme="dark"] .patient-main-container h4,
 [data-theme="dark"] .section-header-row h1,
 [data-theme="dark"] .section-header-row h2,
 [data-theme="dark"] .section-header-row h3,
@@ -8372,7 +8368,6 @@ textarea:focus {
 }
 
 [data-theme="dark"] .doctor-main-content p,
-[data-theme="dark"] .patient-main-container p,
 [data-theme="dark"] .section-header-row p,
 [data-theme="dark"] .section-title-box p,
 [data-theme="dark"] .settings-card p,
@@ -8381,6 +8376,26 @@ textarea:focus {
 [data-theme="dark"] .enroll-view p,
 [data-theme="dark"] .settings-view p {
   color: #cbd5e1 !important;
+}
+
+/* Patient Portal Appointments View - Explicit Black Text (Image 2) */
+.booking-info h3,
+.appointment-schedule-title,
+.appointment-booking-card h3,
+.appointments-list-container h3,
+.appointments-history-title,
+[data-theme="dark"] .booking-info h3,
+[data-theme="dark"] .appointment-schedule-title,
+[data-theme="dark"] .appointment-booking-card h3,
+[data-theme="dark"] .appointments-list-container h3,
+[data-theme="dark"] .appointments-history-title,
+[data-theme="light"] .booking-info h3,
+[data-theme="light"] .appointment-schedule-title,
+[data-theme="light"] .appointment-booking-card h3,
+[data-theme="light"] .appointments-list-container h3,
+[data-theme="light"] .appointments-history-title {
+  color: #0f172a !important;
+  font-weight: 800 !important;
 }
 
 [data-theme="dark"] label,
@@ -8581,16 +8596,29 @@ textarea:focus {
 }
 
 .mobile-patient-name,
+.mobile-patient-card .mobile-patient-name,
+[data-theme="dark"] .mobile-patient-card .mobile-patient-name,
+[data-theme="light"] .mobile-patient-card .mobile-patient-name,
 .patient-card h4,
 .patient-card strong {
   color: #0f172a !important;
   font-weight: 800 !important;
+  font-size: 16px !important;
+  display: block !important;
+  visibility: visible !important;
 }
 
 .mobile-patient-sub,
+.mobile-patient-card .mobile-patient-sub,
+[data-theme="dark"] .mobile-patient-card .mobile-patient-sub,
+[data-theme="light"] .mobile-patient-card .mobile-patient-sub,
 .patient-card p,
 .patient-card span:not(.patient-id-badge):not(.status-badge):not(.visit-count-tag):not(.patient-concern-pill) {
-  color: #475569 !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+  font-size: 12.5px !important;
+  display: block !important;
+  visibility: visible !important;
 }
 
 .patient-concern-pill,

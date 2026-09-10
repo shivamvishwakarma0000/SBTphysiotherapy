@@ -1667,6 +1667,11 @@ label {
   font-weight: 700;
 }
 
+.assessment-card label,
+.assessment-card .form-grid label {
+  color: #000000 !important;
+}
+
 input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
@@ -8411,6 +8416,11 @@ textarea:focus {
 [data-theme="dark"] .detail-cell label {
   color: #f1f5f9 !important;
   font-weight: 700 !important;
+}
+
+[data-theme="dark"] .assessment-card label,
+[data-theme="dark"] .assessment-card .form-grid label {
+  color: #000000 !important;
 }
 
 [data-theme="dark"] .form-section-title {

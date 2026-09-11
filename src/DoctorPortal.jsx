@@ -633,8 +633,17 @@ export default function DoctorPortal({ onClose, themeProps }) {
   };
 
   const convertEnquiryToPatient = (enquiry) => {
+    const cleanPhone = String(enquiry.phone || "").replace(/\D/g, "").slice(-10);
+    const resolvedName = (
+      enquiry.name ||
+      enquiry.patientName ||
+      enquiry.fullName ||
+      patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone)?.name ||
+      ""
+    ).trim();
+
     setNewPatientForm({
-      name: enquiry.name || "",
+      name: resolvedName,
       age: "",
       gender: "Male",
       phone: enquiry.phone || "",
@@ -2105,6 +2114,14 @@ _(Saved in patient clinic records)_`;
                   const isSpam = e.status === "Hidden / Spam";
                   const isLinked = String(e.status || "").startsWith("Linked:");
                   const cleanPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+                  const patientName = (
+                    e.name ||
+                    e.patientName ||
+                    e.fullName ||
+                    e.patient_name ||
+                    patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone)?.name ||
+                    "Patient (Online Lead)"
+                  ).trim();
                   return (
                     <div key={e.id} className="mobile-enquiry-card" style={{ opacity: isSpam ? 0.6 : 1 }}>
                       <div className="enquiry-card-header">
@@ -2118,13 +2135,18 @@ _(Saved in patient clinic records)_`;
                       </div>
 
                       <div className="enquiry-patient-meta">
-                        <h4 className="enquiry-patient-name">{e.name}</h4>
+                        <div className="enquiry-name-header">
+                          <span className="enquiry-name-label">Patient Name:</span>
+                          <h4 className="enquiry-patient-name" style={{ color: "#000000", fontWeight: 800, fontSize: "16px", margin: "2px 0 0 0" }}>
+                            👤 {patientName}
+                          </h4>
+                        </div>
                         <div className="enquiry-contact-row">
                           <a href={`tel:${cleanPhone}`} className="enquiry-phone-btn">
                             📞 +91 {cleanPhone}
                           </a>
                           <a
-                            href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${e.name}, thank you for contacting Vindhya Physio & Rehab Center. Dr. Satyam Vishwakarma is reviewing your consultation enquiry.`)}`}
+                            href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${patientName}, thank you for contacting Vindhya Physio & Rehab Center. Dr. Satyam Vishwakarma is reviewing your consultation enquiry.`)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="enquiry-wa-btn"
@@ -2211,10 +2233,19 @@ _(Saved in patient clinic records)_`;
                     .map(e => {
                       const isSpam = e.status === "Hidden / Spam";
                       const isLinked = String(e.status || "").startsWith("Linked:");
+                      const cleanPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+                      const patientName = (
+                        e.name ||
+                        e.patientName ||
+                        e.fullName ||
+                        e.patient_name ||
+                        patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone)?.name ||
+                        "Patient (Online Lead)"
+                      ).trim();
                       return (
                         <tr key={e.id} style={{ opacity: isSpam ? 0.55 : 1 }}>
                           <td><strong>{cleanDateOnly(e.date)}</strong><br /><small>{cleanTimeOnly(e.time) || e.time}</small></td>
-                          <td><strong>{e.name}</strong></td>
+                          <td><strong style={{ color: "#000000", fontSize: "14px" }}>👤 {patientName}</strong></td>
                           <td>
                             <a href={`tel:${e.phone}`} className="phone-link">+91 {e.phone}</a>
                           </td>

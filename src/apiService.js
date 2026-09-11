@@ -576,11 +576,14 @@ export const api = {
     const todayStr = new Date().toISOString().split("T")[0];
     const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+    const patientName = (payload.name || payload.patientName || payload.fullName || "").trim() || "Direct Consultation Lead";
+
     const newEnquiry = {
       id: `ENQ-${Date.now().toString().slice(-6)}`,
       date: todayStr,
       time: timeStr,
-      name: payload.name,
+      name: patientName,
+      patientName: patientName,
       phone: payload.phone,
       painArea: payload.painArea || "General Consultation",
       duration: payload.duration || "Recent",

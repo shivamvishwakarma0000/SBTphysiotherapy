@@ -636,6 +636,16 @@ function Assessment() {
     return () => window.removeEventListener("prefill-assessment", handlePrefill);
   }, []);
 
+  // Auto-dismiss submitted message after a short period (4 seconds)
+  useEffect(() => {
+    if (status === "success") {
+      const timer = setTimeout(() => {
+        setStatus("idle");
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
   const finalPainArea = selectedPainArea === "custom" ? (customPainArea || "Custom Condition") : selectedPainArea;
   const finalDuration = selectedDuration === "custom" ? (customDuration || "Custom Duration") : selectedDuration;
 
@@ -653,8 +663,11 @@ function Assessment() {
       return;
     }
     setStatus("loading");
+    const cleanName = form.name.trim();
     const payload = {
       ...form,
+      name: cleanName,
+      patientName: cleanName,
       painArea: finalPainArea,
       duration: finalDuration,
       phone: form.phone.trim()
@@ -788,7 +801,25 @@ function Assessment() {
             </label>
             <label className="wide">
               Preferred Date of Visit
-              <input name="appointmentDate" type="date" value={form.appointmentDate} onChange={update} />
+              <input
+                name="appointmentDate"
+                type={form.appointmentDate ? "date" : "text"}
+                value={form.appointmentDate}
+                placeholder="Click to choose date"
+                min={new Date().toISOString().split("T")[0]}
+                onFocus={(e) => {
+                  e.target.type = "date";
+                  try { if (typeof e.target.showPicker === "function") e.target.showPicker(); } catch {}
+                }}
+                onClick={(e) => {
+                  e.target.type = "date";
+                  try { if (typeof e.target.showPicker === "function") e.target.showPicker(); } catch {}
+                }}
+                onBlur={(e) => {
+                  if (!e.target.value) e.target.type = "text";
+                }}
+                onChange={update}
+              />
             </label>
             <label className="wide">
               Tell Us About Your Symptoms / Medical History

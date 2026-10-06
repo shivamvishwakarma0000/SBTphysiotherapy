@@ -79,5 +79,14 @@
     "status": "active",
     "createdAt": "2026-10-06T12:20:32.522Z",
     "updatedAt": "2026-10-06T12:20:32.522Z"
+  },
+  {
+    "patientId": "VPR-0010",
+    "phone": "9887766554",
+    "passwordHash": "$2b$10$bLmH/5fdCD.x0ANZ/0kXuuBGBQA148NkD95QhvdkFALQ2CSZb13IW",
+    "hasCustomPassword": false,
+    "status": "active",
+    "createdAt": "2026-10-06T12:33:49.783Z",
+    "updatedAt": "2026-10-06T12:33:49.783Z"
   }
 ]

@@ -854,6 +854,10 @@ export const api = {
       enq.updatedAt = new Date().toISOString();
       setLocal(KEYS.ENQUIRIES, enquiries);
     }
+
+    // Push status update to Google Sheets
+    syncToGoogleSheets("doctor_hide_enquiry", { enquiryId, id: enquiryId, status, linkedPatientId });
+
     return serverData || { ok: true, status, linkedPatientId };
   }
 };

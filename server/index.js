@@ -18,6 +18,7 @@ const patientsFile = path.join(dataDir, "patients.json");
 const visitsFile = path.join(dataDir, "visits.json");
 const authFile = path.join(dataDir, "auth.json");
 const patientAuthFile = path.join(dataDir, "patient_auth.json");
+const deletedRecordsFile = path.join(dataDir, "deleted_records.json");
 
 const port = process.env.PORT || 5174;
 const host = process.env.HOST || "127.0.0.1";
@@ -122,9 +123,14 @@ async function syncToGoogleSheets(type, payload) {
   }
   try {
     let action = type;
+    let dataToSend = payload;
     if (type === "patient") action = "sync_patient";
     else if (type === "visit") action = "sync_visit";
-    else if (type === "enquiry" || type === "enquiry_status") action = "sync_enquiry";
+    else if (type === "enquiry") action = "sync_enquiry";
+    else if (type === "enquiry_status") {
+      action = "doctor_hide_enquiry";
+      dataToSend = { enquiryId: payload.id || payload.enquiryId, id: payload.id || payload.enquiryId, status: payload.status, linkedPatientId: payload.linkedPatientId };
+    }
     else if (type === "patient_auth") action = "sync_patient_auth";
     else if (type === "delete_patient") action = "delete_patient";
     else if (type === "delete_visit") action = "delete_visit";
@@ -137,7 +143,7 @@ async function syncToGoogleSheets(type, payload) {
         action,
         authorizedAccount: AUTHORIZED_DOCTOR_EMAIL,
         timestamp: new Date().toISOString(),
-        data: payload
+        data: dataToSend
       })
     });
     if (response.ok) {
@@ -171,15 +177,20 @@ async function pullFromGoogleSheets() {
 
     const { patients: remotePatients = [], visits: remoteVisits = [], enquiries: remoteEnquiries = [] } = result;
 
-    const localPatients = await ensureDataFile(patientsFile, []);
-    const localVisits = await ensureDataFile(visitsFile, []);
-    const localEnquiries = await ensureDataFile(enquiriesFile, []);
+    const deletedData = await ensureDataFile(deletedRecordsFile, { patientIds: [], visitIds: [], enquiryIds: [] });
+    const deletedPatientIds = new Set(deletedData.patientIds || []);
+    const deletedVisitIds = new Set(deletedData.visitIds || []);
+    const deletedEnquiryIds = new Set((deletedData.enquiryIds || []).map(String));
 
-    // Merge Patients by patientId
+    const localPatients = (await ensureDataFile(patientsFile, [])).filter(p => !deletedPatientIds.has(p.patientId));
+    const localVisits = (await ensureDataFile(visitsFile, [])).filter(v => !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId));
+    const localEnquiries = (await ensureDataFile(enquiriesFile, [])).filter(e => !deletedEnquiryIds.has(String(e.id)));
+
+    // Merge Patients by patientId (excluding permanently deleted)
     const patientMap = new Map();
     localPatients.forEach(p => patientMap.set(p.patientId, p));
     remotePatients.forEach(rp => {
-      if (rp.patientId) {
+      if (rp.patientId && !deletedPatientIds.has(rp.patientId)) {
         const existing = patientMap.get(rp.patientId);
         patientMap.set(rp.patientId, {
           ...(existing || {}),
@@ -190,11 +201,11 @@ async function pullFromGoogleSheets() {
     });
     const mergedPatients = Array.from(patientMap.values());
 
-    // Merge Visits by visitId
+    // Merge Visits by visitId (excluding permanently deleted)
     const visitMap = new Map();
     localVisits.forEach(v => visitMap.set(v.visitId, v));
     remoteVisits.forEach(rv => {
-      if (rv.visitId) {
+      if (rv.visitId && !deletedVisitIds.has(rv.visitId) && !deletedPatientIds.has(rv.patientId)) {
         const existing = visitMap.get(rv.visitId);
         visitMap.set(rv.visitId, {
           ...(existing || {}),
@@ -205,15 +216,20 @@ async function pullFromGoogleSheets() {
     });
     const mergedVisits = Array.from(visitMap.values());
 
-    // Merge Enquiries by ID or Phone+Date
+    // Merge Enquiries by ID or Phone+Date (excluding permanently deleted and preserving local Hidden/Converted statuses)
     const enquiryMap = new Map();
     localEnquiries.forEach(e => enquiryMap.set(e.id || `${e.phone}_${e.date}`, e));
     remoteEnquiries.forEach(re => {
       const key = re.id || `${re.phone}_${re.date}`;
-      const existing = enquiryMap.get(key);
+      if (deletedEnquiryIds.has(String(re.id)) || deletedEnquiryIds.has(key)) return;
+      const existing = enquiryMap.get(key) || (re.id ? enquiryMap.get(re.id) : null);
+      const preservedStatus = (existing && (existing.status === "Hidden" || existing.status === "Converted"))
+        ? existing.status
+        : (re.status || "New");
       enquiryMap.set(key, {
         ...(existing || {}),
         ...re,
+        status: preservedStatus,
         syncStatus: "synced"
       });
     });
@@ -1048,6 +1064,14 @@ app.delete("/api/doctor/enquiries/:id", requireDoctorAuth, async (req, res) => {
       return res.status(404).json({ error: "Enquiry not found." });
     }
     await writeDataFile(enquiriesFile, filtered);
+
+    const deletedData = await ensureDataFile(deletedRecordsFile, { patientIds: [], visitIds: [], enquiryIds: [] });
+    if (!deletedData.enquiryIds) deletedData.enquiryIds = [];
+    if (!deletedData.enquiryIds.includes(enquiryId)) {
+      deletedData.enquiryIds.push(enquiryId);
+      await writeDataFile(deletedRecordsFile, deletedData);
+    }
+
     syncToGoogleSheets("delete_enquiry", { enquiryId }).catch(() => {});
     res.json({ ok: true, message: "Enquiry permanently deleted." });
   } catch (err) {
@@ -1071,6 +1095,13 @@ app.delete("/api/doctor/patients/:id", requireDoctorAuth, async (req, res) => {
     await writeDataFile(visitsFile, updatedVisits);
     await writeDataFile(patientAuthFile, updatedAuth);
 
+    const deletedData = await ensureDataFile(deletedRecordsFile, { patientIds: [], visitIds: [], enquiryIds: [] });
+    if (!deletedData.patientIds) deletedData.patientIds = [];
+    if (!deletedData.patientIds.includes(patientId)) {
+      deletedData.patientIds.push(patientId);
+      await writeDataFile(deletedRecordsFile, deletedData);
+    }
+
     syncToGoogleSheets("delete_patient", { patientId }).catch(() => {});
     res.json({ ok: true, message: `Patient ${patientId} and associated records deleted successfully.` });
   } catch (err) {
@@ -1085,6 +1116,13 @@ app.delete("/api/doctor/visits/:id", requireDoctorAuth, async (req, res) => {
     const visits = await ensureDataFile(visitsFile, []);
     const updatedVisits = visits.filter(v => v.visitId !== visitId);
     await writeDataFile(visitsFile, updatedVisits);
+
+    const deletedData = await ensureDataFile(deletedRecordsFile, { patientIds: [], visitIds: [], enquiryIds: [] });
+    if (!deletedData.visitIds) deletedData.visitIds = [];
+    if (!deletedData.visitIds.includes(visitId)) {
+      deletedData.visitIds.push(visitId);
+      await writeDataFile(deletedRecordsFile, deletedData);
+    }
 
     syncToGoogleSheets("delete_visit", { visitId }).catch(() => {});
     res.json({ ok: true, message: `Visit ${visitId} deleted successfully.` });

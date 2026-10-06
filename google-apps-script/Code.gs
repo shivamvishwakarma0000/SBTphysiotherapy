@@ -361,7 +361,7 @@ function doPost(e) {
     if (action === "delete_enquiry") return handleDoctorDeleteEnquiry(ss, data);
     if (action === "doctor_convert_enquiry") return handleDoctorConvertEnquiry(ss, data);
     if (action === "doctor_link_enquiry") return handleDoctorLinkEnquiry(ss, data);
-    if (action === "doctor_hide_enquiry") return handleDoctorHideEnquiry(ss, data);
+    if (action === "doctor_hide_enquiry" || action === "enquiry_status") return handleDoctorHideEnquiry(ss, data);
     if (action === "doctor_set_password") return handleDoctorSetPatientPassword(ss, data);
     if (action === "doctor_toggle_status") return handleDoctorTogglePatientStatus(ss, data);
     if (action === "doctor_sync_appointment") return handleDoctorSyncAppointment(ss, data);
@@ -1404,14 +1404,17 @@ function handleDoctorLinkEnquiry(ss, data) {
 }
 
 function handleDoctorHideEnquiry(ss, data) {
-  var enquiryId = data.enquiryId;
+  var enquiryId = data.enquiryId || data.id;
   var enquirySheet = ss.getSheetByName("ENQUIRIES");
+  if (!enquirySheet || enquirySheet.getLastRow() < 2) return errorResponse("NOT_FOUND", "Enquiries sheet empty.");
+
   var eRows = enquirySheet.getRange(2, 1, enquirySheet.getLastRow() - 1, 1).getValues();
   for (var i = 0; i < eRows.length; i++) {
-    if (String(eRows[i][0]) === String(enquiryId)) {
+    if (String(eRows[i][0]).trim().toUpperCase() === String(enquiryId).trim().toUpperCase()) {
       var currentStatus = enquirySheet.getRange(i + 2, 10).getValue();
-      var newStatus = (currentStatus === "HIDDEN" || currentStatus === "Hidden / Spam") ? "NEW" : "HIDDEN";
+      var newStatus = data.status ? data.status.toUpperCase() : ((currentStatus === "HIDDEN" || currentStatus === "Hidden / Spam") ? "NEW" : "HIDDEN");
       enquirySheet.getRange(i + 2, 10).setValue(newStatus);
+      enquirySheet.getRange(i + 2, 14).setValue(new Date().toISOString());
       return successResponse({ enquiryId: enquiryId, status: newStatus }, "Status updated.");
     }
   }

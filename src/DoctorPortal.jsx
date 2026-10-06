@@ -1118,12 +1118,12 @@ _(Saved in patient clinic records)_`;
   };
 
   // ==========================================
-  // RENDER: LOGIN VIEW
+  // RENDER: LOGIN VIEW (FORCED DARK THEME)
   // ==========================================
   if (!token) {
     return (
-      <div className="doctor-portal-modal-overlay">
-        <div className="doctor-login-card">
+      <div className="doctor-portal-modal-overlay doctor-login-forced-dark" data-theme="dark">
+        <div className="doctor-login-card doctor-login-card-dark" data-theme="dark">
           <div className="login-header">
             <img
               src={CLINIC_LOGO_B64 || "/vindhya-receipt-logo.png"}
@@ -1181,8 +1181,8 @@ _(Saved in patient clinic records)_`;
           </form>
 
           {showForgotModal && (
-            <div className="inner-modal-overlay">
-              <div className="inner-modal-card">
+            <div className="inner-modal-overlay doctor-inner-modal-overlay" data-theme="dark">
+              <div className="inner-modal-card doctor-inner-modal-dark" data-theme="dark">
                 <h3>Reset Doctor Password</h3>
                 <p>Verify authorized doctor email to generate a secure reset token.</p>
                 
@@ -1376,8 +1376,12 @@ _(Saved in patient clinic records)_`;
               <div className="greeting-text">
                 <span className="greeting-wave">👋</span>
                 <div>
-                  <h1 className="greeting-title">Hello, Dr. Satyam!</h1>
-                  <p className="greeting-subtitle">Clinical Operations • Vindhya Physio & Rehab Center</p>
+                  <h1 className="greeting-title" style={{ color: "#ffffff", textShadow: "0 2px 10px rgba(0, 0, 0, 0.8)", fontWeight: 800 }}>
+                    Hello, Dr. Satyam!
+                  </h1>
+                  <p className="greeting-subtitle" style={{ color: "rgba(255, 255, 255, 0.95)", textShadow: "0 1px 4px rgba(0, 0, 0, 0.6)" }}>
+                    Clinical Operations • Vindhya Physio &amp; Rehab Center
+                  </p>
                 </div>
               </div>
               <button 

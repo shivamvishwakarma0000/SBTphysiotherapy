@@ -2594,61 +2594,86 @@ textarea:focus {
   margin: 0 auto;
 }
 
-/* Doctor Login Modal */
+/* Doctor Login Modal (Forced Dark Theme across all devices) */
+.doctor-portal-modal-overlay.doctor-login-forced-dark,
 .doctor-portal-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
-  background: rgba(2, 10, 18, 0.75);
-  backdrop-filter: blur(12px);
+  z-index: 10000;
+  background: rgba(3, 7, 18, 0.88) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
+  box-sizing: border-box;
 }
 
+.doctor-login-card.doctor-login-card-dark,
 .doctor-login-card {
   width: min(440px, 100%);
-  background: var(--bg-card);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 32px 28px;
-  box-shadow: var(--shadow-lg);
-  color: var(--text);
+  background: #0f172a !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.35) !important;
+  border-radius: 20px !important;
+  padding: 32px 28px !important;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.85), 0 0 35px rgba(8, 120, 201, 0.25) !important;
+  color: #f8fafc !important;
+  box-sizing: border-box;
+  animation: fadeIn 220ms ease;
 }
 
-.login-header {
+.doctor-login-card .login-header {
   text-align: center;
   margin-bottom: 24px;
 }
 
-.login-logo-img {
-  height: 46px;
+.doctor-login-card .login-logo-img {
+  height: 48px;
   width: auto;
   margin-bottom: 12px;
+  display: inline-block;
 }
 
-.login-header h2 {
-  font-size: 22px;
-  margin-bottom: 4px;
-  color: var(--heading);
+.doctor-login-card .login-header h2 {
+  font-size: 22px !important;
+  margin-bottom: 6px !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
 }
 
-.login-header p {
-  color: var(--muted);
-  font-size: 13px;
+.doctor-login-card .login-header p {
+  color: #94a3b8 !important;
+  font-size: 13px !important;
   margin: 0;
 }
 
-.login-form label {
+.doctor-login-card .login-form label {
+  display: block;
   margin-bottom: 14px;
-  color: var(--heading);
+  color: #cbd5e1 !important;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
 }
 
-.login-form input {
-  background: var(--input-bg);
-  border: 1px solid var(--input-border);
-  color: var(--heading);
+.doctor-login-card .login-form input {
+  background: #1e293b !important;
+  border: 1.5px solid #334155 !important;
+  color: #ffffff !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-top: 6px;
+  font-size: 15px !important;
+  transition: all 180ms ease;
+}
+
+.doctor-login-card .login-form input:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
+  outline: none !important;
 }
 
 .full-btn {
@@ -2666,14 +2691,71 @@ textarea:focus {
   margin: -4px 0 14px;
 }
 
-.text-link-btn {
+.doctor-login-card .text-link-btn {
   background: none;
   border: none;
-  color: var(--emerald);
-  font-size: 12px;
+  color: #38bdf8 !important;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   padding: 0;
+}
+
+.doctor-login-card .text-link-btn:hover {
+  text-decoration: underline;
+  color: #7dd3fc !important;
+}
+
+.doctor-inner-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  background: rgba(3, 7, 18, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.doctor-inner-modal-dark {
+  width: min(400px, 100%);
+  background: #0f172a !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.35) !important;
+  border-radius: 18px !important;
+  padding: 24px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8) !important;
+  color: #ffffff !important;
+}
+
+.doctor-inner-modal-dark h3 {
+  color: #ffffff !important;
+  margin-bottom: 8px;
+}
+
+.doctor-inner-modal-dark p {
+  color: #94a3b8 !important;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.doctor-inner-modal-dark label {
+  color: #cbd5e1 !important;
+  display: block;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.doctor-inner-modal-dark input {
+  background: #1e293b !important;
+  border: 1.5px solid #334155 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-top: 4px;
 }
 
 /* Metrics Grid */
@@ -10040,10 +10122,12 @@ html, body {
   right: 0 !important;
   z-index: 1000 !important;
   width: 100% !important;
-  background: var(--header-bg, rgba(255, 255, 255, 0.98)) !important;
+  background: linear-gradient(135deg, #072B45 0%, #0A4360 45%, #0C5852 100%) !important;
+  border-bottom: 1px solid rgba(24, 184, 120, 0.35) !important;
   backdrop-filter: blur(16px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
   padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
+  box-shadow: 0 4px 20px rgba(7, 43, 69, 0.35) !important;
   box-sizing: border-box !important;
 }
 
@@ -10051,6 +10135,7 @@ html, body {
   /* iOS-specific safe area header positioning */
   .site-header {
     padding-top: max(10px, env(safe-area-inset-top, 0px)) !important;
+    background: linear-gradient(135deg, #072B45 0%, #0A4360 45%, #0C5852 100%) !important;
   }
 }
 
@@ -10058,7 +10143,7 @@ html, body {
   /* Standalone PWA / Added to Home Screen on iOS & Android */
   .site-header {
     padding-top: max(14px, env(safe-area-inset-top, 20px)) !important;
-    background: var(--header-bg) !important;
+    background: linear-gradient(135deg, #072B45 0%, #0A4360 45%, #0C5852 100%) !important;
   }
 }
 
@@ -10207,42 +10292,92 @@ html, body {
    DOCTOR PORTAL GREETING CARD — ULTRA-CLEAR TEXT CONTRAST ENHANCEMENTS
    ========================================================================== */
 .mobile-app-greeting-card,
-.mobile-app-greeting-card.doctor-greeting {
+.mobile-app-greeting-card.doctor-greeting,
+.mobile-greeting-hero-fixed {
   background: linear-gradient(180deg, #031422 0%, #062b33 55%, #08433d 100%) !important;
   color: #ffffff !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
 }
 
 .mobile-app-greeting-card .greeting-title,
-.doctor-greeting .greeting-title {
+.mobile-app-greeting-card h1,
+.mobile-greeting-hero-fixed h1,
+.mobile-greeting-hero-fixed .greeting-title,
+.doctor-greeting .greeting-title,
+.doctor-greeting h1,
+.greeting-text h1,
+.greeting-text .greeting-title,
+[data-theme="light"] .mobile-app-greeting-card .greeting-title,
+[data-theme="light"] .mobile-app-greeting-card h1,
+[data-theme="light"] .mobile-greeting-hero-fixed h1,
+[data-theme="light"] .mobile-greeting-hero-fixed .greeting-title,
+[data-theme="light"] .doctor-greeting .greeting-title,
+[data-theme="light"] .doctor-greeting h1,
+[data-theme="light"] .greeting-text h1,
+[data-theme="light"] .greeting-text .greeting-title,
+[data-theme="dark"] .mobile-app-greeting-card .greeting-title,
+[data-theme="dark"] .mobile-app-greeting-card h1,
+[data-theme="dark"] .mobile-greeting-hero-fixed h1,
+[data-theme="dark"] .mobile-greeting-hero-fixed .greeting-title,
+[data-theme="dark"] .doctor-greeting .greeting-title,
+[data-theme="dark"] .doctor-greeting h1,
+[data-theme="dark"] .greeting-text h1,
+[data-theme="dark"] .greeting-text .greeting-title {
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font-size: clamp(20px, 5.5vw, 24px) !important;
   font-weight: 800 !important;
   margin: 0 0 4px 0 !important;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6) !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8) !important;
   letter-spacing: -0.2px !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .mobile-app-greeting-card .greeting-subtitle,
 .mobile-app-greeting-card .greeting-sub,
+.mobile-app-greeting-card p,
+.mobile-greeting-hero-fixed p,
+.mobile-greeting-hero-fixed .greeting-subtitle,
 .doctor-greeting .greeting-subtitle,
 .doctor-greeting .greeting-sub,
 .doctor-greeting p,
+.greeting-text p,
+.greeting-text .greeting-subtitle,
+[data-theme="light"] .mobile-app-greeting-card .greeting-subtitle,
+[data-theme="light"] .mobile-app-greeting-card p,
+[data-theme="light"] .mobile-greeting-hero-fixed p,
+[data-theme="light"] .mobile-greeting-hero-fixed .greeting-subtitle,
+[data-theme="light"] .doctor-greeting .greeting-subtitle,
+[data-theme="light"] .doctor-greeting p,
+[data-theme="light"] .greeting-text p,
+[data-theme="light"] .greeting-text .greeting-subtitle,
 [data-theme="dark"] .mobile-app-greeting-card .greeting-subtitle,
-[data-theme="light"] .mobile-app-greeting-card .greeting-subtitle {
-  color: #e0f2fe !important;
+[data-theme="dark"] .mobile-app-greeting-card p,
+[data-theme="dark"] .mobile-greeting-hero-fixed p,
+[data-theme="dark"] .mobile-greeting-hero-fixed .greeting-subtitle,
+[data-theme="dark"] .doctor-greeting .greeting-subtitle,
+[data-theme="dark"] .doctor-greeting p,
+[data-theme="dark"] .greeting-text p,
+[data-theme="dark"] .greeting-text .greeting-subtitle {
+  color: #f0f9ff !important;
+  -webkit-text-fill-color: #f0f9ff !important;
   font-size: 13.5px !important;
   font-weight: 600 !important;
   margin: 0 !important;
   opacity: 1 !important;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5) !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6) !important;
   line-height: 1.35 !important;
   letter-spacing: 0.2px !important;
 }
 
 .mobile-app-greeting-card .greeting-salutation,
-.doctor-greeting .greeting-salutation {
+.doctor-greeting .greeting-salutation,
+[data-theme="light"] .doctor-greeting .greeting-salutation,
+[data-theme="dark"] .doctor-greeting .greeting-salutation {
   color: #7dd3fc !important;
+  -webkit-text-fill-color: #7dd3fc !important;
   font-weight: 700 !important;
   font-size: 14px !important;
 }

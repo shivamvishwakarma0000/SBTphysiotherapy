@@ -229,7 +229,13 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
               <span className="portal-rect-icon">🔒</span>
               <span className="rect-btn-text">Doctor Portal</span>
             </button>
-            <a className="header-cta desktop-only-cta" href="#consultation">Book Consultation</a>
+            <a 
+              className="header-cta desktop-only-cta" 
+              href="#consultation"
+              onClick={() => window.dispatchEvent(new CustomEvent("highlight-assessment"))}
+            >
+              Book Consultation
+            </a>
 
             <button
               className="mobile-menu-toggle-btn"
@@ -344,7 +350,13 @@ function Hero() {
           </div>
         </div>
         <div className="hero-actions hero-actions-centered">
-          <a className="primary-btn hero-consult-btn" href="#consultation">Book Consultation</a>
+          <a 
+            className="primary-btn hero-consult-btn" 
+            href="#consultation"
+            onClick={() => window.dispatchEvent(new CustomEvent("highlight-assessment"))}
+          >
+            Book Consultation
+          </a>
           <a className="secondary-btn hero-call-btn" href={`tel:${phonePrimary}`}><CallIcon /> Call Clinic</a>
         </div>
       </div>
@@ -392,7 +404,13 @@ function LeadConsultant() {
             <span>Post-Surgical</span>
           </div>
           <div className="consultant-btn-group">
-            <a href="#consultation" className="primary-btn consultant-book-btn">Book Consultation With Dr. Satyam</a>
+            <a 
+              href="#consultation" 
+              className="primary-btn consultant-book-btn"
+              onClick={() => window.dispatchEvent(new CustomEvent("highlight-assessment"))}
+            >
+              Book Consultation With Dr. Satyam
+            </a>
             <a href={`tel:${phonePrimary}`} className="secondary-btn consultant-call-btn"><CallIcon /> Direct Call</a>
           </div>
         </div>
@@ -617,6 +635,7 @@ function Assessment() {
   const [customPainArea, setCustomPainArea] = useState("");
   const [selectedDuration, setSelectedDuration] = useState("1-3 months");
   const [customDuration, setCustomDuration] = useState("");
+  const [highlightCard, setHighlightCard] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -632,10 +651,29 @@ function Assessment() {
     const handlePrefill = (e) => {
       if (e.detail) {
         setSelectedPainArea(e.detail);
+        setHighlightCard(true);
+        setTimeout(() => setHighlightCard(false), 2000);
       }
     };
+    const handleHighlight = () => {
+      setHighlightCard(true);
+      setTimeout(() => setHighlightCard(false), 2000);
+    };
+    const checkHash = () => {
+      if (window.location.hash === "#consultation") {
+        setHighlightCard(true);
+        setTimeout(() => setHighlightCard(false), 2000);
+      }
+    };
+
     window.addEventListener("prefill-assessment", handlePrefill);
-    return () => window.removeEventListener("prefill-assessment", handlePrefill);
+    window.addEventListener("highlight-assessment", handleHighlight);
+    window.addEventListener("hashchange", checkHash);
+    return () => {
+      window.removeEventListener("prefill-assessment", handlePrefill);
+      window.removeEventListener("highlight-assessment", handleHighlight);
+      window.removeEventListener("hashchange", checkHash);
+    };
   }, []);
 
   const finalPainArea = selectedPainArea === "custom" ? (customPainArea || "Custom Condition") : selectedPainArea;
@@ -697,7 +735,7 @@ function Assessment() {
             <span className="timing-note">Mon – Sat: 9:00 AM – 8:00 PM</span>
           </div>
         </div>
-        <form className="assessment-card" onSubmit={submit}>
+        <form className={`assessment-card ${highlightCard ? "highlight-focus" : ""}`} onSubmit={submit}>
           <div className="form-heading-row">
             <h3>Consultation Request</h3>
             <span className="form-subnote">Direct Clinic Triage</span>

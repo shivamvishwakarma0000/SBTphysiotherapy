@@ -14,7 +14,10 @@ const KEYS = {
   PATIENTS: "vindhya_patients_db",
   VISITS: "vindhya_visits_db",
   ENQUIRIES: "vindhya_enquiries_db",
-  WEBHOOK_URL: "vindhya_webhook_url"
+  WEBHOOK_URL: "vindhya_webhook_url",
+  DELETED_PATIENT_IDS: "vindhya_deleted_patient_ids",
+  DELETED_VISIT_IDS: "vindhya_deleted_visit_ids",
+  DELETED_ENQUIRY_IDS: "vindhya_deleted_enquiry_ids"
 };
 
 // Helper: Get configured Webhook URL
@@ -169,36 +172,45 @@ export async function restoreFromGoogleSheets() {
       };
     }
 
-    const localPatients = getLocal(KEYS.PATIENTS, []);
-    const localVisits = getLocal(KEYS.VISITS, []);
-    const localEnquiries = getLocal(KEYS.ENQUIRIES, []);
+    const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
+    const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+    const deletedEnquiryIds = new Set(getLocal(KEYS.DELETED_ENQUIRY_IDS, []));
 
-    // Merge Patients
+    const localPatients = getLocal(KEYS.PATIENTS, []).filter(p => !deletedPatientIds.has(p.patientId));
+    const localVisits = getLocal(KEYS.VISITS, []).filter(v => !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId));
+    const localEnquiries = getLocal(KEYS.ENQUIRIES, []).filter(e => !deletedEnquiryIds.has(String(e.id)));
+
+    // Merge Patients (excluding deleted)
     const pMap = new Map();
     localPatients.forEach(p => pMap.set(p.patientId, p));
     (data.patients || []).forEach(rp => {
-      if (rp.patientId) {
+      if (rp.patientId && !deletedPatientIds.has(rp.patientId)) {
         pMap.set(rp.patientId, { ...(pMap.get(rp.patientId) || {}), ...rp });
       }
     });
     const mergedPatients = Array.from(pMap.values());
 
-    // Merge Visits
+    // Merge Visits (excluding deleted)
     const vMap = new Map();
     localVisits.forEach(v => vMap.set(v.visitId, v));
     (data.visits || []).forEach(rv => {
-      if (rv.visitId) {
+      if (rv.visitId && !deletedVisitIds.has(rv.visitId) && !deletedPatientIds.has(rv.patientId)) {
         vMap.set(rv.visitId, { ...(vMap.get(rv.visitId) || {}), ...rv });
       }
     });
     const mergedVisits = Array.from(vMap.values());
 
-    // Merge Enquiries
+    // Merge Enquiries (excluding deleted and preserving local Hidden/Converted statuses)
     const eMap = new Map();
     localEnquiries.forEach(e => eMap.set(e.id || `${e.phone}_${e.date}`, e));
     (data.enquiries || []).forEach(re => {
       const key = re.id || `${re.phone}_${re.date}`;
-      eMap.set(key, { ...(eMap.get(key) || {}), ...re });
+      if (deletedEnquiryIds.has(String(re.id)) || deletedEnquiryIds.has(key)) return;
+      const localEnq = eMap.get(key) || (re.id ? eMap.get(re.id) : null);
+      const preservedStatus = (localEnq && (localEnq.status === "Hidden" || localEnq.status === "Converted"))
+        ? localEnq.status
+        : (re.status || "New");
+      eMap.set(key, { ...(localEnq || {}), ...re, status: preservedStatus });
     });
     const mergedEnquiries = Array.from(eMap.values());
 
@@ -470,7 +482,12 @@ export const api = {
   },
 
   async deletePatient(patientId) {
-    // 1. Send DELETE request to server if running
+    // 1. Record in permanent deletion tombstones
+    const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
+    deletedPatientIds.add(patientId);
+    setLocal(KEYS.DELETED_PATIENT_IDS, Array.from(deletedPatientIds));
+
+    // 2. Send DELETE request to server if running
     try {
       const token = localStorage.getItem("doctor_token") || localStorage.getItem(KEYS.DOCTOR_TOKEN);
       if (token) {
@@ -485,7 +502,7 @@ export const api = {
       console.warn("Backend patient delete sync failed, proceeding with full local purge:", e);
     }
 
-    // 2. Remove permanently from local storage collections
+    // 3. Remove permanently from local storage collections
     const patients = getLocal(KEYS.PATIENTS, []);
     const visits = getLocal(KEYS.VISITS, []);
     const authList = getLocal(KEYS.PATIENT_AUTH, []);
@@ -498,13 +515,17 @@ export const api = {
     setLocal(KEYS.VISITS, updatedVisits);
     setLocal(KEYS.PATIENT_AUTH, updatedAuth);
 
-    // 3. Sync deletion to Google Sheets
+    // 4. Sync deletion to Google Sheets
     syncToGoogleSheets("delete_patient", { patientId });
 
     return { ok: true, message: `Patient ${patientId} permanently deleted.` };
   },
 
   async deleteVisit(visitId) {
+    const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+    deletedVisitIds.add(visitId);
+    setLocal(KEYS.DELETED_VISIT_IDS, Array.from(deletedVisitIds));
+
     try {
       const token = localStorage.getItem("doctor_token") || localStorage.getItem(KEYS.DOCTOR_TOKEN);
       if (token) {
@@ -585,6 +606,7 @@ export const api = {
 
   // 5. ENQUIRIES
   async getEnquiries() {
+    const deletedEnquiryIds = new Set(getLocal(KEYS.DELETED_ENQUIRY_IDS, []));
     const token = this.getToken();
     if (token) {
       try {
@@ -594,13 +616,24 @@ export const api = {
         if (res.ok) {
           const data = await res.json();
           if (data.ok && Array.isArray(data.enquiries)) {
-            setLocal(KEYS.ENQUIRIES, data.enquiries);
-            return { ok: true, enquiries: data.enquiries };
+            const filtered = data.enquiries.filter(e => !deletedEnquiryIds.has(String(e.id)));
+            // Merge with local statuses to preserve any locally hidden status
+            const localEnqs = getLocal(KEYS.ENQUIRIES, []);
+            const localMap = new Map(localEnqs.map(e => [String(e.id), e]));
+            const merged = filtered.map(e => {
+              const local = localMap.get(String(e.id));
+              if (local && (local.status === "Hidden" || local.status === "Converted")) {
+                return { ...e, status: local.status };
+              }
+              return e;
+            });
+            setLocal(KEYS.ENQUIRIES, merged);
+            return { ok: true, enquiries: merged };
           }
         }
       } catch (e) {}
     }
-    const enquiries = getLocal(KEYS.ENQUIRIES, []);
+    const enquiries = getLocal(KEYS.ENQUIRIES, []).filter(e => !deletedEnquiryIds.has(String(e.id)));
     return { ok: true, enquiries };
   },
 
@@ -663,6 +696,10 @@ export const api = {
   },
 
   async deleteEnquiry(enquiryId) {
+    const deletedEnquiryIds = new Set(getLocal(KEYS.DELETED_ENQUIRY_IDS, []));
+    deletedEnquiryIds.add(String(enquiryId));
+    setLocal(KEYS.DELETED_ENQUIRY_IDS, Array.from(deletedEnquiryIds));
+
     const token = this.getToken();
     if (token) {
       try {

@@ -1563,7 +1563,11 @@ function App() {
     setShowDownloadModal(false);
   };
 
-  const canShowDownloadBtn = !isAppInstalled && !showDoctorPortal && !showPatientPortal;
+  const isTabletOrPhone = typeof window !== "undefined" && (
+    /android|iphone|ipad|ipod|mobile|tablet/i.test(navigator.userAgent) ||
+    window.innerWidth <= 1024
+  );
+  const canShowDownloadBtn = isTabletOrPhone && !isAppInstalled && !showDoctorPortal && !showPatientPortal;
 
   return (
     <div className={`app-root ${themeProps.resolvedTheme}`}>

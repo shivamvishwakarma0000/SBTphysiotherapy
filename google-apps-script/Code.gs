@@ -357,6 +357,8 @@ function doPost(e) {
     if (action === "sync_visit") return handleDoctorSyncVisit(ss, data);
     if (action === "sync_patient_auth") return handleDoctorSyncPatientAuth(ss, data);
     if (action === "delete_patient") return handleDoctorDeletePatient(ss, data);
+    if (action === "delete_visit") return handleDoctorDeleteVisit(ss, data);
+    if (action === "delete_enquiry") return handleDoctorDeleteEnquiry(ss, data);
     if (action === "doctor_convert_enquiry") return handleDoctorConvertEnquiry(ss, data);
     if (action === "doctor_link_enquiry") return handleDoctorLinkEnquiry(ss, data);
     if (action === "doctor_hide_enquiry") return handleDoctorHideEnquiry(ss, data);
@@ -1193,17 +1195,93 @@ function handleDoctorSyncPatientAuth(ss, data) {
 }
 
 function handleDoctorDeletePatient(ss, data) {
-  var pSheet = ss.getSheetByName("PATIENTS");
-  if (pSheet && pSheet.getLastRow() > 1) {
-    var pValues = pSheet.getRange(2, 1, pSheet.getLastRow() - 1, 1).getValues();
-    for (var i = pValues.length - 1; i >= 0; i--) {
-      if (String(pValues[i][0]).trim().toUpperCase() === String(data.patientId).trim().toUpperCase()) {
-        pSheet.deleteRow(i + 2);
+  var patientId = String(data.patientId || "").trim().toUpperCase();
+  if (!patientId) {
+    return errorResponse("MISSING_ID", "Patient ID is required for deletion.");
+  }
+
+  var deletedInfo = {
+    patientsCount: 0,
+    visitsCount: 0,
+    authCount: 0,
+    appointmentsCount: 0,
+    receiptsCount: 0,
+    treatmentPlansCount: 0
+  };
+
+  // Helper function to delete matching rows by checking target column
+  function deleteRowsMatching(sheetName, colIndex, targetValue) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet || sheet.getLastRow() < 2) return 0;
+    var count = 0;
+    var values = sheet.getRange(2, colIndex, sheet.getLastRow() - 1, 1).getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      if (String(values[i][0]).trim().toUpperCase() === targetValue) {
+        sheet.deleteRow(i + 2);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  // 1. Delete from PATIENTS sheet (Col 1 is Patient ID)
+  deletedInfo.patientsCount = deleteRowsMatching("PATIENTS", 1, patientId);
+
+  // 2. Delete from VISITS sheet (Col 2 is Patient ID)
+  deletedInfo.visitsCount = deleteRowsMatching("VISITS", 2, patientId);
+
+  // 3. Delete from PATIENT_AUTH sheet (Col 1 is Patient ID)
+  deletedInfo.authCount = deleteRowsMatching("PATIENT_AUTH", 1, patientId);
+
+  // 4. Delete from APPOINTMENTS sheet (Col 2 is Patient ID)
+  deletedInfo.appointmentsCount = deleteRowsMatching("APPOINTMENTS", 2, patientId);
+
+  // 5. Delete from RECEIPTS sheet (Col 2 is Patient ID)
+  deletedInfo.receiptsCount = deleteRowsMatching("RECEIPTS", 2, patientId);
+
+  // 6. Delete from TREATMENT_PLANS sheet (Col 1 is Patient ID)
+  deletedInfo.treatmentPlansCount = deleteRowsMatching("TREATMENT_PLANS", 1, patientId);
+
+  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "PERMANENT_DELETE_PATIENT", patientId, JSON.stringify(deletedInfo));
+  return successResponse({ patientId: patientId, deletedInfo: deletedInfo }, "Patient and all associated records permanently purged from all Google Sheets.");
+}
+
+function handleDoctorDeleteVisit(ss, data) {
+  var visitId = String(data.visitId || "").trim().toUpperCase();
+  if (!visitId) return errorResponse("MISSING_ID", "Visit ID required for deletion.");
+  
+  var vSheet = ss.getSheetByName("VISITS");
+  var deletedCount = 0;
+  if (vSheet && vSheet.getLastRow() > 1) {
+    var vValues = vSheet.getRange(2, 1, vSheet.getLastRow() - 1, 1).getValues();
+    for (var i = vValues.length - 1; i >= 0; i--) {
+      if (String(vValues[i][0]).trim().toUpperCase() === visitId) {
+        vSheet.deleteRow(i + 2);
+        deletedCount++;
       }
     }
   }
-  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "DELETE_PATIENT", data.patientId, "OK");
-  return successResponse({ patientId: data.patientId }, "Patient removed from Sheet.");
+  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "DELETE_VISIT", visitId, "Deleted: " + deletedCount);
+  return successResponse({ visitId: visitId, deletedCount: deletedCount }, "Visit removed from Google Sheets.");
+}
+
+function handleDoctorDeleteEnquiry(ss, data) {
+  var enquiryId = String(data.enquiryId || "").trim().toUpperCase();
+  if (!enquiryId) return errorResponse("MISSING_ID", "Enquiry ID required for deletion.");
+  
+  var eSheet = ss.getSheetByName("ENQUIRIES");
+  var deletedCount = 0;
+  if (eSheet && eSheet.getLastRow() > 1) {
+    var eValues = eSheet.getRange(2, 1, eSheet.getLastRow() - 1, 1).getValues();
+    for (var i = eValues.length - 1; i >= 0; i--) {
+      if (String(eValues[i][0]).trim().toUpperCase() === enquiryId) {
+        eSheet.deleteRow(i + 2);
+        deletedCount++;
+      }
+    }
+  }
+  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "DELETE_ENQUIRY", enquiryId, "Deleted: " + deletedCount);
+  return successResponse({ enquiryId: enquiryId, deletedCount: deletedCount }, "Enquiry removed from Google Sheets.");
 }
 
 function handleDoctorConvertEnquiry(ss, data) {

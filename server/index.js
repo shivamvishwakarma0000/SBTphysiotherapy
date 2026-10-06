@@ -121,10 +121,14 @@ async function syncToGoogleSheets(type, payload) {
     return { synced: false, status: "pending", reason: "GOOGLE_SHEETS_WEBHOOK_URL not configured" };
   }
   try {
-    let action = "sync_patient";
-    if (type === "visit") action = "sync_visit";
-    if (type === "enquiry" || type === "enquiry_status") action = "sync_enquiry";
-    if (type === "patient_auth") action = "sync_patient_auth";
+    let action = type;
+    if (type === "patient") action = "sync_patient";
+    else if (type === "visit") action = "sync_visit";
+    else if (type === "enquiry" || type === "enquiry_status") action = "sync_enquiry";
+    else if (type === "patient_auth") action = "sync_patient_auth";
+    else if (type === "delete_patient") action = "delete_patient";
+    else if (type === "delete_visit") action = "delete_visit";
+    else if (type === "delete_enquiry") action = "delete_enquiry";
 
     const response = await fetch(webhookUrl, {
       method: "POST",
@@ -1071,6 +1075,21 @@ app.delete("/api/doctor/patients/:id", requireDoctorAuth, async (req, res) => {
     res.json({ ok: true, message: `Patient ${patientId} and associated records deleted successfully.` });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete patient." });
+  }
+});
+
+// Doctor: Delete Visit Record
+app.delete("/api/doctor/visits/:id", requireDoctorAuth, async (req, res) => {
+  try {
+    const visitId = req.params.id;
+    const visits = await ensureDataFile(visitsFile, []);
+    const updatedVisits = visits.filter(v => v.visitId !== visitId);
+    await writeDataFile(visitsFile, updatedVisits);
+
+    syncToGoogleSheets("delete_visit", { visitId }).catch(() => {});
+    res.json({ ok: true, message: `Visit ${visitId} deleted successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete visit." });
   }
 });
 

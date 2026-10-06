@@ -505,9 +505,23 @@ export const api = {
   },
 
   async deleteVisit(visitId) {
+    try {
+      const token = localStorage.getItem("doctor_token") || localStorage.getItem(KEYS.DOCTOR_TOKEN);
+      if (token) {
+        await fetch(`${API_BASE}/doctor/visits/${encodeURIComponent(visitId)}`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+      }
+    } catch (e) {
+      console.warn("Backend visit delete failed, proceeding with local purge:", e);
+    }
+
     const visits = getLocal(KEYS.VISITS, []);
     const updatedVisits = visits.filter(v => v.visitId !== visitId);
     setLocal(KEYS.VISITS, updatedVisits);
+
+    syncToGoogleSheets("delete_visit", { visitId });
     return { ok: true, message: `Visit ${visitId} deleted.` };
   },
 

@@ -1116,77 +1116,7 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
   );
 }
 
-function PublicMobileBottomNav({ onOpenPatientPortal }) {
-  const [activeTab, setActiveTab] = useState("home");
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPos = window.scrollY + 200;
-      const consultationElem = document.getElementById("consultation");
-      const treatmentsElem = document.getElementById("treatments");
-
-      if (consultationElem && scrollPos >= consultationElem.offsetTop) {
-        setActiveTab("consultation");
-      } else if (treatmentsElem && scrollPos >= treatmentsElem.offsetTop) {
-        setActiveTab("treatments");
-      } else {
-        setActiveTab("home");
-      }
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  return (
-    <nav className="public-mobile-bottom-nav" aria-label="Mobile Navigation Bar">
-      <a
-        href="#home"
-        className={`public-bottom-nav-item ${activeTab === "home" ? "active" : ""}`}
-        onClick={() => setActiveTab("home")}
-      >
-        <span className="public-bottom-nav-icon">🏠</span>
-        <span className="public-bottom-nav-label">Home</span>
-      </a>
-
-      <a
-        href="#treatments"
-        className={`public-bottom-nav-item ${activeTab === "treatments" ? "active" : ""}`}
-        onClick={() => setActiveTab("treatments")}
-      >
-        <span className="public-bottom-nav-icon">🩺</span>
-        <span className="public-bottom-nav-label">Services</span>
-      </a>
-
-      <a
-        href="#consultation"
-        className={`public-bottom-nav-item public-bottom-nav-item-highlight ${activeTab === "consultation" ? "active" : ""}`}
-        onClick={() => setActiveTab("consultation")}
-      >
-        <span className="public-bottom-nav-icon highlight-icon">📝</span>
-        <span className="public-bottom-nav-label">Book Now</span>
-      </a>
-
-      <button
-        type="button"
-        className="public-bottom-nav-item"
-        onClick={onOpenPatientPortal}
-      >
-        <span className="public-bottom-nav-icon">👤</span>
-        <span className="public-bottom-nav-label">Patient</span>
-      </button>
-
-      <a
-        href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I would like to book a physiotherapy consultation.")}`}
-        target="_blank"
-        rel="noreferrer"
-        className="public-bottom-nav-item public-bottom-nav-wa"
-      >
-        <span className="public-bottom-nav-icon">💬</span>
-        <span className="public-bottom-nav-label">WhatsApp</span>
-      </a>
-    </nav>
-  );
-}
 
 function WhatsAppFloating() {
   return (
@@ -1624,10 +1554,6 @@ function App() {
       />
 
       <WhatsAppFloating />
-
-      {!showDoctorPortal && !showPatientPortal && (
-        <PublicMobileBottomNav onOpenPatientPortal={openPatientPortal} />
-      )}
 
       <AutoEnquiryModal
         isOpen={showAutoEnquiry && !showDoctorPortal && !showPatientPortal}

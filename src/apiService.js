@@ -470,16 +470,35 @@ export const api = {
   },
 
   async deletePatient(patientId) {
+    // 1. Send DELETE request to server if running
+    try {
+      const token = localStorage.getItem("doctor_token") || localStorage.getItem(KEYS.DOCTOR_TOKEN);
+      if (token) {
+        await fetch(`${API_BASE}/doctor/patients/${encodeURIComponent(patientId)}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Backend patient delete sync failed, proceeding with full local purge:", e);
+    }
+
+    // 2. Remove permanently from local storage collections
     const patients = getLocal(KEYS.PATIENTS, []);
     const visits = getLocal(KEYS.VISITS, []);
+    const authList = getLocal(KEYS.PATIENT_AUTH, []);
 
     const updatedPatients = patients.filter(p => p.patientId !== patientId);
     const updatedVisits = visits.filter(v => v.patientId !== patientId);
+    const updatedAuth = authList.filter(a => a.patientId !== patientId);
 
     setLocal(KEYS.PATIENTS, updatedPatients);
     setLocal(KEYS.VISITS, updatedVisits);
+    setLocal(KEYS.PATIENT_AUTH, updatedAuth);
 
-    // Sync deletion
+    // 3. Sync deletion to Google Sheets
     syncToGoogleSheets("delete_patient", { patientId });
 
     return { ok: true, message: `Patient ${patientId} permanently deleted.` };

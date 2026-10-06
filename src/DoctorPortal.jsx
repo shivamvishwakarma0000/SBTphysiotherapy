@@ -1094,15 +1094,21 @@ _(Saved in patient clinic records)_`;
       return;
     }
     try {
-      await api.deletePatient(patientId);
+      // Immediately remove from UI state
+      setPatients((prev) => prev.filter((p) => p.patientId !== patientId));
+      setTodayVisits((prev) => prev.filter((v) => v.patientId !== patientId));
       if (selectedPatient && selectedPatient.patientId === patientId) {
         setSelectedPatient(null);
       }
+
+      await api.deletePatient(patientId);
+
       fetchStats();
       fetchPatients();
       fetchTodayVisits();
       alert(`Patient "${patientName}" (${patientId}) has been permanently deleted.`);
     } catch (err) {
+      fetchPatients();
       alert("Could not delete patient: " + err.message);
     }
   };

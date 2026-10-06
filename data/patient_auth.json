@@ -7,5 +7,32 @@
     "status": "active",
     "createdAt": "2026-09-08T12:07:31.198Z",
     "updatedAt": "2026-09-08T15:15:36.487Z"
+  },
+  {
+    "patientId": "VPR-0002",
+    "phone": "9123456780",
+    "passwordHash": "$2b$10$6A7g/13O.wK7Fk7bkbt9gOgi2gbc5poRJ62SXhOXfp0ZT6jPc7hXW",
+    "hasCustomPassword": false,
+    "status": "active",
+    "createdAt": "2026-10-06T11:01:17.047Z",
+    "updatedAt": "2026-10-06T11:01:17.047Z"
+  },
+  {
+    "patientId": "VPR-0003",
+    "phone": "9887766554",
+    "passwordHash": "$2b$10$lyTgOCU6pkDyaC3siZsay.ao6FPghty5Vn0PQoHuN/8z/CnwLP1dW",
+    "hasCustomPassword": false,
+    "status": "active",
+    "createdAt": "2026-10-06T11:01:17.205Z",
+    "updatedAt": "2026-10-06T11:01:17.205Z"
+  },
+  {
+    "patientId": "VPR-0004",
+    "phone": "9887766554",
+    "passwordHash": "$2b$10$ofIdQww.RZFVabfNBC0nRO.B4E0iUX3UH9/kbLfW7Goda5bqQBZO.",
+    "hasCustomPassword": false,
+    "status": "active",
+    "createdAt": "2026-10-06T11:20:09.852Z",
+    "updatedAt": "2026-10-06T11:20:09.852Z"
   }
 ]

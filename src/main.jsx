@@ -620,10 +620,12 @@ function Assessment() {
 
   const [form, setForm] = useState({
     name: "",
+    age: "",
     phone: "",
     appointmentDate: "",
     concern: ""
   });
+  const [lastSubmittedLead, setLastSubmittedLead] = useState(null);
   const [status, setStatus] = useState("idle");
 
   useEffect(() => {
@@ -635,16 +637,6 @@ function Assessment() {
     window.addEventListener("prefill-assessment", handlePrefill);
     return () => window.removeEventListener("prefill-assessment", handlePrefill);
   }, []);
-
-  // Auto-dismiss submitted message after a short period (4 seconds)
-  useEffect(() => {
-    if (status === "success") {
-      const timer = setTimeout(() => {
-        setStatus("idle");
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [status]);
 
   const finalPainArea = selectedPainArea === "custom" ? (customPainArea || "Custom Condition") : selectedPainArea;
   const finalDuration = selectedDuration === "custom" ? (customDuration || "Custom Duration") : selectedDuration;
@@ -668,6 +660,7 @@ function Assessment() {
       ...form,
       name: cleanName,
       patientName: cleanName,
+      age: form.age.trim(),
       painArea: finalPainArea,
       duration: finalDuration,
       phone: form.phone.trim()
@@ -675,8 +668,9 @@ function Assessment() {
 
     try {
       await api.createEnquiry(payload);
+      setLastSubmittedLead(payload);
       setStatus("success");
-      setForm({ name: "", phone: "", appointmentDate: "", concern: "" });
+      setForm({ name: "", age: "", phone: "", appointmentDate: "", concern: "" });
       setCustomPainArea("");
       setCustomDuration("");
     } catch {
@@ -792,6 +786,12 @@ function Assessment() {
               Patient Full Name *
               <input name="name" value={form.name} onChange={update} placeholder="e.g. Rajesh Sharma" autoComplete="name" required />
             </label>
+
+            <label>
+              Patient Age (Years) *
+              <input name="age" type="number" min="1" max="120" value={form.age} onChange={update} placeholder="e.g. 38" required />
+            </label>
+
             <label>
               Mobile Number (10 Digits) *
               <div className="phone-input">
@@ -827,9 +827,39 @@ function Assessment() {
             </label>
           </div>
           <button className="primary-btn form-submit" type="submit">Submit Consultation Request</button>
-          {status === "invalid" && <p className="form-status">Please enter a valid patient name and 10-digit Indian mobile number.</p>}
+          {status === "invalid" && <p className="form-status">Please enter a valid patient name, age, and 10-digit Indian mobile number.</p>}
           {status === "loading" && <p className="form-status">Submitting consultation request...</p>}
-          {status === "success" && <p className="form-status success">Consultation request received! Our clinic team will call you shortly.</p>}
+          {status === "success" && (
+            <div className="form-status-box success" style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid #10b981", borderRadius: "8px", padding: "14px", marginTop: "14px", color: "var(--text-primary)" }}>
+              <div style={{ fontWeight: "700", color: "#10b981", fontSize: "15px", marginBottom: "4px" }}>
+                ✅ Consultation Request Successfully Stored in Website!
+              </div>
+              <p style={{ margin: "0 0 10px 0", fontSize: "13px" }}>
+                Dr. Satyam Vishwakarma and our clinic reception have received your request. You can also send an instant copy directly on WhatsApp:
+              </p>
+              {lastSubmittedLead && (
+                <a
+                  href={`https://wa.me/91${phoneWhatsApp}?text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I have booked a consultation on your website:\n\n👤 Name: ${lastSubmittedLead.name}\n🎂 Age: ${lastSubmittedLead.age || "N/A"}\n📞 Phone: +91 ${lastSubmittedLead.phone}\n🩺 Problem: ${lastSubmittedLead.painArea}\n⏱️ Duration: ${lastSubmittedLead.duration}\n📅 Preferred Date: ${lastSubmittedLead.appointmentDate || "Flexible"}\n💬 Message: ${lastSubmittedLead.concern || "Consultation requested"}`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "#25D366",
+                    color: "#ffffff",
+                    padding: "8px 14px",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    textDecoration: "none"
+                  }}
+                >
+                  <WhatsAppIcon /> Notify Dr. Satyam on WhatsApp ➔
+                </a>
+              )}
+            </div>
+          )}
           {status === "error" && <p className="form-status">Form could not be sent online. Please call +91 9793093316 directly.</p>}
         </form>
       </div>
@@ -1086,6 +1116,78 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
   );
 }
 
+function PublicMobileBottomNav({ onOpenPatientPortal }) {
+  const [activeTab, setActiveTab] = useState("home");
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPos = window.scrollY + 200;
+      const consultationElem = document.getElementById("consultation");
+      const treatmentsElem = document.getElementById("treatments");
+
+      if (consultationElem && scrollPos >= consultationElem.offsetTop) {
+        setActiveTab("consultation");
+      } else if (treatmentsElem && scrollPos >= treatmentsElem.offsetTop) {
+        setActiveTab("treatments");
+      } else {
+        setActiveTab("home");
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <nav className="public-mobile-bottom-nav" aria-label="Mobile Navigation Bar">
+      <a
+        href="#home"
+        className={`public-bottom-nav-item ${activeTab === "home" ? "active" : ""}`}
+        onClick={() => setActiveTab("home")}
+      >
+        <span className="public-bottom-nav-icon">🏠</span>
+        <span className="public-bottom-nav-label">Home</span>
+      </a>
+
+      <a
+        href="#treatments"
+        className={`public-bottom-nav-item ${activeTab === "treatments" ? "active" : ""}`}
+        onClick={() => setActiveTab("treatments")}
+      >
+        <span className="public-bottom-nav-icon">🩺</span>
+        <span className="public-bottom-nav-label">Services</span>
+      </a>
+
+      <a
+        href="#consultation"
+        className={`public-bottom-nav-item public-bottom-nav-item-highlight ${activeTab === "consultation" ? "active" : ""}`}
+        onClick={() => setActiveTab("consultation")}
+      >
+        <span className="public-bottom-nav-icon highlight-icon">📝</span>
+        <span className="public-bottom-nav-label">Book Now</span>
+      </a>
+
+      <button
+        type="button"
+        className="public-bottom-nav-item"
+        onClick={onOpenPatientPortal}
+      >
+        <span className="public-bottom-nav-icon">👤</span>
+        <span className="public-bottom-nav-label">Patient</span>
+      </button>
+
+      <a
+        href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I would like to book a physiotherapy consultation.")}`}
+        target="_blank"
+        rel="noreferrer"
+        className="public-bottom-nav-item public-bottom-nav-wa"
+      >
+        <span className="public-bottom-nav-icon">💬</span>
+        <span className="public-bottom-nav-label">WhatsApp</span>
+      </a>
+    </nav>
+  );
+}
+
 function WhatsAppFloating() {
   return (
     <a
@@ -1105,6 +1207,7 @@ function WhatsAppFloating() {
 function AutoEnquiryModal({ isOpen, onClose }) {
   const [form, setForm] = useState({
     name: "",
+    age: "",
     phone: "",
     painArea: "Spine & Back Pain (Sciatica / Slip Disc)",
     concern: ""
@@ -1129,18 +1232,16 @@ function AutoEnquiryModal({ isOpen, onClose }) {
     try {
       await api.createEnquiry({
         name: form.name.trim(),
+        age: form.age.trim(),
         phone: cleanPhone,
         painArea: form.painArea,
-        concern: form.concern.trim() || "Automatic 5-second website exploration enquiry",
+        concern: form.concern.trim() || "Automatic website exploration enquiry",
         duration: "Direct Online Enquiry"
       });
       setStatus("success");
       try {
         localStorage.setItem("vindhya_auto_enquiry_ever_shown", "true");
       } catch (e) {}
-      setTimeout(() => {
-        onClose();
-      }, 2500);
     } catch (err) {
       console.error(err);
       setStatus("error");
@@ -1169,9 +1270,32 @@ function AutoEnquiryModal({ isOpen, onClose }) {
         </p>
 
         {status === "success" ? (
-          <div className="auto-enquiry-status success">
-            🎉 <strong>Enquiry Submitted!</strong><br />
-            Dr. Satyam's clinic team will call you at +91 {form.phone} shortly.
+          <div className="auto-enquiry-status success" style={{ textAlign: "left", padding: "16px" }}>
+            <div style={{ fontWeight: "800", fontSize: "16px", color: "#10b981", marginBottom: "6px" }}>
+              🎉 Enquiry Received & Stored!
+            </div>
+            <p style={{ margin: "0 0 12px 0", fontSize: "13px", color: "var(--text-primary)" }}>
+              Dr. Satyam's clinic reception will contact you at +91 {form.phone} shortly. You can also chat directly on WhatsApp:
+            </p>
+            <a
+              href={`https://wa.me/91${phoneWhatsApp}?text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I have sent an enquiry on your website:\n\n👤 Name: ${form.name}\n🎂 Age: ${form.age || "N/A"}\n📞 Phone: +91 ${form.phone}\n🩺 Condition: ${form.painArea}\n💬 Query: ${form.concern || "Physiotherapy Guidance"}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "#25D366",
+                color: "#ffffff",
+                padding: "8px 14px",
+                borderRadius: "6px",
+                fontSize: "13px",
+                fontWeight: "700",
+                textDecoration: "none"
+              }}
+            >
+              <WhatsAppIcon /> Chat Directly on WhatsApp ➔
+            </a>
           </div>
         ) : (
           <form className="auto-enquiry-form" onSubmit={handleSubmit}>
@@ -1188,23 +1312,38 @@ function AutoEnquiryModal({ isOpen, onClose }) {
               />
             </label>
 
-            <label className="auto-enquiry-field">
-              Mobile Number (10 Digits) *
-              <div className="auto-enquiry-phone-row">
-                <span>+91</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <label className="auto-enquiry-field">
+                Age (Years)
                 <input
-                  type="tel"
-                  name="phone"
-                  required
-                  maxLength="10"
-                  inputMode="numeric"
-                  value={form.phone}
+                  type="number"
+                  name="age"
+                  min="1"
+                  max="120"
+                  value={form.age}
                   onChange={update}
-                  placeholder="9876543210"
-                  autoComplete="tel"
+                  placeholder="e.g. 35"
                 />
-              </div>
-            </label>
+              </label>
+
+              <label className="auto-enquiry-field">
+                Mobile Number *
+                <div className="auto-enquiry-phone-row">
+                  <span>+91</span>
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    maxLength="10"
+                    inputMode="numeric"
+                    value={form.phone}
+                    onChange={update}
+                    placeholder="9876543210"
+                    autoComplete="tel"
+                  />
+                </div>
+              </label>
+            </div>
 
             <label className="auto-enquiry-field">
               Pain Area / Clinical Condition *
@@ -1485,6 +1624,10 @@ function App() {
       />
 
       <WhatsAppFloating />
+
+      {!showDoctorPortal && !showPatientPortal && (
+        <PublicMobileBottomNav onOpenPatientPortal={openPatientPortal} />
+      )}
 
       <AutoEnquiryModal
         isOpen={showAutoEnquiry && !showDoctorPortal && !showPatientPortal}

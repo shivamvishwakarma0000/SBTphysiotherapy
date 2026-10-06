@@ -443,6 +443,191 @@ app.post("/api/auth/reset-password", async (req, res) => {
 // 1B. PATIENT PORTAL AUTHENTICATION & SELF-SERVICE APIS
 // ==========================================
 
+// Patient Self-Registration / Portal Sign-up
+app.post("/api/patient/register", async (req, res) => {
+  try {
+    const { name, age, gender, phone, altPhone, address, complaint, reasonForVisit, password } = req.body;
+    const cleanPhone = normalizePhone(phone);
+    const cleanName = sanitizeText(name);
+    const cleanAge = String(age || "").trim();
+    const cleanGender = sanitizeText(gender, "Male");
+
+    if (!cleanPhone || cleanName.length < 2) {
+      return res.status(400).json({ error: "Valid full name and 10-digit mobile number are required." });
+    }
+
+    const patients = await ensureDataFile(patientsFile, []);
+    const phoneDigits = cleanPhone.replace("+91", "");
+
+    // Check if already registered
+    let existingPatient = patients.find(p => {
+      const pPhone = String(p.phone || "").replace(/\D/g, "").slice(-10);
+      return pPhone === phoneDigits;
+    });
+
+    if (existingPatient) {
+      const authRecord = await getOrCreatePatientAuth(existingPatient);
+      const token = jwt.sign(
+        {
+          patientId: existingPatient.patientId,
+          phone: existingPatient.phone,
+          name: existingPatient.name,
+          role: "patient"
+        },
+        JWT_SECRET,
+        { expiresIn: "30d" }
+      );
+      return res.json({
+        ok: true,
+        alreadyRegistered: true,
+        token,
+        patient: {
+          patientId: existingPatient.patientId,
+          name: existingPatient.name,
+          phone: existingPatient.phone,
+          age: existingPatient.age,
+          gender: existingPatient.gender,
+          address: existingPatient.address,
+          firstVisitReason: existingPatient.firstVisitReason,
+          registrationDate: existingPatient.registrationDate,
+          totalVisits: existingPatient.totalVisits || 1,
+          lastVisitDate: existingPatient.lastVisitDate || existingPatient.registrationDate,
+          hasCustomPassword: !!authRecord.hasCustomPassword
+        },
+        message: "Account already registered! Signed in successfully."
+      });
+    }
+
+    const patientId = await generateNextPatientId();
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const newPatient = {
+      patientId,
+      registrationDate: todayStr,
+      name: cleanName,
+      age: cleanAge || "30",
+      gender: cleanGender,
+      phone: phoneDigits,
+      altPhone: sanitizeText(altPhone, ""),
+      address: sanitizeText(address, "Vindhyachal, Mirzapur"),
+      dob: "",
+      emergencyContact: "",
+      firstVisitReason: sanitizeText(reasonForVisit || complaint, "Initial Consultation & Assessment"),
+      status: "Active",
+      totalVisits: 1,
+      lastVisitDate: todayStr,
+      syncStatus: "pending",
+      createdAt: new Date().toISOString()
+    };
+
+    const visits = await ensureDataFile(visitsFile, []);
+    const firstVisit = {
+      visitId: `VIS-${patientId}-01`,
+      patientId,
+      patientName: newPatient.name,
+      phone: newPatient.phone,
+      visitNumber: 1,
+      date: todayStr,
+      time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+      reason: newPatient.firstVisitReason,
+      complaint: sanitizeText(complaint, newPatient.firstVisitReason),
+      diagnosis: "Registered via Online Portal",
+      treatmentNotes: "Patient self-registered via Online Portal. Scheduled for clinical consultation.",
+      referredBy: "Patient Portal Self-Registration",
+      followUpDate: "As Advised",
+      status: "New",
+      doctor: "Dr. Satyam Vishwakarma",
+      syncStatus: "pending",
+      createdAt: new Date().toISOString()
+    };
+
+    patients.unshift(newPatient);
+    visits.unshift(firstVisit);
+
+    await writeDataFile(patientsFile, patients);
+    await writeDataFile(visitsFile, visits);
+
+    // Save auth record with chosen password or default 'vindhya'
+    const customPass = String(password || "").trim();
+    const passToHash = (customPass && customPass.length >= 4) ? customPass : "vindhya";
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(passToHash, salt);
+
+    const patientAuthList = await ensureDataFile(patientAuthFile, []);
+    const newAuthRecord = {
+      patientId: newPatient.patientId,
+      phone: phoneDigits,
+      passwordHash: hash,
+      hasCustomPassword: customPass.length >= 4 && customPass.toLowerCase() !== "vindhya",
+      status: "active",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    patientAuthList.push(newAuthRecord);
+    await writeDataFile(patientAuthFile, patientAuthList);
+
+    // Also create enquiry entry so doctor immediately sees lead
+    const enquiries = await ensureDataFile(enquiriesFile, []);
+    const newEnq = {
+      id: `ENQ-${Date.now().toString().slice(-6)}`,
+      date: todayStr,
+      time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+      name: cleanName,
+      age: cleanAge,
+      phone: phoneDigits,
+      fullPhone: cleanPhone,
+      painArea: newPatient.firstVisitReason,
+      duration: "New Portal Patient",
+      appointmentDate: todayStr,
+      concern: `New patient registered: ${cleanName}, Age: ${cleanAge}, Condition: ${newPatient.firstVisitReason}`,
+      status: "Converted",
+      linkedPatientId: patientId,
+      syncStatus: "pending",
+      createdAt: new Date().toISOString()
+    };
+    enquiries.unshift(newEnq);
+    await writeDataFile(enquiriesFile, enquiries);
+
+    // Async sync
+    syncToGoogleSheets("patient", newPatient).catch(() => {});
+    syncToGoogleSheets("visit", firstVisit).catch(() => {});
+    syncToGoogleSheets("patient_auth", newAuthRecord).catch(() => {});
+    syncToGoogleSheets("enquiry", newEnq).catch(() => {});
+
+    const token = jwt.sign(
+      {
+        patientId: newPatient.patientId,
+        phone: newPatient.phone,
+        name: newPatient.name,
+        role: "patient"
+      },
+      JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    res.status(201).json({
+      ok: true,
+      token,
+      patient: {
+        patientId: newPatient.patientId,
+        name: newPatient.name,
+        phone: newPatient.phone,
+        age: newPatient.age,
+        gender: newPatient.gender,
+        address: newPatient.address,
+        firstVisitReason: newPatient.firstVisitReason,
+        registrationDate: newPatient.registrationDate,
+        totalVisits: 1,
+        lastVisitDate: todayStr,
+        hasCustomPassword: newAuthRecord.hasCustomPassword
+      },
+      message: "Patient registered and logged in successfully!"
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Patient registration error: " + err.message });
+  }
+});
+
 // Patient Login (Registered Phone or Patient ID + Universal Password 'vindhya' or Custom Password)
 app.post("/api/patient/login", async (req, res) => {
   try {
@@ -845,6 +1030,47 @@ app.post("/api/doctor/enquiries/:id/status", requireDoctorAuth, async (req, res)
     res.json({ ok: true, enquiry, message: `Enquiry updated to ${status}.` });
   } catch (err) {
     res.status(500).json({ error: "Failed to update enquiry status." });
+  }
+});
+
+// Doctor: Delete / Reject Enquiry Permanently
+app.delete("/api/doctor/enquiries/:id", requireDoctorAuth, async (req, res) => {
+  try {
+    const enquiryId = req.params.id;
+    const enquiries = await ensureDataFile(enquiriesFile, []);
+    const initialLen = enquiries.length;
+    const filtered = enquiries.filter(e => e.id !== enquiryId);
+    if (filtered.length === initialLen) {
+      return res.status(404).json({ error: "Enquiry not found." });
+    }
+    await writeDataFile(enquiriesFile, filtered);
+    syncToGoogleSheets("delete_enquiry", { enquiryId }).catch(() => {});
+    res.json({ ok: true, message: "Enquiry permanently deleted." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete enquiry." });
+  }
+});
+
+// Doctor: Delete Patient Record
+app.delete("/api/doctor/patients/:id", requireDoctorAuth, async (req, res) => {
+  try {
+    const patientId = req.params.id;
+    const patients = await ensureDataFile(patientsFile, []);
+    const visits = await ensureDataFile(visitsFile, []);
+    const authList = await ensureDataFile(patientAuthFile, []);
+
+    const updatedPatients = patients.filter(p => p.patientId !== patientId);
+    const updatedVisits = visits.filter(v => v.patientId !== patientId);
+    const updatedAuth = authList.filter(a => a.patientId !== patientId);
+
+    await writeDataFile(patientsFile, updatedPatients);
+    await writeDataFile(visitsFile, updatedVisits);
+    await writeDataFile(patientAuthFile, updatedAuth);
+
+    syncToGoogleSheets("delete_patient", { patientId }).catch(() => {});
+    res.json({ ok: true, message: `Patient ${patientId} and associated records deleted successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete patient." });
   }
 });
 
@@ -1343,6 +1569,7 @@ app.post("/api/enquiries", async (req, res) => {
       date: todayStr,
       time: timeStr,
       name,
+      age: sanitizeText(req.body.age, ""),
       phone: phone.replace("+91", ""),
       fullPhone: phone,
       painArea: sanitizeText(req.body.painArea, "Spine & Back Pain"),

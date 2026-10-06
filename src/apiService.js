@@ -572,11 +572,11 @@ export const api = {
   },
 
   async createEnquiry(payload) {
-    const enquiries = getLocal(KEYS.ENQUIRIES, []);
     const todayStr = new Date().toISOString().split("T")[0];
     const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
     const patientName = (payload.name || payload.patientName || payload.fullName || "").trim() || "Direct Consultation Lead";
+    const cleanPhone = String(payload.phone || "").replace(/\D/g, "").slice(-10);
+    const cleanAge = String(payload.age || "").trim();
 
     const newEnquiry = {
       id: `ENQ-${Date.now().toString().slice(-6)}`,
@@ -584,20 +584,70 @@ export const api = {
       time: timeStr,
       name: patientName,
       patientName: patientName,
-      phone: payload.phone,
+      age: cleanAge,
+      phone: cleanPhone,
       painArea: payload.painArea || "General Consultation",
       duration: payload.duration || "Recent",
       appointmentDate: payload.appointmentDate || todayStr,
-      concern: payload.concern || ""
+      concern: payload.concern || "",
+      status: "New"
     };
 
+    // Try server endpoint
+    try {
+      const res = await fetch("/api/enquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: patientName,
+          age: cleanAge,
+          phone: cleanPhone,
+          painArea: newEnquiry.painArea,
+          duration: newEnquiry.duration,
+          appointmentDate: newEnquiry.appointmentDate,
+          concern: newEnquiry.concern
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok && data.enquiry) {
+          Object.assign(newEnquiry, data.enquiry);
+        }
+      }
+    } catch (e) {
+      console.warn("Direct server enquiry save notice:", e);
+    }
+
+    // Always update local storage
+    const enquiries = getLocal(KEYS.ENQUIRIES, []);
     enquiries.unshift(newEnquiry);
     setLocal(KEYS.ENQUIRIES, enquiries);
 
-    // Push to Google Sheets
+    // Push to Google Sheets in background
     syncToGoogleSheets("sync_enquiry", newEnquiry);
 
     return { ok: true, enquiry: newEnquiry };
+  },
+
+  async deleteEnquiry(enquiryId) {
+    const token = this.getToken();
+    if (token) {
+      try {
+        await fetch(`/api/doctor/enquiries/${enquiryId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {
+        console.warn("Server enquiry delete warning:", e);
+      }
+    }
+
+    const enquiries = getLocal(KEYS.ENQUIRIES, []);
+    const updated = enquiries.filter(e => String(e.id) !== String(enquiryId));
+    setLocal(KEYS.ENQUIRIES, updated);
+
+    syncToGoogleSheets("delete_enquiry", { enquiryId });
+    return { ok: true, message: "Enquiry deleted successfully." };
   },
 
   // 6. EXPORT CSV
@@ -756,12 +806,104 @@ export const patientApi = {
     localStorage.removeItem(PATIENT_TOKEN_KEY);
     localStorage.removeItem(PATIENT_PROFILE_KEY);
   },
+  async register(payload) {
+    const cleanPhone = String(payload.phone || "").replace(/\D/g, "").slice(-10);
+    const cleanName = String(payload.name || "").trim();
+    const cleanAge = String(payload.age || "").trim();
+    const cleanGender = String(payload.gender || "Male").trim();
+    const cleanAddress = String(payload.address || "Vindhyachal, Mirzapur").trim();
+    const cleanReason = String(payload.reasonForVisit || payload.complaint || "Initial Assessment").trim();
+    const cleanPass = String(payload.password || "vindhya").trim();
+
+    try {
+      const res = await fetch("/api/patient/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: cleanName,
+          age: cleanAge,
+          gender: cleanGender,
+          phone: cleanPhone,
+          address: cleanAddress,
+          reasonForVisit: cleanReason,
+          complaint: cleanReason,
+          password: cleanPass
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        localStorage.setItem(PATIENT_TOKEN_KEY, data.token);
+        localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(data.patient));
+        return data;
+      }
+      if (!res.ok) {
+        return { ok: false, error: data.error || "Registration failed" };
+      }
+    } catch (err) {
+      // Offline fallback: Create patient record locally
+      const patients = getLocal(KEYS.PATIENTS, []);
+      const newId = `VPR-2026-${1000 + patients.length + 1}`;
+      const todayStr = new Date().toISOString().split("T")[0];
+
+      let existing = patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone);
+      let patientToUse = existing;
+
+      if (!patientToUse) {
+        patientToUse = {
+          patientId: newId,
+          name: cleanName,
+          age: Number(cleanAge) || 30,
+          gender: cleanGender,
+          phone: cleanPhone,
+          altPhone: "",
+          address: cleanAddress,
+          firstVisitReason: cleanReason,
+          registrationDate: todayStr,
+          status: "Active",
+          totalVisits: 1,
+          lastVisitDate: todayStr
+        };
+        patients.unshift(patientToUse);
+        setLocal(KEYS.PATIENTS, patients);
+
+        // Also add initial visit
+        const visits = getLocal(KEYS.VISITS, []);
+        visits.unshift({
+          visitId: `VIS-${patientToUse.patientId}-01`,
+          patientId: patientToUse.patientId,
+          patientName: patientToUse.name,
+          phone: patientToUse.phone,
+          visitNumber: 1,
+          date: todayStr,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          reason: cleanReason,
+          diagnosis: "Registered via Online Portal",
+          treatmentNotes: "Patient self-registered online.",
+          doctor: "Dr. Satyam Vishwakarma",
+          status: "Active"
+        });
+        setLocal(KEYS.VISITS, visits);
+
+        // Save custom password locally
+        localStorage.setItem("patient_custom_pass_" + patientToUse.patientId, cleanPass);
+      }
+
+      const dummyToken = "local_patient_token_" + patientToUse.patientId;
+      localStorage.setItem(PATIENT_TOKEN_KEY, dummyToken);
+      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...patientToUse, defaultPassword: "vindhya" }));
+      return { ok: true, token: dummyToken, patient: patientToUse, message: "Registered and signed in successfully!" };
+    }
+  },
+
   async login(identifier, password) {
+    const cleanIdentifier = String(identifier || "").trim();
+    const cleanPassword = String(password || "").trim();
+
     try {
       const res = await fetch("/api/patient/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password })
+        body: JSON.stringify({ identifier: cleanIdentifier, password: cleanPassword })
       });
       const data = await res.json();
       if (res.ok && data.ok) {
@@ -773,10 +915,10 @@ export const patientApi = {
         return { ok: false, error: data.error || "Login failed" };
       }
     } catch (err) {
-      // Offline fallback: Validate that patient is officially registered in clinic records
+      // Offline / Static fallback: Check against locally stored patients
       const patients = getLocal(KEYS.PATIENTS, []);
-      const cleanId = String(identifier).trim().toUpperCase();
-      const cleanDigits = String(identifier).replace(/\D/g, "").slice(-10);
+      const cleanId = cleanIdentifier.toUpperCase();
+      const cleanDigits = cleanIdentifier.replace(/\D/g, "").slice(-10);
       const p = patients.find(pt => {
         const pId = String(pt.patientId || "").trim().toUpperCase();
         const pPhone = String(pt.phone || "").replace(/\D/g, "").slice(-10);
@@ -785,18 +927,18 @@ export const patientApi = {
       if (!p) {
         return {
           ok: false,
-          error: "No registered patient account found with this phone number or ID. Only patients registered by Dr. Satyam Vishwakarma can log in."
+          error: "No registered patient account found with this phone number or ID. Please register first or contact Dr. Satyam Vishwakarma."
         };
       }
 
-      const inputPass = String(password).trim();
+      const inputPass = cleanPassword;
       const customPass = localStorage.getItem("patient_custom_pass_" + p.patientId);
       const isCorrect = customPass ? (inputPass === customPass) : (inputPass.toLowerCase() === "vindhya");
 
       if (!isCorrect) {
         return {
           ok: false,
-          error: "Incorrect password. Default clinic password for all registered patients is 'vindhya'."
+          error: "Incorrect password. The default clinic password is 'vindhya'. If you customized it, please enter your new password."
         };
       }
 

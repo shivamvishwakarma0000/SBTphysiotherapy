@@ -39,9 +39,25 @@ export default function PatientPortal({ onClose, themeProps }) {
     }
   });
 
+  // Auth View Switcher: "login" or "register"
+  const [authMode, setAuthMode] = useState("login");
+
   // Login Form State
   const [loginForm, setLoginForm] = useState({ identifier: "", password: "" });
   const [loginError, setLoginError] = useState("");
+
+  // Registration Form State
+  const [registerForm, setRegisterForm] = useState({
+    name: "",
+    age: "",
+    gender: "Male",
+    phone: "",
+    address: "Vindhyachal, Mirzapur",
+    reasonForVisit: "Spine & Back Pain",
+    password: ""
+  });
+  const [registerError, setRegisterError] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState("");
 
   // Password Change State
   const [changePassForm, setChangePassForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -179,6 +195,45 @@ export default function PatientPortal({ onClose, themeProps }) {
     }
   };
 
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setRegisterError("");
+    setRegisterSuccess("");
+
+    const cleanPhone = registerForm.phone.replace(/\D/g, "");
+    if (!registerForm.name.trim() || registerForm.name.trim().length < 2) {
+      setRegisterError("Please enter your full patient name.");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setRegisterError("Please enter a valid 10-digit Indian mobile number.");
+      return;
+    }
+    if (!registerForm.age || Number(registerForm.age) < 1 || Number(registerForm.age) > 120) {
+      setRegisterError("Please enter a valid patient age.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await patientApi.register({
+        ...registerForm,
+        phone: cleanPhone
+      });
+      if (res.ok) {
+        setPatientToken(res.token);
+        setPatientProfile(res.patient);
+        setRegisterSuccess("Registration successful! Entering your recovery portal...");
+      } else {
+        setRegisterError(res.error || "Registration failed. Please check your details.");
+      }
+    } catch (err) {
+      setRegisterError("Registration service currently unavailable. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setChangePassMsg({ text: "", isError: false });
@@ -256,12 +311,12 @@ export default function PatientPortal({ onClose, themeProps }) {
   };
 
   // =========================================================================
-  // VIEW A: PATIENT LOGIN & SELF-RECOVERY SCREEN
+  // VIEW A: PATIENT AUTH (SIGN IN & SELF REGISTRATION)
   // =========================================================================
   if (!patientToken || !patientProfile) {
     return (
-      <div className="patient-portal-overlay">
-        <div className="patient-login-modal">
+      <div className="patient-portal-overlay patient-login-forced-dark" data-theme="dark">
+        <div className="patient-login-modal patient-login-card-dark" data-theme="dark">
           <div className="patient-login-header">
             <div className="patient-portal-badge">PATIENT RECOVERY PORTAL</div>
             <img
@@ -274,52 +329,191 @@ export default function PatientPortal({ onClose, themeProps }) {
           </div>
 
           <div className="patient-login-card">
-            <h3>Sign In to Your Health Portal</h3>
-
-            {loginError && <div className="patient-alert error">{loginError}</div>}
-
-            <form onSubmit={handleLogin} className="patient-login-form">
-              <label>
-                Patient ID or Registered Mobile (10 Digits)
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 8858496345 or VPR-0001"
-                  value={loginForm.identifier}
-                  onChange={(e) => setLoginForm({ ...loginForm, identifier: e.target.value })}
-                  autoComplete="username"
-                />
-              </label>
-
-              <label>
-                Password (Default is 'vindhya')
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter password (default: vindhya)"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  autoComplete="current-password"
-                />
-              </label>
-
-              <button type="submit" className="patient-primary-btn" disabled={loading} style={{ marginTop: "6px" }}>
-                {loading ? "Signing in..." : "Sign In to Portal →"}
+            {/* Segmented Tab Switcher */}
+            <div className="patient-auth-tab-bar">
+              <button
+                type="button"
+                className={`patient-auth-tab ${authMode === "login" ? "active" : ""}`}
+                onClick={() => { setAuthMode("login"); setLoginError(""); setRegisterError(""); }}
+              >
+                🔐 Sign In
               </button>
-            </form>
-
-            <div className="patient-support-note">
-              <span>💡 First time logging in?</span>
-              <p>
-                Use your <strong>10-digit Registered Mobile Number</strong> or <strong>Patient ID</strong>.<br />
-                Your universal clinic password is <strong>vindhya</strong>.<br />
-                <em>Only patients registered by Dr. Satyam Vishwakarma can log in. You can change your password anytime inside your profile.</em>
-              </p>
-              <div className="helpline-chips">
-                <a href="tel:+919793093316" className="help-chip">📞 Call: +91 9793093316</a>
-                <a href="https://wa.me/918382024264" target="_blank" rel="noreferrer" className="help-chip wa">💬 WhatsApp Helpline</a>
-              </div>
+              <button
+                type="button"
+                className={`patient-auth-tab ${authMode === "register" ? "active" : ""}`}
+                onClick={() => { setAuthMode("register"); setLoginError(""); setRegisterError(""); }}
+              >
+                ✨ New Patient Registration
+              </button>
             </div>
+
+            {authMode === "login" ? (
+              <>
+                <h3 style={{ marginTop: "14px" }}>Sign In to Your Health Portal</h3>
+
+                {loginError && <div className="patient-alert error">{loginError}</div>}
+
+                <form onSubmit={handleLogin} className="patient-login-form">
+                  <label>
+                    Patient ID or Registered Mobile (10 Digits)
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 8858496345 or VPR-0001"
+                      value={loginForm.identifier}
+                      onChange={(e) => setLoginForm({ ...loginForm, identifier: e.target.value })}
+                      autoComplete="username"
+                    />
+                  </label>
+
+                  <label>
+                    Password (Default is 'vindhya')
+                    <input
+                      type="password"
+                      required
+                      placeholder="Enter password (default: vindhya)"
+                      value={loginForm.password}
+                      onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                      autoComplete="current-password"
+                    />
+                  </label>
+
+                  <button type="submit" className="patient-primary-btn" disabled={loading} style={{ marginTop: "6px" }}>
+                    {loading ? "Signing in..." : "Sign In to Portal →"}
+                  </button>
+                </form>
+
+                <div className="patient-support-note">
+                  <span>💡 First time here or newly registered?</span>
+                  <p>
+                    Use your <strong>10-digit Registered Mobile Number</strong> or <strong>Patient ID</strong>.<br />
+                    Your universal clinic password is <strong>vindhya</strong>.<br />
+                    <em>Don't have an account yet? Switch to the "New Patient Registration" tab above to sign up instantly!</em>
+                  </p>
+                  <div className="helpline-chips">
+                    <a href="tel:+919793093316" className="help-chip">📞 Call: +91 9793093316</a>
+                    <a href="https://wa.me/918382024264" target="_blank" rel="noreferrer" className="help-chip wa">💬 WhatsApp Helpline</a>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 style={{ marginTop: "14px" }}>Register as a New Patient</h3>
+                <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "12px" }}>
+                  Create your health profile to view consultation records, exercise routines, and receipts.
+                </p>
+
+                {registerError && <div className="patient-alert error">{registerError}</div>}
+                {registerSuccess && <div className="patient-alert success">{registerSuccess}</div>}
+
+                <form onSubmit={handleRegister} className="patient-login-form">
+                  <label>
+                    Patient Full Name *
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Rajesh Kumar"
+                      value={registerForm.name}
+                      onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                      autoComplete="name"
+                    />
+                  </label>
+
+                  <div className="patient-form-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <label>
+                      Age (Years) *
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        max="120"
+                        placeholder="e.g. 35"
+                        value={registerForm.age}
+                        onChange={(e) => setRegisterForm({ ...registerForm, age: e.target.value })}
+                      />
+                    </label>
+
+                    <label>
+                      Gender *
+                      <select
+                        value={registerForm.gender}
+                        onChange={(e) => setRegisterForm({ ...registerForm, gender: e.target.value })}
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <label>
+                    Mobile Number (10 Digits) *
+                    <div className="auto-enquiry-phone-row" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontWeight: "700", color: "var(--text-secondary)" }}>+91</span>
+                      <input
+                        type="tel"
+                        required
+                        maxLength="10"
+                        placeholder="9876543210"
+                        value={registerForm.phone}
+                        onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value })}
+                        autoComplete="tel"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </label>
+
+                  <label>
+                    City / Address
+                    <input
+                      type="text"
+                      placeholder="e.g. Vindhyachal, Mirzapur"
+                      value={registerForm.address}
+                      onChange={(e) => setRegisterForm({ ...registerForm, address: e.target.value })}
+                    />
+                  </label>
+
+                  <label>
+                    Primary Pain Area / Health Concern *
+                    <select
+                      value={registerForm.reasonForVisit}
+                      onChange={(e) => setRegisterForm({ ...registerForm, reasonForVisit: e.target.value })}
+                    >
+                      <option value="Spine & Back Pain">Spine & Back Pain (Slip Disc / Sciatica)</option>
+                      <option value="Cup Therapy / Cupping">Cupping Therapy / Hijama</option>
+                      <option value="Cervical & Neck Spondylosis">Cervical & Neck Pain</option>
+                      <option value="Knee Pain & Arthritis / ACL">Knee Pain & Arthritis / ACL</option>
+                      <option value="Paralysis & Neuro Rehabilitation">Paralysis & Neuro Rehabilitation</option>
+                      <option value="Frozen Shoulder & Shoulder Pain">Frozen Shoulder & Rotator Cuff</option>
+                      <option value="Sports Injury Recovery">Sports Injury & Ligament Recovery</option>
+                      <option value="Post-Surgical Rehabilitation">Post-Surgical Rehabilitation</option>
+                      <option value="General Physiotherapy">General Physiotherapy / Body Pain</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Set Password (Optional, default is 'vindhya')
+                    <input
+                      type="password"
+                      placeholder="Leave blank for default: vindhya"
+                      value={registerForm.password}
+                      onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                      autoComplete="new-password"
+                    />
+                  </label>
+
+                  <button type="submit" className="patient-primary-btn" disabled={loading} style={{ marginTop: "8px" }}>
+                    {loading ? "Registering..." : "Complete Registration & Access Portal →"}
+                  </button>
+                </form>
+
+                <div className="patient-support-note" style={{ marginTop: "12px" }}>
+                  <p style={{ margin: 0 }}>
+                    Already have an account? <button type="button" onClick={() => setAuthMode("login")} style={{ background: "none", border: "none", color: "var(--brand-primary, #0878C9)", fontWeight: "700", cursor: "pointer", textDecoration: "underline", padding: 0 }}>Sign in here</button>.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="patient-login-footer">

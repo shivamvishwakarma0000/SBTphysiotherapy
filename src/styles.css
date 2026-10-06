@@ -4997,13 +4997,18 @@ textarea:focus {
    PATIENT PORTAL & RECOVERY SUITE STYLES
    ========================================================================== */
 
+/* =========================================================================
+   FORCED DARK MODE FOR PATIENT PORTAL LOGIN & REGISTRATION MODAL
+   Always in Dark Mode in every situation, device, and phone
+========================================================================= */
+.patient-portal-overlay.patient-login-forced-dark,
 .patient-portal-overlay {
   position: fixed;
   inset: 0;
   z-index: 10000;
-  background: rgba(7, 43, 69, 0.90);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(3, 7, 18, 0.88) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -5013,26 +5018,29 @@ textarea:focus {
   box-sizing: border-box;
 }
 
+.patient-login-modal.patient-login-card-dark,
 .patient-login-modal {
   width: 100%;
   max-width: 480px;
   margin: auto 0;
-  background: var(--bg-card, #ffffff);
-  border: 1.5px solid rgba(8, 120, 201, 0.25);
+  background: #0f172a !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.35) !important;
   border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(8, 120, 201, 0.25) !important;
   padding: 28px 24px 24px;
   text-align: center;
   animation: fadeIn 220ms ease;
-  color: var(--text, #0f172a);
+  color: #f8fafc !important;
+  box-sizing: border-box;
 }
 
 .patient-login-header .patient-portal-badge {
   display: inline-block;
-  padding: 4px 12px;
+  padding: 4px 14px;
   border-radius: 20px;
-  background: rgba(8, 120, 201, 0.12);
-  color: #0878C9;
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 1px;
@@ -5040,25 +5048,25 @@ textarea:focus {
 }
 
 .patient-login-header .patient-portal-logo {
-  height: 48px;
+  height: 52px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
-  margin: 0 auto 10px;
+  margin: 0 auto 12px;
   display: block;
 }
 
 .patient-login-header h2 {
   font-size: 19px;
   font-weight: 800;
-  color: var(--heading, #0f172a);
+  color: #ffffff !important;
   margin: 0 0 4px;
 }
 
 .patient-login-header .subtext {
   font-size: 12.5px;
-  color: var(--text-muted, #64748b);
-  margin: 0 0 20px;
+  color: #94a3b8 !important;
+  margin: 0 0 18px;
 }
 
 .patient-login-card {
@@ -5069,18 +5077,50 @@ textarea:focus {
   margin: 0 !important;
 }
 
+/* Patient Auth Tab Bar (Always Dark) */
+.patient-auth-tab-bar {
+  display: flex;
+  background: #1e293b !important;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid #334155 !important;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.patient-auth-tab {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent !important;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  transition: all 0.2s ease;
+}
+
+.patient-auth-tab:hover {
+  color: #ffffff !important;
+}
+
+.patient-auth-tab.active {
+  background: #0f172a !important;
+  color: #38bdf8 !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.2) !important;
+}
+
 .patient-login-card h3 {
   font-size: 17px;
   font-weight: 700;
   margin: 0 0 6px;
-  color: var(--heading, #0f172a);
+  color: #ffffff !important;
 }
 
-.patient-login-card .login-desc {
-  font-size: 13px;
-  color: var(--text-secondary, #475569);
-  line-height: 1.5;
-  margin-bottom: 18px;
+.patient-login-card p {
+  color: #94a3b8 !important;
 }
 
 .patient-login-form {
@@ -5096,42 +5136,32 @@ textarea:focus {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, #334155);
+  color: #e2e8f0 !important;
 }
 
-.patient-login-form input {
+.patient-login-form input,
+.patient-login-form select {
   height: 44px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid var(--border, #cbd5e1);
-  background: var(--input-bg, #f8fafc);
-  color: var(--text-primary, #0f172a);
+  border: 1.5px solid #334155 !important;
+  background: #1e293b !important;
+  color: #ffffff !important;
   font-size: 14px;
   transition: all 180ms ease;
+  box-sizing: border-box;
 }
 
-.patient-login-form input:focus {
+.patient-login-form input::placeholder {
+  color: #64748b !important;
+}
+
+.patient-login-form input:focus,
+.patient-login-form select:focus {
   outline: none;
-  border-color: #0878C9;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(8, 120, 201, 0.15);
-}
-
-.login-help-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -4px;
-}
-
-.link-btn {
-  background: none;
-  border: none;
-  color: #0878C9;
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
+  border-color: #38bdf8 !important;
+  background: #0b1329 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
 }
 
 .patient-primary-btn {
@@ -5142,30 +5172,21 @@ textarea:focus {
   min-height: 44px;
   padding: 0 20px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #0878C9, #0284c7);
-  color: #ffffff;
+  background: linear-gradient(135deg, #0284c7, #0878C9) !important;
+  color: #ffffff !important;
   font-size: 14px;
   font-weight: 700;
   border: none;
   cursor: pointer;
   text-decoration: none;
   transition: all 180ms ease;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4) !important;
 }
 
 .patient-primary-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(8, 120, 201, 0.35);
-}
-
-.patient-primary-btn.outline {
-  background: transparent;
-  border: 1.5px solid #0878C9;
-  color: #0878C9;
-}
-
-.patient-primary-btn.outline:hover {
-  background: #0878C9;
-  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.5) !important;
+  background: linear-gradient(135deg, #0369a1, #0284c7) !important;
 }
 
 .patient-secondary-btn {
@@ -5177,9 +5198,9 @@ textarea:focus {
   width: 100%;
   padding: 0 16px;
   border-radius: 10px;
-  background: var(--panel-bg, #f1f5f9);
-  color: var(--text-primary, #0f172a);
-  border: 1.5px solid var(--border, #cbd5e1);
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1.5px solid #334155 !important;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -5188,19 +5209,9 @@ textarea:focus {
 }
 
 .patient-secondary-btn:hover {
-  background: var(--panel-hover, #e2e8f0);
-  border-color: #94a3b8;
-}
-
-[data-theme="dark"] .patient-secondary-btn {
-  background: #1e293b;
-  color: #f8fafc;
-  border: 1.5px solid #475569;
-}
-
-[data-theme="dark"] .patient-secondary-btn:hover {
-  background: #334155;
-  border-color: #64748b;
+  background: #334155 !important;
+  border-color: #475569 !important;
+  color: #ffffff !important;
 }
 
 .patient-alert {
@@ -5213,39 +5224,47 @@ textarea:focus {
 }
 
 .patient-alert.error {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #f87171;
+  background: rgba(220, 38, 38, 0.15) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(220, 38, 38, 0.5) !important;
 }
 
 .patient-alert.success {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid #86efac;
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #86efac !important;
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
 }
 
 .patient-support-note {
-  margin-top: 20px;
+  margin-top: 18px;
   padding: 14px;
   border-radius: 12px;
-  background: rgba(118, 184, 42, 0.08);
-  border: 1px dashed rgba(118, 184, 42, 0.35);
+  background: rgba(56, 189, 248, 0.08) !important;
+  border: 1px dashed rgba(56, 189, 248, 0.3) !important;
   text-align: left;
 }
 
 .patient-support-note span {
   font-weight: 700;
   font-size: 13px;
-  color: #4d7c0f;
+  color: #38bdf8 !important;
   display: block;
   margin-bottom: 4px;
 }
 
 .patient-support-note p {
   font-size: 12.5px;
-  color: var(--text-secondary, #475569);
+  color: #cbd5e1 !important;
   line-height: 1.5;
   margin: 0 0 10px;
+}
+
+.patient-support-note strong {
+  color: #ffffff !important;
+}
+
+.patient-support-note em {
+  color: #94a3b8 !important;
 }
 
 .helpline-chips {
@@ -5260,16 +5279,21 @@ textarea:focus {
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
-  background: #ffffff;
-  border: 1px solid var(--border, #cbd5e1);
-  color: var(--text-primary, #0f172a);
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
   transition: all 150ms ease;
 }
 
+.help-chip:hover {
+  background: #334155 !important;
+  color: #ffffff !important;
+}
+
 .help-chip.wa {
-  background: #25d366;
-  color: #ffffff;
-  border-color: #25d366;
+  background: #25d366 !important;
+  color: #ffffff !important;
+  border-color: #25d366 !important;
 }
 
 .patient-login-footer {
@@ -9808,4 +9832,288 @@ textarea:focus {
 [data-theme="dark"] .stat-card {
   border: 1.5px solid #334155 !important;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* ==========================================================================
+   NATIVE-GRADE MOBILE RESPONSIVE ENGINE (ANDROID & IPHONE / iOS PWA)
+   ========================================================================== */
+
+/* 1. Global Viewport & Touch Reset for Android & iPhone */
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.app-root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  min-height: 100dvh;
+}
+
+/* 2. Public Mobile Bottom App Navigation Bar */
+.public-mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Reserve space at bottom of page for bottom nav and iPhone home bar */
+  body {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .public-mobile-bottom-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 6px 8px env(safe-area-inset-bottom, 0px) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-top: 1px solid rgba(8, 43, 69, 0.1) !important;
+    box-shadow: 0 -4px 20px rgba(8, 43, 69, 0.08) !important;
+    z-index: 900 !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-theme="dark"] .public-mobile-bottom-nav {
+    background: rgba(8, 26, 39, 0.95) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .public-bottom-nav-item {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    padding: 6px 2px !important;
+    border: none !important;
+    background: transparent !important;
+    color: #5f7183 !important;
+    text-decoration: none !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    -webkit-tap-highlight-color: transparent !important;
+    user-select: none !important;
+  }
+
+  [data-theme="dark"] .public-bottom-nav-item {
+    color: #94a3b8 !important;
+  }
+
+  .public-bottom-nav-icon {
+    font-size: 20px !important;
+    line-height: 1 !important;
+    transition: transform 0.15s ease !important;
+  }
+
+  .public-bottom-nav-item:active .public-bottom-nav-icon {
+    transform: scale(1.15) !important;
+  }
+
+  .public-bottom-nav-item.active {
+    color: #0878c9 !important;
+    font-weight: 800 !important;
+  }
+
+  [data-theme="dark"] .public-bottom-nav-item.active {
+    color: #38bdf8 !important;
+  }
+
+  /* Center Call to Action / Highlighted Book Button */
+  .public-bottom-nav-item-highlight {
+    color: #0878c9 !important;
+    font-weight: 700 !important;
+  }
+
+  .public-bottom-nav-item-highlight .highlight-icon {
+    background: linear-gradient(135deg, #0878c9, #18b878) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    font-size: 22px !important;
+    filter: drop-shadow(0 2px 4px rgba(8, 120, 201, 0.3)) !important;
+  }
+
+  .public-bottom-nav-wa {
+    color: #10b981 !important;
+  }
+
+  [data-theme="dark"] .public-bottom-nav-wa {
+    color: #34d399 !important;
+  }
+
+  /* 3. Floating WhatsApp Adjustment on Mobile so it doesn't overlap bottom nav */
+  .whatsapp-floating-btn {
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 14px !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    z-index: 890 !important;
+    box-shadow: 0 4px 16px rgba(37, 211, 102, 0.45) !important;
+  }
+
+  .whatsapp-floating-label {
+    display: none !important;
+  }
+
+  /* 4. iPhone iOS Safari Form Input Auto-Zoom Prevention (Crucial for iOS) */
+  input[type="text"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="password"],
+  input[type="email"],
+  select,
+  textarea {
+    font-size: 16px !important; /* Prevents iOS auto-zoom */
+  }
+
+  /* 5. Mobile Touch Target Sizing & Compact Margins */
+  button,
+  .btn,
+  .hero-cta,
+  .patient-primary-btn,
+  .patient-secondary-btn,
+  .contact-call-btn,
+  .contact-wa-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* 6. Hero & Header Responsive Polish */
+  .site-header {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+
+  .hero {
+    padding: 16px 14px 28px !important;
+  }
+
+  .hero-inner {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(24px, 6.5vw, 34px) !important;
+    line-height: 1.25 !important;
+  }
+
+  .hero-rehab-photo {
+    height: 220px !important;
+    border-radius: 16px !important;
+    object-fit: cover !important;
+  }
+
+  .stats-strip {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .stat-card {
+    padding: 14px 16px !important;
+  }
+
+  /* 7. Consultation & Assessment Section Polish for Mobile */
+  .consultation-section {
+    padding: 24px 14px !important;
+  }
+
+  .portal-shell {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .assessment-card {
+    padding: 20px 16px !important;
+    border-radius: 18px !important;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .contact-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .contact-call-btn,
+  .contact-wa-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 8. Fullscreen Overlays & Modals iOS/Android Polish */
+  .patient-portal-overlay,
+  .doctor-portal-fullscreen,
+  .auto-enquiry-overlay,
+  .app-download-overlay {
+    padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    min-height: 100dvh !important;
+  }
+
+  .auto-enquiry-card,
+  .app-download-card {
+    width: 100% !important;
+    max-width: 440px !important;
+    padding: 22px 18px !important;
+    border-radius: 18px !important;
+  }
+
+  /* 9. Standalone PWA App Mode Adjustments (When Added to Home Screen on iPhone or Android) */
+  @media all and (display-mode: standalone) {
+    .site-header {
+      padding-top: max(12px, env(safe-area-inset-top, 0px)) !important;
+    }
+    
+    .public-mobile-bottom-nav {
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
+      height: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+  }
+}
+
+/* Extra Compact Phones (iPhone SE, Small Android 320px–380px) */
+@media (max-width: 380px) {
+  .hero-copy h1 {
+    font-size: 22px !important;
+  }
+  .public-bottom-nav-label {
+    font-size: 10px !important;
+  }
+  .public-bottom-nav-icon {
+    font-size: 18px !important;
+  }
+  .header-rect-btn {
+    padding: 0 6px !important;
+    font-size: 11px !important;
+  }
 }

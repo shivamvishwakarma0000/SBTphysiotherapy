@@ -93,6 +93,26 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [linkSearchQuery, setLinkSearchQuery] = useState("");
   const [showSpamFilter, setShowSpamFilter] = useState(false);
 
+  // Leads Management & Direct Conversion States
+  const [enquirySubTab, setEnquirySubTab] = useState("active"); // "active", "converted", "hidden", "all"
+  const [enquirySearchQuery, setEnquirySearchQuery] = useState("");
+  const [convertingLead, setConvertingLead] = useState(null);
+  const [convertingLeadForm, setConvertingLeadForm] = useState({
+    name: "",
+    age: "",
+    gender: "Male",
+    phone: "",
+    address: "Vindhyachal, Mirzapur",
+    reasonForVisit: "Spine & Back Pain",
+    complaint: "",
+    diagnosis: "Initial Physiotherapy Assessment",
+    treatmentNotes: "Physical evaluation and targeted physiotherapy therapy.",
+    fee: "₹300",
+    followUpDate: "As Advised"
+  });
+  const [convertLoading, setConvertLoading] = useState(false);
+  const [leadActionToast, setLeadActionToast] = useState("");
+
   const handleSearchPlaceLocation = async (e) => {
     if (e) e.preventDefault();
     if (!locationAddressInput.trim()) return;
@@ -749,22 +769,125 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
-  const handleMarkEnquirySpam = async (enquiry) => {
+  const handleHideEnquiry = async (enquiry) => {
     if (!enquiry || !enquiry.id) return;
-    const isCurrentlySpam = enquiry.status === "Hidden / Spam";
-    const newStatus = isCurrentlySpam ? "New" : "Hidden / Spam";
+    setEnquiries(prev => prev.map(e => String(e.id) === String(enquiry.id) ? { ...e, status: "Hidden" } : e));
+    setLeadActionToast("Lead moved to Hidden section.");
+    setTimeout(() => setLeadActionToast(""), 3000);
+    try {
+      await api.updateEnquiryStatus(enquiry.id, "Hidden");
+      fetchEnquiries();
+    } catch (err) {
+      console.error("Failed to hide enquiry:", err);
+      fetchEnquiries();
+    }
+  };
 
-    // Optimistic UI update so the action responds instantly
-    setEnquiries(prev => prev.map(e => String(e.id) === String(enquiry.id) ? { ...e, status: newStatus } : e));
+  const handleUnhideEnquiry = async (enquiry) => {
+    if (!enquiry || !enquiry.id) return;
+    setEnquiries(prev => prev.map(e => String(e.id) === String(enquiry.id) ? { ...e, status: "New" } : e));
+    setLeadActionToast("Lead restored to Active leads.");
+    setTimeout(() => setLeadActionToast(""), 3000);
+    try {
+      await api.updateEnquiryStatus(enquiry.id, "New");
+      fetchEnquiries();
+    } catch (err) {
+      console.error("Failed to unhide enquiry:", err);
+      fetchEnquiries();
+    }
+  };
+
+  const handleDeleteEnquiry = async (enquiry) => {
+    if (!enquiry || !enquiry.id) return;
+    const confirmDelete = window.confirm(`Are you sure you want to permanently delete the lead from "${enquiry.name || 'Patient'}"? This lead will never show again.`);
+    if (!confirmDelete) return;
+
+    setEnquiries(prev => prev.filter(e => String(e.id) !== String(enquiry.id)));
+    setLeadActionToast("Lead permanently deleted.");
+    setTimeout(() => setLeadActionToast(""), 3000);
 
     try {
-      const res = await api.updateEnquiryStatus(enquiry.id, newStatus);
-      if (res.ok) {
-        fetchEnquiries();
-      }
+      await api.deleteEnquiry(enquiry.id);
+      fetchEnquiries();
     } catch (err) {
-      console.error("Failed to update enquiry status:", err);
-      fetchEnquiries(); // rollback on error
+      console.error("Failed to delete enquiry:", err);
+      fetchEnquiries();
+    }
+  };
+
+  const openQuickConvertModal = (enquiry) => {
+    const cleanPhone = String(enquiry.phone || "").replace(/\D/g, "").slice(-10);
+    const resolvedName = (
+      enquiry.name ||
+      enquiry.patientName ||
+      enquiry.fullName ||
+      patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone)?.name ||
+      ""
+    ).trim();
+
+    setConvertingLead(enquiry);
+    setConvertingLeadForm({
+      name: resolvedName,
+      age: enquiry.age || "",
+      gender: "Male",
+      phone: cleanPhone || enquiry.phone || "",
+      address: "Vindhyachal, Mirzapur",
+      reasonForVisit: enquiry.painArea || "Spine & Back Pain",
+      complaint: enquiry.concern || "",
+      diagnosis: `Clinical Evaluation for ${enquiry.painArea || "Physiotherapy"}`,
+      treatmentNotes: "Patient enrolled from online website lead. Initial consultation scheduled.",
+      fee: "₹300",
+      followUpDate: "As Advised"
+    });
+  };
+
+  const handleDirectEnrollSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!convertingLeadForm.name.trim() || !convertingLeadForm.phone.trim()) {
+      alert("Please enter patient name and mobile number.");
+      return;
+    }
+
+    setConvertLoading(true);
+    try {
+      // 1. Create Patient Record
+      const pRes = await api.createPatient({
+        name: convertingLeadForm.name.trim(),
+        age: convertingLeadForm.age ? Number(convertingLeadForm.age) : 30,
+        gender: convertingLeadForm.gender || "Male",
+        phone: convertingLeadForm.phone.trim(),
+        address: convertingLeadForm.address.trim(),
+        reasonForVisit: convertingLeadForm.reasonForVisit,
+        complaint: convertingLeadForm.complaint
+      });
+
+      const createdPatient = pRes.patient;
+
+      // 2. Finalize Consultation
+      await api.finalizeConsultation(createdPatient.patientId, {
+        reason: convertingLeadForm.reasonForVisit,
+        complaint: convertingLeadForm.complaint,
+        diagnosis: convertingLeadForm.diagnosis,
+        treatmentNotes: convertingLeadForm.treatmentNotes,
+        fee: convertingLeadForm.fee,
+        followUpDate: convertingLeadForm.followUpDate
+      });
+
+      // 3. Mark Enquiry Converted
+      if (convertingLead && convertingLead.id) {
+        await api.updateEnquiryStatus(convertingLead.id, "Converted", createdPatient.patientId);
+      }
+
+      setConvertingLead(null);
+      setLeadActionToast(`🎉 Patient ${createdPatient.name} (${createdPatient.patientId}) enrolled successfully!`);
+      setTimeout(() => setLeadActionToast(""), 5000);
+
+      await Promise.all([fetchPatients(), fetchEnquiries(), fetchStats()]);
+      openPatientProfile(createdPatient.patientId);
+    } catch (err) {
+      alert("Failed to enroll patient: " + err.message);
+    } finally {
+      setConvertLoading(false);
     }
   };
 
@@ -2085,232 +2208,542 @@ _(Saved in patient clinic records)_`;
         {/* ================= 5. ONLINE BOOKINGS & ENQUIRIES ================= */}
         {activeTab === "enquiries" && (
           <div className="enquiries-view">
+            {leadActionToast && (
+              <div className="doctor-toast-alert" style={{ background: "#0878C9", color: "#ffffff", padding: "12px 18px", borderRadius: "10px", marginBottom: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 14px rgba(8,120,201,0.3)" }}>
+                <span>{leadActionToast}</span>
+                <button onClick={() => setLeadActionToast("")} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "16px" }}>✕</button>
+              </div>
+            )}
+
             <div className="section-header-row">
               <div>
-                <h2>Website Consultation Bookings ({enquiries.length})</h2>
-                <p>Manage patient consultation requests, convert to patients, or link to existing records without duplication.</p>
+                <h2>Website Consultation Leads ({enquiries.length})</h2>
+                <p>Clean, organized cards for every consultation request. Convert directly to registered patients, hide/archive, or delete spam.</p>
               </div>
               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginBottom: "14px" }}>
-                <label className="checkbox-filter-label" style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#0f172a", fontWeight: "600" }}>
-                  <input
-                    type="checkbox"
-                    checked={showSpamFilter}
-                    onChange={(e) => setShowSpamFilter(e.target.checked)}
-                    style={{ width: "18px", height: "18px", minHeight: "18px", margin: 0, accentColor: "#0878C9", cursor: "pointer" }}
-                  />
-                  <span>Show Hidden / Spam</span>
-                </label>
                 <button className="secondary-btn" onClick={() => handleExportCSV("enquiries")}>
-                  📥 Export Enquiries (CSV)
+                  📥 Export Leads (CSV)
                 </button>
               </div>
             </div>
 
-            {/* Mobile Cards View (Visible on Phones) */}
-            <div className="mobile-enquiry-cards hide-on-desktop">
-              {enquiries
-                .filter(e => showSpamFilter || e.status !== "Hidden / Spam")
-                .map(e => {
-                  const isSpam = e.status === "Hidden / Spam";
-                  const isLinked = String(e.status || "").startsWith("Linked:");
-                  const cleanPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
-                  const patientName = (
-                    e.name ||
-                    e.patientName ||
-                    e.fullName ||
-                    e.patient_name ||
-                    patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone)?.name ||
-                    "Patient (Online Lead)"
-                  ).trim();
-                  return (
-                    <div key={e.id} className="mobile-enquiry-card" style={{ opacity: isSpam ? 0.6 : 1 }}>
-                      <div className="enquiry-card-header">
-                        <div className="enquiry-date-block">
-                          <span className="enquiry-date-pill">📅 {cleanDateOnly(e.date)}</span>
-                          {e.time && <span className="enquiry-time-sub">⏰ {cleanTimeOnly(e.time) || e.time}</span>}
-                        </div>
-                        <span className={`enquiry-status-pill ${isSpam ? "spam" : isLinked ? "linked" : (e.status === "Converted" ? "converted" : "new")}`}>
-                          {e.status || "New"}
-                        </span>
-                      </div>
+            {/* Segmented Leads Navigation Sub-Tabs */}
+            <div className="enquiry-subtabs-bar" style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px", background: "var(--card-bg, #ffffff)", padding: "6px", borderRadius: "12px", border: "1px solid var(--border-color, #e2e8f0)" }}>
+              {(() => {
+                const activeCount = enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && e.status !== "Converted" && !String(e.status || "").startsWith("Linked:")).length;
+                const convertedCount = enquiries.filter(e => e.status === "Converted" || String(e.status || "").startsWith("Linked:")).length;
+                const hiddenCount = enquiries.filter(e => e.status === "Hidden" || e.status === "Hidden / Spam").length;
+                const allCount = enquiries.length;
+                return (
+                  <>
+                    <button
+                      type="button"
+                      className={`subtab-btn ${enquirySubTab === "active" ? "active" : ""}`}
+                      onClick={() => setEnquirySubTab("active")}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        fontWeight: "700",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        background: enquirySubTab === "active" ? "#0878C9" : "transparent",
+                        color: enquirySubTab === "active" ? "#ffffff" : "var(--text-secondary, #475569)",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      📌 Active Leads ({activeCount})
+                    </button>
+                    <button
+                      type="button"
+                      className={`subtab-btn ${enquirySubTab === "converted" ? "active" : ""}`}
+                      onClick={() => setEnquirySubTab("converted")}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        fontWeight: "700",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        background: enquirySubTab === "converted" ? "#10b981" : "transparent",
+                        color: enquirySubTab === "converted" ? "#ffffff" : "var(--text-secondary, #475569)",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      ✅ Converted / Patients ({convertedCount})
+                    </button>
+                    <button
+                      type="button"
+                      className={`subtab-btn ${enquirySubTab === "hidden" ? "active" : ""}`}
+                      onClick={() => setEnquirySubTab("hidden")}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        fontWeight: "700",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        background: enquirySubTab === "hidden" ? "#f59e0b" : "transparent",
+                        color: enquirySubTab === "hidden" ? "#ffffff" : "var(--text-secondary, #475569)",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      👁️ Hidden / Archived Leads ({hiddenCount})
+                    </button>
+                    <button
+                      type="button"
+                      className={`subtab-btn ${enquirySubTab === "all" ? "active" : ""}`}
+                      onClick={() => setEnquirySubTab("all")}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        fontWeight: "700",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        background: enquirySubTab === "all" ? "#64748b" : "transparent",
+                        color: enquirySubTab === "all" ? "#ffffff" : "var(--text-secondary, #475569)",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      📑 All Leads ({allCount})
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
 
-                      <div className="enquiry-patient-meta">
-                        <div className="enquiry-name-header">
-                          <span className="enquiry-name-label">Patient Name:</span>
-                          <h4 className="enquiry-patient-name" style={{ color: "#000000", fontWeight: 800, fontSize: "16px", margin: "2px 0 0 0" }}>
-                            👤 {patientName}
-                          </h4>
-                        </div>
-                        <div className="enquiry-contact-row">
-                          <a href={`tel:${cleanPhone}`} className="enquiry-phone-btn">
-                            📞 +91 {cleanPhone}
-                          </a>
-                          <a
-                            href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${patientName}, thank you for contacting Vindhya Physio & Rehab Center. Dr. Satyam Vishwakarma is reviewing your consultation enquiry.`)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="enquiry-wa-btn"
-                          >
-                            💬 WhatsApp
-                          </a>
-                        </div>
-                      </div>
+            {/* Leads Search Bar */}
+            <div style={{ marginBottom: "20px" }}>
+              <input
+                type="text"
+                placeholder="🔍 Search leads by Patient Name, Phone Number, Pain Area, or Symptoms..."
+                value={enquirySearchQuery}
+                onChange={(e) => setEnquirySearchQuery(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: "10px",
+                  border: "1.5px solid var(--border-color, #cbd5e1)",
+                  background: "var(--input-bg, #ffffff)",
+                  color: "var(--text-primary, #0f172a)",
+                  fontSize: "14px",
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
 
-                      <div className="enquiry-details-grid">
-                        <div className="enquiry-detail-row">
-                          <span className="enquiry-detail-label">Concern:</span>
-                          <span className="condition-tag">{e.painArea || "General Physiotherapy"}</span>
-                        </div>
-                        <div className="enquiry-detail-row">
-                          <span className="enquiry-detail-label">Preferred Date:</span>
-                          <span className="enquiry-pref-date">{cleanDateOnly(e.appointmentDate) || "Flexible"}</span>
-                        </div>
-                        {e.concern && (
-                          <div className="enquiry-message-box">
-                            "{e.concern}"
-                          </div>
-                        )}
-                      </div>
+            {/* Clean, Separated Cards Grid */}
+            {(() => {
+              const filteredLeads = enquiries.filter(e => {
+                const isHidden = e.status === "Hidden" || e.status === "Hidden / Spam";
+                const isConverted = e.status === "Converted" || String(e.status || "").startsWith("Linked:");
 
-                      <div className="enquiry-actions-row">
-                        <button
-                          type="button"
-                          className="enquiry-action-btn enroll"
-                          onClick={() => convertEnquiryToPatient(e)}
-                          title="Enroll as a new patient record"
-                        >
-                          ➕ Enroll
-                        </button>
-                        <button
-                          type="button"
-                          className="enquiry-action-btn link"
-                          onClick={() => {
-                            if (patients.length === 0) fetchPatients();
-                            setLinkingEnquiry(e);
-                            setLinkSearchQuery("");
-                          }}
-                          title="Link this request to an existing patient"
-                        >
-                          🔗 Link
-                        </button>
-                        <button
-                          type="button"
-                          className="enquiry-action-btn spam"
-                          onClick={() => handleMarkEnquirySpam(e)}
-                          title={isSpam ? "Unhide enquiry" : "Hide spam enquiry"}
-                        >
-                          {isSpam ? "Unhide" : "🚫 Hide"}
-                        </button>
-                      </div>
+                if (enquirySubTab === "active" && (isHidden || isConverted)) return false;
+                if (enquirySubTab === "converted" && !isConverted) return false;
+                if (enquirySubTab === "hidden" && !isHidden) return false;
+
+                const q = (enquirySearchQuery || "").trim().toLowerCase();
+                if (!q) return true;
+                const cleanPhone = String(e.phone || "").replace(/\D/g, "");
+                const nameMatch = (e.name || e.patientName || "").toLowerCase().includes(q);
+                const phoneMatch = cleanPhone.includes(q);
+                const painMatch = (e.painArea || "").toLowerCase().includes(q);
+                const concernMatch = (e.concern || "").toLowerCase().includes(q);
+                const dateMatch = (e.date || "").includes(q);
+                return nameMatch || phoneMatch || painMatch || concernMatch || dateMatch;
+              });
+
+              if (filteredLeads.length === 0) {
+                return (
+                  <div className="empty-state-box" style={{ padding: "40px 20px", textAlign: "center", background: "var(--card-bg, #ffffff)", borderRadius: "12px", border: "1px dashed var(--border-color, #cbd5e1)" }}>
+                    <div style={{ fontSize: "36px", marginBottom: "10px" }}>
+                      {enquirySubTab === "hidden" ? "👁️" : enquirySubTab === "converted" ? "✅" : "📭"}
                     </div>
-                  );
-                })}
-              {enquiries.length === 0 && (
-                <div className="empty-state-box">
-                  <p>No online consultation requests yet.</p>
-                </div>
-              )}
-            </div>
+                    <h3 style={{ margin: "0 0 6px 0", color: "var(--text-primary)" }}>
+                      {enquirySubTab === "hidden"
+                        ? "No Hidden Leads"
+                        : enquirySubTab === "converted"
+                        ? "No Converted Leads Yet"
+                        : enquirySearchQuery
+                        ? "No matching leads found"
+                        : "No active website consultation requests"}
+                    </h3>
+                    <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "14px" }}>
+                      {enquirySubTab === "hidden"
+                        ? "Any leads you hide will appear here for reference or restoration."
+                        : "Website consultation bookings will appear here in real-time."}
+                    </p>
+                  </div>
+                );
+              }
 
-            {/* Desktop Scannable Table (Visible on Tablets & Laptops) */}
-            <div className="table-responsive hide-on-mobile">
-              <table className="doctor-table">
-                <thead>
-                  <tr>
-                    <th>Date / Time</th>
-                    <th>Patient Name</th>
-                    <th>Phone</th>
-                    <th>Condition / Pain</th>
-                    <th>Preferred Date</th>
-                    <th>Message</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {enquiries
-                    .filter(e => showSpamFilter || e.status !== "Hidden / Spam")
-                    .map(e => {
-                      const isSpam = e.status === "Hidden / Spam";
-                      const isLinked = String(e.status || "").startsWith("Linked:");
-                      const cleanPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
-                      const patientName = (
-                        e.name ||
-                        e.patientName ||
-                        e.fullName ||
-                        e.patient_name ||
-                        patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone)?.name ||
-                        "Patient (Online Lead)"
-                      ).trim();
-                      return (
-                        <tr key={e.id} style={{ opacity: isSpam ? 0.55 : 1 }}>
-                          <td><strong>{cleanDateOnly(e.date)}</strong><br /><small>{cleanTimeOnly(e.time) || e.time}</small></td>
-                          <td><strong style={{ color: "#000000", fontSize: "14px" }}>👤 {patientName}</strong></td>
-                          <td>
-                            <a href={`tel:${e.phone}`} className="phone-link">+91 {e.phone}</a>
-                          </td>
-                          <td><span className="condition-tag">{e.painArea}</span></td>
-                          <td>{cleanDateOnly(e.appointmentDate) || "Flexible"}</td>
-                          <td style={{ maxWidth: "200px" }}>{e.concern}</td>
-                          <td>
-                            <span style={{
+              return (
+                <div className="leads-cards-container" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "18px" }}>
+                  {filteredLeads.map(e => {
+                    const isHidden = e.status === "Hidden" || e.status === "Hidden / Spam";
+                    const isConverted = e.status === "Converted";
+                    const isLinked = String(e.status || "").startsWith("Linked:");
+                    const cleanPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+                    const patientName = (
+                      e.name ||
+                      e.patientName ||
+                      e.fullName ||
+                      patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone)?.name ||
+                      "Patient (Online Lead)"
+                    ).trim();
+
+                    return (
+                      <div
+                        key={e.id}
+                        className="lead-card-premium"
+                        style={{
+                          background: "var(--card-bg, #ffffff)",
+                          border: isHidden ? "1.5px solid #f59e0b" : isConverted ? "1.5px solid #10b981" : "1.5px solid var(--border-color, #e2e8f0)",
+                          borderRadius: "14px",
+                          padding: "18px",
+                          boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "14px",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        {/* Top Meta Bar */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-secondary)", fontWeight: "600" }}>
+                            <span>📅 {cleanDateOnly(e.date)}</span>
+                            {e.time && <span>• ⏰ {cleanTimeOnly(e.time) || e.time}</span>}
+                          </div>
+
+                          <span
+                            style={{
                               fontSize: "11px",
-                              fontWeight: "700",
-                              padding: "3px 8px",
-                              borderRadius: "6px",
-                              whiteSpace: "nowrap",
-                              background: isSpam ? "#fee2e2" : isLinked ? "#f3e8ff" : (e.status === "Converted" ? "#dcfce7" : "#e0f2fe"),
-                              color: isSpam ? "#dc2626" : isLinked ? "#7e22ce" : (e.status === "Converted" ? "#15803d" : "#0369a1")
-                            }}>
-                              {e.status || "New"}
-                            </span>
-                          </td>
-                          <td>
-                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                              <button
-                                className="table-action-btn primary-action"
-                                onClick={() => convertEnquiryToPatient(e)}
-                                title="Enroll as a new patient record"
-                              >
-                                ➕ Enroll
-                              </button>
-                              <button
-                                className="table-action-btn"
-                                style={{ background: "rgba(126, 34, 206, 0.12)", color: "#9333ea", borderColor: "rgba(126, 34, 206, 0.3)" }}
-                                onClick={() => {
-                                  if (patients.length === 0) fetchPatients();
-                                  setLinkingEnquiry(e);
-                                  setLinkSearchQuery("");
-                                }}
-                                title="Link this request to an existing patient"
-                              >
-                                🔗 Link
-                              </button>
-                              <button
-                                className="table-action-btn"
-                                style={{
-                                  background: isSpam ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                                  color: isSpam ? "#10b981" : "#ef4444",
-                                  borderColor: isSpam ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"
-                                }}
-                                onClick={() => handleMarkEnquirySpam(e)}
-                                title={isSpam ? "Unhide enquiry" : "Hide spam enquiry"}
-                              >
-                                {isSpam ? "Unhide" : "🚫 Hide"}
-                              </button>
+                              fontWeight: "800",
+                              padding: "4px 10px",
+                              borderRadius: "20px",
+                              background: isHidden ? "#fef3c7" : isConverted ? "#dcfce7" : isLinked ? "#f3e8ff" : "#e0f2fe",
+                              color: isHidden ? "#b45309" : isConverted ? "#15803d" : isLinked ? "#7e22ce" : "#0369a1"
+                            }}
+                          >
+                            {isHidden ? "👁️ Hidden" : isConverted ? "✅ Converted Patient" : isLinked ? e.status : "⚡ New Lead"}
+                          </span>
+                        </div>
+
+                        {/* Patient Name, Age & Contact Header */}
+                        <div style={{ borderBottom: "1px solid var(--border-color, #f1f5f9)", paddingBottom: "12px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px" }}>
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "800", color: "var(--text-primary)" }}>
+                                👤 {patientName}
+                              </h3>
+                              <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px", fontWeight: "600" }}>
+                                🎂 Age: {e.age ? <strong>{e.age} Yrs</strong> : <em>Not specified</em>}
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  {enquiries.length === 0 && (
-                    <tr>
-                      <td colSpan="8" className="empty-cell">No online consultation requests yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+
+                            <div style={{ display: "flex", gap: "6px" }}>
+                              <a
+                                href={`tel:${cleanPhone}`}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  background: "rgba(8, 120, 201, 0.1)",
+                                  color: "#0878C9",
+                                  padding: "6px 10px",
+                                  borderRadius: "6px",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  textDecoration: "none"
+                                }}
+                              >
+                                📞 Call
+                              </a>
+                              <a
+                                href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${patientName}, thank you for contacting Vindhya Physio & Rehab Center. Dr. Satyam Vishwakarma is reviewing your consultation booking for ${e.painArea || "Physiotherapy"}.`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  background: "#25D366",
+                                  color: "#ffffff",
+                                  padding: "6px 10px",
+                                  borderRadius: "6px",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  textDecoration: "none"
+                                }}
+                              >
+                                💬 WhatsApp
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Clinical Details */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ color: "var(--text-secondary)", fontWeight: "600" }}>Pain / Condition:</span>
+                            <span style={{ fontWeight: "700", color: "#0878C9", background: "rgba(8, 120, 201, 0.08)", padding: "2px 8px", borderRadius: "6px" }}>
+                              🩺 {e.painArea || "General Physiotherapy"}
+                            </span>
+                          </div>
+
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ color: "var(--text-secondary)", fontWeight: "600" }}>Preferred Date:</span>
+                            <span style={{ fontWeight: "600", color: "var(--text-primary)" }}>
+                              📅 {cleanDateOnly(e.appointmentDate) || "Flexible"}
+                            </span>
+                          </div>
+
+                          {e.duration && (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ color: "var(--text-secondary)", fontWeight: "600" }}>Duration:</span>
+                              <span style={{ fontWeight: "600", color: "var(--text-primary)" }}>
+                                ⏱️ {e.duration}
+                              </span>
+                            </div>
+                          )}
+
+                          {e.concern && (
+                            <div style={{ background: "var(--bg-subtle, #f8fafc)", padding: "8px 10px", borderRadius: "8px", fontSize: "12.5px", color: "var(--text-secondary)", fontStyle: "italic", borderLeft: "3px solid #0878C9", marginTop: "4px" }}>
+                              "{e.concern}"
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Buttons Toolbar */}
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "auto", paddingTop: "10px", borderTop: "1px solid var(--border-color, #f1f5f9)" }}>
+                          {!isConverted && (
+                            <button
+                              type="button"
+                              onClick={() => openQuickConvertModal(e)}
+                              style={{
+                                flex: "1 1 auto",
+                                padding: "8px 12px",
+                                borderRadius: "8px",
+                                border: "none",
+                                background: "#0878C9",
+                                color: "#ffffff",
+                                fontWeight: "700",
+                                fontSize: "12.5px",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "4px"
+                              }}
+                            >
+                              ⚡ Direct Add Patient
+                            </button>
+                          )}
+
+                          {!isConverted && !isLinked && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (patients.length === 0) fetchPatients();
+                                setLinkingEnquiry(e);
+                                setLinkSearchQuery("");
+                              }}
+                              style={{
+                                padding: "8px 10px",
+                                borderRadius: "8px",
+                                border: "1px solid #c084fc",
+                                background: "rgba(192, 132, 252, 0.1)",
+                                color: "#9333ea",
+                                fontWeight: "700",
+                                fontSize: "12px",
+                                cursor: "pointer"
+                              }}
+                              title="Link to an existing registered patient record"
+                            >
+                              🔗 Link
+                            </button>
+                          )}
+
+                          {/* Hide / Unhide Button */}
+                          <button
+                            type="button"
+                            onClick={() => isHidden ? handleUnhideEnquiry(e) : handleHideEnquiry(e)}
+                            style={{
+                              padding: "8px 10px",
+                              borderRadius: "8px",
+                              border: isHidden ? "1px solid #10b981" : "1px solid #f59e0b",
+                              background: isHidden ? "rgba(16, 185, 129, 0.1)" : "rgba(245, 158, 11, 0.1)",
+                              color: isHidden ? "#10b981" : "#d97706",
+                              fontWeight: "700",
+                              fontSize: "12px",
+                              cursor: "pointer"
+                            }}
+                            title={isHidden ? "Restore to Active Leads" : "Hide this lead into separate Hidden section"}
+                          >
+                            {isHidden ? "↩️ Unhide" : "👁️ Hide"}
+                          </button>
+
+                          {/* Permanent Delete Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteEnquiry(e)}
+                            style={{
+                              padding: "8px 10px",
+                              borderRadius: "8px",
+                              border: "1px solid #ef4444",
+                              background: "rgba(239, 68, 68, 0.1)",
+                              color: "#ef4444",
+                              fontWeight: "700",
+                              fontSize: "12px",
+                              cursor: "pointer"
+                            }}
+                            title="Permanently delete lead so it never shows again"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* Direct Quick Add / Convert Lead to Patient Modal */}
+            {convertingLead && (
+              <div className="patient-submodal-overlay" onClick={() => setConvertingLead(null)}>
+                <div className="patient-submodal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "560px", width: "95%" }}>
+                  <div className="submodal-head">
+                    <h3>⚡ Direct Convert Lead to Registered Patient</h3>
+                    <button className="submodal-close" onClick={() => setConvertingLead(null)}>✕</button>
+                  </div>
+                  <p className="submodal-desc">
+                    Instantly enroll <strong>{convertingLeadForm.name}</strong> as an official clinic patient, create their consultation file, and activate their patient portal.
+                  </p>
+
+                  <form onSubmit={handleDirectEnrollSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "13px", fontWeight: "700" }}>
+                        Patient Full Name *
+                        <input
+                          type="text"
+                          required
+                          value={convertingLeadForm.name}
+                          onChange={(e) => setConvertingLeadForm({ ...convertingLeadForm, name: e.target.value })}
+                          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                        />
+                      </label>
+
+                      <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "13px", fontWeight: "700" }}>
+                        Patient Age (Years) *
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          max="120"
+                          placeholder="e.g. 35"
+                          value={convertingLeadForm.age}
+                          onChange={(e) => setConvertingLeadForm({ ...convertingLeadForm, age: e.target.value })}
+                          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                          autoFocus={!convertingLeadForm.age}
+                        />
+                      </label>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "13px", fontWeight: "700" }}>
+                        Mobile Number *
+                        <input
+                          type="tel"
+                          required
+                          maxLength="10"
+                          value={convertingLeadForm.phone}
+                          onChange={(e) => setConvertingLeadForm({ ...convertingLeadForm, phone: e.target.value })}
+                          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                        />
+                      </label>
+
+                      <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "13px", fontWeight: "700" }}>
+                        Gender *
+                        <select
+                          value={convertingLeadForm.gender}
+                          onChange={(e) => setConvertingLeadForm({ ...convertingLeadForm, gender: e.target.value })}
+                          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                        >
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "13px", fontWeight: "700" }}>
+                      Address / City
+                      <input
+                        type="text"
+                        value={convertingLeadForm.address}
+                        onChange={(e) => setConvertingLeadForm({ ...convertingLeadForm, address: e.target.value })}
+                        style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      />
+                    </label>
+
+                    <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "13px", fontWeight: "700" }}>
+                      Clinical Condition / Reason *
+                      <input
+                        type="text"
+                        required
+                        value={convertingLeadForm.reasonForVisit}
+                        onChange={(e) => setConvertingLeadForm({ ...convertingLeadForm, reasonForVisit: e.target.value })}
+                        style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      />
+                    </label>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "13px", fontWeight: "700" }}>
+                        Consultation Fee
+                        <input
+                          type="text"
+                          value={convertingLeadForm.fee}
+                          onChange={(e) => setConvertingLeadForm({ ...convertingLeadForm, fee: e.target.value })}
+                          placeholder="₹300"
+                          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                        />
+                      </label>
+
+                      <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "13px", fontWeight: "700" }}>
+                        Initial Diagnosis
+                        <input
+                          type="text"
+                          value={convertingLeadForm.diagnosis}
+                          onChange={(e) => setConvertingLeadForm({ ...convertingLeadForm, diagnosis: e.target.value })}
+                          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                        />
+                      </label>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={() => setConvertingLead(null)}
+                        style={{ flex: "1" }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="primary-btn"
+                        disabled={convertLoading}
+                        style={{ flex: "2", background: "#0878C9" }}
+                      >
+                        {convertLoading ? "Enrolling Patient..." : "⚡ Complete Direct Enrollment →"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
 
             {/* Link Enquiry to Patient Modal */}
             {linkingEnquiry && (

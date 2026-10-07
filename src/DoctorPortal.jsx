@@ -78,7 +78,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import jsPDF from "jspdf";
 import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets";
 import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets, clearLocalPatientsCache } from "./apiService";
-import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
+import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly, formatVisitDateTimeDisplay } from "./receiptUtils";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
 
@@ -2488,20 +2488,62 @@ _(Saved in patient clinic records)_`;
         {/* ================= 3. PATIENTS DIRECTORY ================= */}
         {activeTab === "patients" && (
           <div className="patients-directory-view">
-            <div className="section-header-row">
-              <div>
-                <h2>Patient Directory & Clinical Profiles</h2>
-                <p>Search by Patient ID (VPR-XXXX), Patient Name, or Phone Number.</p>
+            <div className="section-header-row patient-directory-header-banner" style={{
+              background: "linear-gradient(135deg, #071927, #0B2A3D)",
+              borderRadius: "14px",
+              padding: "18px 20px",
+              color: "#ffffff",
+              marginBottom: "16px",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              boxShadow: "0 6px 20px rgba(7, 25, 39, 0.2)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px"
+            }}>
+              <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+                <h2 style={{ color: "#ffffff", margin: "0 0 4px 0", fontSize: "20px", fontWeight: "800", letterSpacing: "-0.3px" }}>
+                  Patient Directory & Clinical Profiles
+                </h2>
+                <p style={{ color: "#94a3b8", margin: 0, fontSize: "13px" }}>
+                  Search by Patient ID (VPR-XXXX), Patient Name, or Phone Number.
+                </p>
               </div>
-              <button className="primary-btn" onClick={() => setActiveTab("new-patient")}>
+              <button
+                className="primary-btn"
+                onClick={() => setActiveTab("new-patient")}
+                style={{
+                  background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                  color: "#ffffff",
+                  fontWeight: "800",
+                  padding: "10px 18px",
+                  borderRadius: "8px",
+                  border: "none",
+                  boxShadow: "0 4px 12px rgba(2, 132, 199, 0.35)",
+                  whiteSpace: "nowrap"
+                }}
+              >
                 ➕ Intake New Patient
               </button>
             </div>
 
-            <div className="search-bar-row">
+            <div className="search-bar-container" style={{ width: "100%", marginBottom: "14px" }}>
               <input
                 type="text"
-                className="search-input"
+                className="search-input full-width-search"
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  minHeight: "44px",
+                  padding: "0 14px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: "14px",
+                  marginBottom: "10px",
+                  background: "#ffffff",
+                  color: "#0f172a"
+                }}
                 placeholder="🔍 Search by Patient ID, Name, or 10-digit Phone..."
                 value={searchQuery}
                 onChange={(e) => {
@@ -2509,18 +2551,24 @@ _(Saved in patient clinic records)_`;
                   fetchPatients(e.target.value);
                 }}
               />
-              <button className="secondary-btn" onClick={() => handleExportCSV("patients")}>
-                📥 Export Patients (CSV)
-              </button>
-              <button
-                className="secondary-btn"
-                style={{ background: "#e0f2fe", color: "#0284c7", borderColor: "#7dd3fc", fontWeight: "700" }}
-                onClick={handleCleanAndRestoreFromSheets}
-                disabled={restoreLoading}
-                title="Clear local test cache and pull latest records from connected Google Sheet"
-              >
-                {restoreLoading ? "⏳ Syncing..." : "🔄 Sync Fresh from Sheet"}
-              </button>
+              <div className="search-actions-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <button
+                  className="secondary-btn"
+                  onClick={() => handleExportCSV("patients")}
+                  style={{ minHeight: "42px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "13px", padding: "8px 12px" }}
+                >
+                  📥 Export Patients (CSV)
+                </button>
+                <button
+                  className="secondary-btn"
+                  style={{ minHeight: "42px", background: "#e0f2fe", color: "#0284c7", borderColor: "#7dd3fc", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", padding: "8px 12px" }}
+                  onClick={handleCleanAndRestoreFromSheets}
+                  disabled={restoreLoading}
+                  title="Clear local test cache and pull latest records from connected Google Sheet"
+                >
+                  {restoreLoading ? "⏳ Syncing..." : "🔄 Sync Fresh from Sheet"}
+                </button>
+              </div>
             </div>
 
             <div className="directory-controls-bar">
@@ -3759,6 +3807,7 @@ _(Saved in patient clinic records)_`;
             
             {/* 1. MASTER TOP HEADER BOX (Vector Avatar + Info + 1-Tap Daily Session Action) */}
             <div className="profile-master-header-box" style={{
+              position: "relative",
               background: "linear-gradient(135deg, #071927, #0B2A3D)",
               borderRadius: "14px",
               padding: "18px 20px",
@@ -3767,47 +3816,65 @@ _(Saved in patient clinic records)_`;
               boxShadow: "0 6px 20px rgba(7, 25, 39, 0.25)",
               border: "1px solid rgba(255, 255, 255, 0.1)"
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" }}>
-                
+              {/* Top-Right Absolute Close button */}
+              <button
+                type="button"
+                className="profile-modal-close-btn"
+                onClick={() => setSelectedPatient(null)}
+                style={{
+                  position: "absolute",
+                  top: "14px",
+                  right: "14px",
+                  zIndex: 10,
+                  background: "rgba(255, 255, 255, 0.18)",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "16px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                  backdropFilter: "blur(8px)",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                  transition: "all 0.2s ease"
+                }}
+                title="Close Patient Profile"
+              >
+                ✕
+              </button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", paddingRight: "44px" }}>
                 {/* Left: Vector Avatar & Patient Key Demographics */}
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: "1 1 320px", minWidth: 0 }}>
-                  <PatientAvatar patient={selectedPatient} size={70} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
-                      <span className="patient-id-badge large" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #059669", fontWeight: "800", fontSize: "12.5px" }}>
-                        {selectedPatient.patientId}
-                      </span>
-                      <span style={{ fontSize: "12px", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "2px 8px", borderRadius: "6px", fontWeight: "700" }}>
-                        {selectedPatient.status || "Active"}
-                      </span>
-                    </div>
-                    
-                    <h2 style={{ margin: "2px 0 4px 0", fontSize: "22px", fontWeight: "800", color: "#ffffff", letterSpacing: "-0.3px", wordBreak: "break-word" }}>
-                      {selectedPatient.name}
-                    </h2>
-                    
-                    <div style={{ fontSize: "13px", color: "#cbd5e1", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                      <span>{selectedPatient.age} Yrs • {selectedPatient.gender}</span>
-                      <span>•</span>
-                      <a
-                        href={`tel:+91${selectedPatient.phone}`}
-                        style={{ color: "#38bdf8", textDecoration: "none", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                      >
-                        📞 +91 {selectedPatient.phone}
-                      </a>
-                    </div>
+                <PatientAvatar patient={selectedPatient} size={70} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                    <span className="patient-id-badge large" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #059669", fontWeight: "800", fontSize: "12.5px" }}>
+                      {selectedPatient.patientId}
+                    </span>
+                    <span style={{ fontSize: "12px", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "2px 8px", borderRadius: "6px", fontWeight: "700" }}>
+                      {selectedPatient.status || "Active"}
+                    </span>
+                  </div>
+                  
+                  <h2 style={{ margin: "2px 0 4px 0", fontSize: "22px", fontWeight: "800", color: "#ffffff", letterSpacing: "-0.3px", wordBreak: "break-word" }}>
+                    {selectedPatient.name}
+                  </h2>
+                  
+                  <div style={{ fontSize: "13px", color: "#cbd5e1", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span>{selectedPatient.age} Yrs • {selectedPatient.gender}</span>
+                    <span>•</span>
+                    <a
+                      href={`tel:+91${selectedPatient.phone}`}
+                      style={{ color: "#38bdf8", textDecoration: "none", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                    >
+                      📞 +91 {selectedPatient.phone}
+                    </a>
                   </div>
                 </div>
-
-                {/* Right: Close button */}
-                <button
-                  className="secondary-btn close-btn"
-                  onClick={() => setSelectedPatient(null)}
-                  style={{ background: "rgba(255, 255, 255, 0.15)", color: "#ffffff", border: "none", width: "36px", height: "36px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", cursor: "pointer" }}
-                  title="Close Patient Profile"
-                >
-                  ✕
-                </button>
               </div>
 
               {/* Action Toolbar on Master Header */}
@@ -4072,51 +4139,68 @@ _(Saved in patient clinic records)_`;
                       style={{
                         background: "#ffffff",
                         border: isExpanded ? "1.5px solid #0284c7" : "1.5px solid #e2e8f0",
-                        borderRadius: "10px",
-                        padding: "10px 14px",
-                        marginBottom: "8px",
+                        borderRadius: "12px",
+                        padding: "12px 14px",
+                        marginBottom: "10px",
                         boxShadow: isExpanded ? "0 4px 12px rgba(2, 132, 199, 0.08)" : "0 1px 3px rgba(0,0,0,0.02)",
                         transition: "all 0.2s ease"
                       }}
                     >
-                      <div className="timeline-visit-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                        <div
-                          onClick={() => toggleVisitExpand(v.visitId)}
-                          style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", cursor: "pointer", flex: "1 1 auto" }}
-                          title="Click to view/hide clinical notes"
-                        >
+                      {/* Row 1: Visit Badge, Clean Date & Time, Fee */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                           <span className="visit-num-badge" style={{ background: "#0284c7", color: "#ffffff", fontWeight: "800", padding: "3px 8px", borderRadius: "6px", fontSize: "12px" }}>
                             Visit #{v.visitNumber}
                           </span>
                           <span className="visit-date" style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
-                            📅 {String(v.date || "").slice(0, 10)} {v.time ? `(${v.time})` : ""}
-                          </span>
-                          {v.fee && (
-                            <span style={{ fontWeight: "800", color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: "6px", fontSize: "12px" }}>
-                              {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
-                            </span>
-                          )}
-                          <span style={{ fontSize: "11.5px", color: isExpanded ? "#0284c7" : "#64748b", fontWeight: "700", marginLeft: "4px" }}>
-                            {isExpanded ? "▲ Details" : "▼ Details"}
+                            📅 {cleanDateOnly(v.date)} {cleanTimeOnly(v.time) ? `(${cleanTimeOnly(v.time)})` : ""}
                           </span>
                         </div>
-                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                          <button
-                            className="receipt-btn finalize-action-btn"
-                            style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700", whiteSpace: "nowrap" }}
-                            onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
-                          >
-                            📄 Slip & WhatsApp PDF
-                          </button>
-                          <button
-                            className="secondary-btn"
-                            onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
-                            style={{ padding: "5px 10px", fontSize: "11.5px", whiteSpace: "nowrap" }}
-                            title="Instant Download PDF"
-                          >
-                            📥 Download
-                          </button>
-                        </div>
+                        {v.fee && (
+                          <span style={{ fontWeight: "800", color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: "6px", fontSize: "12px" }}>
+                            {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Row 2: Slip & WhatsApp PDF + Download in the SAME ROW side by side */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "10px", width: "100%" }}>
+                        <button
+                          className="receipt-btn finalize-action-btn"
+                          style={{ minHeight: "38px", padding: "8px 10px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}
+                          onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
+                        >
+                          📄 Slip & WhatsApp PDF
+                        </button>
+                        <button
+                          className="secondary-btn"
+                          onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
+                          style={{ minHeight: "38px", padding: "8px 10px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}
+                          title="Instant Download PDF"
+                        >
+                          📥 Download
+                        </button>
+                      </div>
+
+                      {/* Row 3: Details Arrow Toggle BELOW the action buttons */}
+                      <div
+                        onClick={() => toggleVisitExpand(v.visitId)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginTop: "8px",
+                          paddingTop: "6px",
+                          borderTop: "1px dashed #e2e8f0",
+                          cursor: "pointer"
+                        }}
+                      >
+                        <span style={{ fontSize: "11.5px", color: "#64748b" }}>
+                          {v.reason ? v.reason : "Clinical Notes & Treatment Details"}
+                        </span>
+                        <span style={{ fontSize: "12px", color: isExpanded ? "#0284c7" : "#0284c7", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                          {isExpanded ? "▲ Details" : "▼ Details"}
+                        </span>
                       </div>
 
                       {/* Expandable Details Box */}
@@ -4124,8 +4208,8 @@ _(Saved in patient clinic records)_`;
                         <div
                           className="timeline-visit-details"
                           style={{
-                            marginTop: "10px",
-                            paddingTop: "10px",
+                            marginTop: "8px",
+                            paddingTop: "8px",
                             borderTop: "1px dashed #cbd5e1",
                             fontSize: "13px",
                             color: "#334155",

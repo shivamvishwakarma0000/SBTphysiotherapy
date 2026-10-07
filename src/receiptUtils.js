@@ -4,29 +4,41 @@ import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets.js";
 export const cleanDateOnly = (d) => {
   if (!d) return new Date().toISOString().slice(0, 10);
   const s = String(d).trim();
+  
+  // If string contains 1899 (Google Sheets time-only epoch artifact), return today's clean date
+  if (s.includes("1899")) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  // Already clean YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return s;
+  }
+
   if (s.includes("GMT") || s.includes("T") || s.length > 10) {
     const parsed = new Date(s);
-    if (!isNaN(parsed.getTime())) {
+    if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1900) {
       const year = parsed.getFullYear();
       const month = String(parsed.getMonth() + 1).padStart(2, '0');
       const day = String(parsed.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
   }
-  return s.slice(0, 10);
+  return s.length > 10 ? s.slice(0, 10) : s;
 };
 
 export const cleanTimeOnly = (t) => {
   if (!t) return "";
   const s = String(t).trim();
   
-  // 1. Check if already clean 12-hr with AM/PM like "08:58 PM"
+  // 1. Check if already clean 12-hr with AM/PM like "08:58 PM" or "8:58 PM"
   const ampmMatch = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)/i);
   if (ampmMatch) {
-    return `${ampmMatch[1].padStart(2, "0")}:${ampmMatch[2]} ${ampmMatch[3].toUpperCase()}`;
+    let hr = parseInt(ampmMatch[1], 10);
+    return `${String(hr).padStart(2, "0")}:${ampmMatch[2]} ${ampmMatch[3].toUpperCase()}`;
   }
   
-  // 2. Check 24-hr time like "20:58:00" or within Date string
+  // 2. Check 24-hr time like "20:58:00" or within Date string (e.g. Sat Dec 30 1899 19:33:00 GMT+0521)
   const time24Match = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
   if (time24Match) {
     let hours = parseInt(time24Match[1], 10);
@@ -36,6 +48,15 @@ export const cleanTimeOnly = (t) => {
     return `${String(hours).padStart(2, "0")}:${mins} ${period}`;
   }
   return s.length > 20 ? "" : s;
+};
+
+export const formatVisitDateTimeDisplay = (dateStr, timeStr) => {
+  const d = cleanDateOnly(dateStr);
+  const t = cleanTimeOnly(timeStr || dateStr);
+  if (d && t) return `${d} (${t})`;
+  if (d) return `${d}`;
+  if (t) return `${t}`;
+  return new Date().toISOString().slice(0, 10);
 };
 
 export const buildReceiptPDF = (receipt) => {

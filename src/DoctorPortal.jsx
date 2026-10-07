@@ -1812,7 +1812,7 @@ _(Saved in patient clinic records)_`;
         <div className="doctor-nav-top-row">
           <div className="doctor-nav-brand">
             <img
-              src="/vindhy-receipt-logo.png"
+              src={CLINIC_LOGO_B64 || "/vindhy-logo-light.png"}
               alt="Vindhy Physio & Rehab Center"
               className="doctor-nav-logo"
             />

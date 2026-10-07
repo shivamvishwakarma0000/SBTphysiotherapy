@@ -126,9 +126,10 @@ function ClinicLogo({ isDark = false }) {
   return (
     <div className="clinic-logo-wrap">
       <img
-        src="/vindhy-receipt-logo.png"
+        src={isDark ? "/vindhy-logo-dark.png" : "/vindhy-logo-light.png"}
         alt="Vindhy Physio & Rehab Center"
         className="clinic-logo-img"
+        loading="eager"
       />
     </div>
   );
@@ -1004,7 +1005,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
       <div className="footer-inner">
         <div className="footer-col brand-col">
           <div className="footer-brand">
-            <ClinicLogo isDark={isDark} />
+            <ClinicLogo isDark={true} />
             <h2>DR. SATYAM VISHWAKARMA</h2>
           </div>
           <p className="footer-credentials">Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</p>

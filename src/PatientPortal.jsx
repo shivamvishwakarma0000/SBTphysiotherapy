@@ -1249,9 +1249,20 @@ export default function PatientPortal({ onClose, themeProps }) {
                   </span>
                 </div>
 
-                <h2 style={{ margin: "2px 0 6px 0", fontSize: "24px", fontWeight: "800", color: "#ffffff", letterSpacing: "-0.3px", wordBreak: "break-word" }}>
+                <div
+                  className="patient-profile-name-text"
+                  style={{
+                    margin: "2px 0 6px 0",
+                    fontSize: "24px",
+                    fontWeight: "800",
+                    color: "#ffffff",
+                    letterSpacing: "-0.3px",
+                    wordBreak: "break-word",
+                    textShadow: "0 2px 10px rgba(0, 0, 0, 0.6)"
+                  }}
+                >
                   {patientProfile?.name || "Patient"}
-                </h2>
+                </div>
 
                 <div style={{ fontSize: "13.5px", color: "#cbd5e1", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                   <span>{patientProfile?.age || "--"} Yrs • {patientProfile?.gender || "Not specified"}</span>
@@ -1293,10 +1304,10 @@ export default function PatientPortal({ onClose, themeProps }) {
 
               <div className="profile-detail-card" style={{ background: "var(--bg-card, #ffffff)", border: "1.5px solid var(--line, #e2e8f0)", borderRadius: "12px", padding: "14px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
                 <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
-                  🚨 Emergency Contact
+                  🩺 Chief Concern / Problem
                 </div>
                 <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--heading, #0f172a)" }}>
-                  {patientProfile?.emergencyContact || "Not provided"}
+                  {patientProfile?.firstVisitReason || patientProfile?.reasonForVisit || patientProfile?.lastDiagnosis || "Physiotherapy Rehabilitation"}
                 </div>
               </div>
 

@@ -2002,11 +2002,11 @@ _(Saved in patient clinic records)_`;
                 <span className="card-count-badge purple">{stats.totalEnquiriesCount || enquiries.length}</span>
               </div>
 
-              <div className="mobile-app-card" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
-                <div className="card-icon-bubble cyan">🌐</div>
-                <strong className="card-title">Website Enquiries</strong>
-                <span className="card-count-badge cyan">
-                  {enquiries.filter(e => e.status !== "Resolved").length || enquiries.length}
+              <div className="mobile-app-card" onClick={() => selectDoctorTab("settings")}>
+                <div className="card-icon-bubble cyan">⚙️</div>
+                <strong className="card-title">Cloud Settings</strong>
+                <span className="card-count-badge cyan" style={{ fontSize: "11px", fontWeight: "800", padding: "2px 8px" }}>
+                  {getWebhookUrl() ? "Active" : "Setup"}
                 </span>
               </div>
             </div>
@@ -2503,12 +2503,9 @@ _(Saved in patient clinic records)_`;
               gap: "12px"
             }}>
               <div style={{ flex: "1 1 240px", minWidth: 0 }}>
-                <h2 className="directory-banner-title" style={{ color: "#ffffff", margin: "0 0 4px 0", fontSize: "20px", fontWeight: "800", letterSpacing: "-0.3px", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+                <h2 className="directory-banner-title" style={{ color: "#ffffff", margin: 0, fontSize: "20px", fontWeight: "800", letterSpacing: "-0.3px", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
                   Patient Directory & Clinical Profiles
                 </h2>
-                <p className="directory-banner-subtitle" style={{ color: "#93c5fd", margin: 0, fontSize: "13px", fontWeight: "600", textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>
-                  Search by Patient ID (VPR-XXXX), Patient Name, or Phone Number.
-                </p>
               </div>
               <button
                 className="primary-btn"

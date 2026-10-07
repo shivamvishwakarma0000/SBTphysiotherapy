@@ -122,11 +122,11 @@ const testimonials = [
   ["Vikram Srivastava", "Cervical Spondylosis & Neck Pain", "Tech neck and radiating arm pain disappeared completely after 6 therapy sessions. Highly recommended!", "5"]
 ];
 
-function ClinicLogo({ isDark = false }) {
+function ClinicLogo() {
   return (
     <div className="clinic-logo-wrap">
       <img
-        src={isDark ? "/vindhy-logo-dark.png" : "/vindhy-logo-light.png"}
+        src="/vindhy-logo.png"
         alt="Vindhy Physio & Rehab Center"
         className="clinic-logo-img"
         loading="eager"

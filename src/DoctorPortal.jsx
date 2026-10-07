@@ -574,6 +574,12 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [linkSearchQuery, setLinkSearchQuery] = useState("");
   const [showSpamFilter, setShowSpamFilter] = useState(false);
 
+  // Patient Profile & Visit Details Accordion State
+  const [expandedVisitIds, setExpandedVisitIds] = useState({});
+  const toggleVisitExpand = (vId) => {
+    setExpandedVisitIds(prev => ({ ...prev, [vId]: !prev[vId] }));
+  };
+
   // Leads Management & Direct Conversion States
   const [enquirySubTab, setEnquirySubTab] = useState("active"); // "active", "converted", "hidden", "all"
   const [enquirySearchQuery, setEnquirySearchQuery] = useState("");
@@ -2402,7 +2408,7 @@ _(Saved in patient clinic records)_`;
                     <div className="waiting-problem-box">
                       <strong>🩺 Chief Concern:</strong> {p.firstVisitReason}
                       <br />
-                      <strong>⏱️ Duration:</strong> {p.duration || "Initial onset"} • <strong>🕒 Intake Time:</strong> {p.intakeTime || p.visitTime || "Live Now"}
+                      <strong>⏱️ Duration:</strong> {p.duration || "Initial onset"}
                       {p.isFirstTime && <span className="first-time-tag"> • First Time Visit</span>}
                     </div>
 
@@ -2421,13 +2427,6 @@ _(Saved in patient clinic records)_`;
                       🩺 Start Doctor Consultation & Issue Receipt
                     </button>
                     <div className="waiting-mini-actions">
-                      <button
-                        className="secondary-btn"
-                        onClick={() => handleCopyPhoneNumber(p.phone)}
-                        title="Copy Patient Phone"
-                      >
-                        📋 Copy Phone
-                      </button>
                       <button
                         className="secondary-btn"
                         onClick={() => openPatientProfile(p.patientId)}
@@ -3974,14 +3973,6 @@ _(Saved in patient clinic records)_`;
                   </button>
                   <button
                     className="secondary-btn"
-                    style={{ flex: "1 1 110px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", background: "#e0f2fe", color: "#0284c7", borderColor: "#7dd3fc", fontWeight: "700" }}
-                    onClick={() => handleCopyPhoneNumber(selectedPatient.phone)}
-                    title="Copy Patient Phone Number"
-                  >
-                    📋 Copy Phone
-                  </button>
-                  <button
-                    className="secondary-btn"
                     style={{ flex: "1 1 100px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", fontWeight: "700" }}
                     onClick={() => {
                       const latestVisit = patientVisits[0] || {
@@ -4129,48 +4120,87 @@ _(Saved in patient clinic records)_`;
               </div>
 
               <div className="visit-timeline">
-                {patientVisits.map(v => (
-                  <div className="timeline-visit-card" key={v.visitId} style={{ background: "#ffffff", border: "1.5px solid #e2e8f0", borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
-                    <div className="timeline-visit-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <span className="visit-num-badge" style={{ background: "#0284c7", color: "#ffffff", fontWeight: "800", padding: "3px 8px", borderRadius: "6px", fontSize: "12px" }}>
-                          Visit #{v.visitNumber}
-                        </span>
-                        <span className="visit-date" style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
-                          📅 {String(v.date || "").slice(0, 10)} {v.time ? `• 🕒 ${v.time}` : ""}
-                        </span>
-                        {v.fee && (
-                          <span style={{ fontWeight: "800", color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: "6px", fontSize: "12px" }}>
-                            {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
+                {patientVisits.map(v => {
+                  const isExpanded = !!expandedVisitIds[v.visitId];
+                  return (
+                    <div
+                      className="timeline-visit-card"
+                      key={v.visitId}
+                      style={{
+                        background: "#ffffff",
+                        border: isExpanded ? "1.5px solid #0284c7" : "1.5px solid #e2e8f0",
+                        borderRadius: "10px",
+                        padding: "10px 14px",
+                        marginBottom: "8px",
+                        boxShadow: isExpanded ? "0 4px 12px rgba(2, 132, 199, 0.08)" : "0 1px 3px rgba(0,0,0,0.02)",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      <div className="timeline-visit-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                        <div
+                          onClick={() => toggleVisitExpand(v.visitId)}
+                          style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", cursor: "pointer", flex: "1 1 auto" }}
+                          title="Click to view/hide clinical notes"
+                        >
+                          <span className="visit-num-badge" style={{ background: "#0284c7", color: "#ffffff", fontWeight: "800", padding: "3px 8px", borderRadius: "6px", fontSize: "12px" }}>
+                            Visit #{v.visitNumber}
                           </span>
-                        )}
+                          <span className="visit-date" style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
+                            📅 {String(v.date || "").slice(0, 10)} {v.time ? `(${v.time})` : ""}
+                          </span>
+                          {v.fee && (
+                            <span style={{ fontWeight: "800", color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: "6px", fontSize: "12px" }}>
+                              {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
+                            </span>
+                          )}
+                          <span style={{ fontSize: "11.5px", color: isExpanded ? "#0284c7" : "#64748b", fontWeight: "700", marginLeft: "4px" }}>
+                            {isExpanded ? "▲ Details" : "▼ Details"}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                          <button
+                            className="receipt-btn finalize-action-btn"
+                            style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700", whiteSpace: "nowrap" }}
+                            onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
+                          >
+                            📄 Slip & WhatsApp PDF
+                          </button>
+                          <button
+                            className="secondary-btn"
+                            onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
+                            style={{ padding: "5px 10px", fontSize: "11.5px", whiteSpace: "nowrap" }}
+                            title="Instant Download PDF"
+                          >
+                            📥 Download
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                        <button
-                          className="receipt-btn finalize-action-btn"
-                          style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700" }}
-                          onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
+
+                      {/* Expandable Details Box */}
+                      {isExpanded && (
+                        <div
+                          className="timeline-visit-details"
+                          style={{
+                            marginTop: "10px",
+                            paddingTop: "10px",
+                            borderTop: "1px dashed #cbd5e1",
+                            fontSize: "13px",
+                            color: "#334155",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "5px"
+                          }}
                         >
-                          📄 Receipt & WhatsApp
-                        </button>
-                        <button
-                          className="secondary-btn"
-                          onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
-                          style={{ padding: "5px 10px", fontSize: "11.5px" }}
-                          title="Instant Download PDF"
-                        >
-                          📥 PDF
-                        </button>
-                      </div>
+                          <p style={{ margin: 0 }}><strong>Reason:</strong> {v.reason}</p>
+                          {v.complaint && <p style={{ margin: 0 }}><strong>Complaint:</strong> {v.complaint}</p>}
+                          {v.diagnosis && <p style={{ margin: 0 }}><strong>Diagnosis:</strong> {v.diagnosis}</p>}
+                          {v.treatmentNotes && <p style={{ margin: 0, color: "#0369a1" }}><strong>Therapy Notes:</strong> {v.treatmentNotes}</p>}
+                          {v.followUpDate && <p style={{ margin: 0, color: "#059669" }}><strong>Next Follow-Up:</strong> {cleanDateOnly(v.followUpDate)}</p>}
+                        </div>
+                      )}
                     </div>
-                    <div className="timeline-visit-details" style={{ fontSize: "13px", color: "#334155", display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <p style={{ margin: 0 }}><strong>Therapy Focus:</strong> {v.reason}</p>
-                      {v.diagnosis && <p style={{ margin: 0 }}><strong>Diagnosis:</strong> {v.diagnosis}</p>}
-                      {v.treatmentNotes && <p style={{ margin: 0, color: "#0369a1" }}><strong>Administered:</strong> {v.treatmentNotes}</p>}
-                      {v.followUpDate && <p style={{ margin: 0, color: "#059669" }}><strong>Next Follow-Up:</strong> {cleanDateOnly(v.followUpDate)}</p>}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {patientVisits.length === 0 && (
                   <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "10px", padding: "18px", textAlign: "center" }}>
@@ -4439,7 +4469,7 @@ _(Saved in patient clinic records)_`;
                     </span>
                   </div>
                   <div style={{ display: "flex", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
-                    {["300", "500", "700", "1000", "0"].map((amt) => (
+                    {["200", "300", "500", "700", "1000", "0"].map((amt) => (
                       <button
                         key={amt}
                         type="button"
@@ -4918,7 +4948,7 @@ _(Saved in patient clinic records)_`;
                   Consultation & Therapy Fee (₹) *
                 </label>
                 <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
-                  {["300", "500", "700", "1000", "1200"].map((amt) => (
+                  {["200", "300", "500", "700", "1000", "0"].map((amt) => (
                     <button
                       key={amt}
                       type="button"
@@ -4929,12 +4959,12 @@ _(Saved in patient clinic records)_`;
                         fontSize: "13px",
                         fontWeight: "700",
                         cursor: "pointer",
-                        border: consultForm.fee === amt ? "2px solid #10b981" : "1px solid rgba(255,255,255,0.15)",
-                        background: consultForm.fee === amt ? "#10b981" : "rgba(255,255,255,0.05)",
+                        border: String(consultForm.fee) === amt ? "2px solid #10b981" : "1px solid rgba(255,255,255,0.15)",
+                        background: String(consultForm.fee) === amt ? "#10b981" : "rgba(255,255,255,0.05)",
                         color: "#fff"
                       }}
                     >
-                      ₹{amt}
+                      {amt === "0" ? "₹0 (Pkg / Free)" : `₹${amt}`}
                     </button>
                   ))}
                 </div>
@@ -4954,19 +4984,70 @@ _(Saved in patient clinic records)_`;
 
               {/* Follow-up Section (Optional) */}
               <div style={{ marginTop: "14px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
                   <label style={{ margin: 0, color: "#94a3b8", fontWeight: "700" }}>
-                    🗓️ Next Follow-Up Session <span style={{ color: "#f59e0b", fontSize: "12px" }}>(Optional - Leave blank if only today's session completed)</span>
+                    🗓️ Next Follow-Up Session <span style={{ color: "#f59e0b", fontSize: "12px" }}>(Optional)</span>
                   </label>
-                  {consultForm.followUpDate && (
+                  <div style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>
                     <button
                       type="button"
-                      onClick={() => setConsultForm({ ...consultForm, followUpDate: "", followUpTime: "" })}
-                      style={{ background: "none", border: "none", color: "#f87171", fontSize: "12px", cursor: "pointer", textDecoration: "underline" }}
+                      onClick={() => {
+                        const tom = new Date();
+                        tom.setDate(tom.getDate() + 1);
+                        setConsultForm({ ...consultForm, followUpDate: tom.toISOString().slice(0, 10) });
+                      }}
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "11px",
+                        fontWeight: "700",
+                        borderRadius: "6px",
+                        border: "1px solid #10b981",
+                        background: "rgba(16, 185, 129, 0.2)",
+                        color: "#6ee7b7",
+                        cursor: "pointer"
+                      }}
                     >
-                      Clear / No Follow-up
+                      ⚡ Tomorrow (Daily)
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const in2 = new Date();
+                        in2.setDate(in2.getDate() + 2);
+                        setConsultForm({ ...consultForm, followUpDate: in2.toISOString().slice(0, 10) });
+                      }}
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "11px",
+                        fontWeight: "700",
+                        borderRadius: "6px",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        background: "rgba(255,255,255,0.08)",
+                        color: "#cbd5e1",
+                        cursor: "pointer"
+                      }}
+                    >
+                      In 2 Days
+                    </button>
+                    {consultForm.followUpDate && (
+                      <button
+                        type="button"
+                        onClick={() => setConsultForm({ ...consultForm, followUpDate: "", followUpTime: "" })}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(248, 113, 113, 0.4)",
+                          background: "rgba(248, 113, 113, 0.15)",
+                          color: "#fca5a5",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="form-row-2">
                   <label>

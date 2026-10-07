@@ -4107,7 +4107,7 @@ _(Saved in patient clinic records)_`;
 
         return (
           <div className="add-visit-modal-overlay">
-            <div className="add-visit-card" style={{ maxWidth: "680px", width: "100%", background: "#ffffff", borderRadius: "18px", border: "1.5px solid #cbd5e1", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)", padding: "24px 26px", boxSizing: "border-box", color: "#0f172a" }}>
+            <div className="add-visit-card" style={{ maxWidth: "680px", width: "100%", maxHeight: "90vh", overflowY: "auto", background: "#ffffff", borderRadius: "18px", border: "1.5px solid #cbd5e1", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)", padding: "24px 26px", boxSizing: "border-box", color: "#0f172a" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", paddingBottom: "12px", borderBottom: "1.5px solid #f1f5f9" }}>
                 <div>
                   <span className="status-pill success" style={{ marginBottom: "6px", display: "inline-block", background: "#dcfce7", color: "#15803d", border: "1px solid #86efac", fontWeight: "800" }}>

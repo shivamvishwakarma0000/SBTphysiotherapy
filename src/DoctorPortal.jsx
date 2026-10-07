@@ -77,7 +77,7 @@ export function PatientAvatar({ patient, size = 68 }) {
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import jsPDF from "jspdf";
 import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets";
-import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets } from "./apiService";
+import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets, clearLocalPatientsCache } from "./apiService";
 import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
@@ -1502,6 +1502,30 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
+  const handleCleanAndRestoreFromSheets = async () => {
+    if (!window.confirm("This will clear any old test data and pull real patients & visits directly from your Google Sheet. Proceed?")) {
+      return;
+    }
+    setRestoreLoading(true);
+    try {
+      clearLocalPatientsCache();
+      const res = await restoreFromGoogleSheets();
+      fetchPatients();
+      fetchTodayVisits();
+      fetchEnquiries();
+      fetchStats();
+      if (res && res.ok) {
+        alert(`✅ Success! Synced ${res.patientsCount || 0} patients and ${res.visitsCount || 0} visits from your Google Sheet.`);
+      } else {
+        alert("✅ Cache reset. Data will sync directly from your active Google Sheet.");
+      }
+    } catch (err) {
+      alert("Error pulling from Google Sheets. Please check your Webhook URL in Cloud Settings.");
+    } finally {
+      setRestoreLoading(false);
+    }
+  };
+
   const handleManualSync = async () => {
     setSyncLoading(true);
     try {
@@ -2487,6 +2511,15 @@ _(Saved in patient clinic records)_`;
               />
               <button className="secondary-btn" onClick={() => handleExportCSV("patients")}>
                 📥 Export Patients (CSV)
+              </button>
+              <button
+                className="secondary-btn"
+                style={{ background: "#e0f2fe", color: "#0284c7", borderColor: "#7dd3fc", fontWeight: "700" }}
+                onClick={handleCleanAndRestoreFromSheets}
+                disabled={restoreLoading}
+                title="Clear local test cache and pull latest records from connected Google Sheet"
+              >
+                {restoreLoading ? "⏳ Syncing..." : "🔄 Sync Fresh from Sheet"}
               </button>
             </div>
 
@@ -3509,6 +3542,16 @@ _(Saved in patient clinic records)_`;
                   title="Import and restore all patient profiles, past visits, and bookings from Google Sheets"
                 >
                   {restoreLoading ? "Restoring from Google Sheets..." : "📥 Restore / Pull All Data from Google Sheets"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-btn full-btn"
+                  style={{ marginTop: "10px", background: "rgba(16, 185, 129, 0.15)", color: "#10b981", borderColor: "#10b981", fontWeight: "700" }}
+                  onClick={handleCleanAndRestoreFromSheets}
+                  disabled={restoreLoading}
+                  title="Remove old test cache and pull fresh data from your active Jaiprakash Google Sheet"
+                >
+                  {restoreLoading ? "⏳ Pulling from Sheet..." : "🧹 Clear Old Test Cache & Sync Fresh from Sheet"}
                 </button>
                 <button
                   type="button"

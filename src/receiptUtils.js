@@ -19,11 +19,23 @@ export const cleanDateOnly = (d) => {
 export const cleanTimeOnly = (t) => {
   if (!t) return "";
   const s = String(t).trim();
-  if (s.includes("1899") || s.includes("GMT") || s.includes("Standard Time")) {
-    const match = s.match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
-    return match ? match[1] : "";
+  
+  // 1. Check if already clean 12-hr with AM/PM like "08:58 PM"
+  const ampmMatch = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)/i);
+  if (ampmMatch) {
+    return `${ampmMatch[1].padStart(2, "0")}:${ampmMatch[2]} ${ampmMatch[3].toUpperCase()}`;
   }
-  return s;
+  
+  // 2. Check 24-hr time like "20:58:00" or within Date string
+  const time24Match = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
+  if (time24Match) {
+    let hours = parseInt(time24Match[1], 10);
+    const mins = time24Match[2];
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+    return `${String(hours).padStart(2, "0")}:${mins} ${period}`;
+  }
+  return s.length > 20 ? "" : s;
 };
 
 export const buildReceiptPDF = (receipt) => {

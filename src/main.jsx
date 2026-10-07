@@ -176,7 +176,7 @@ function WhatsAppIcon() {
 
 function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, showDownloadBtn, themeProps }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isDark = false;
+  const isDark = true;
 
   const handleNavClick = () => {
     setMobileMenuOpen(false);
@@ -187,7 +187,7 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
       <header className="site-header">
         <div className="header-inner">
           <a className="brand" href="#home" aria-label="Vindhy Physio & Rehab Center home" onClick={handleNavClick}>
-            <ClinicLogo isDark={isDark} />
+            <ClinicLogo isDark={true} />
           </a>
 
           <nav className="desktop-nav" aria-label="Primary navigation">
@@ -263,7 +263,7 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
         <div className="mobile-drawer-overlay" onClick={() => setMobileMenuOpen(false)}>
           <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
             <div className="mobile-drawer-header">
-              <ClinicLogo isDark={false} />
+              <ClinicLogo isDark={true} />
               <button
                 className="mobile-drawer-close"
                 onClick={() => setMobileMenuOpen(false)}

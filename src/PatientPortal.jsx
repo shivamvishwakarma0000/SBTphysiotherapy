@@ -70,6 +70,12 @@ export default function PatientPortal({ onClose, themeProps }) {
   const [showMoreSheet, setShowMoreSheet] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
+  // Expanded Visit IDs accordion state
+  const [expandedVisitIds, setExpandedVisitIds] = useState({});
+  const toggleVisitExpand = (vId) => {
+    setExpandedVisitIds((prev) => ({ ...prev, [vId]: !prev[vId] }));
+  };
+
   // Phone hardware/browser back button navigation handling
   useEffect(() => {
     // Initial history anchor for patient portal
@@ -910,74 +916,182 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <p>No clinic visits logged yet. Records are added in real-time during your consultation with Dr. Satyam Vishwakarma.</p>
               </div>
             ) : (
-              <div className="visits-full-list">
-                {recordsData.visits.map((v) => {
-                  const receiptObj = makeReceiptObj(v);
-                  return (
-                    <div className="visit-detailed-card" key={v.visitId}>
-                      <div className="detailed-card-header">
-                        <div className="badge-row">
-                          <span className="visit-num-tag">Visit #{v.visitNumber || 1}</span>
-                          <span className="visit-status-tag">{v.status || "Completed"}</span>
-                        </div>
-                        <div className="date-meta">
-                          <strong>{cleanDateOnly(v.date)}</strong>
-                          <span>{cleanTimeOnly(v.time) || v.time || ""}</span>
-                        </div>
-                      </div>
+              <>
+                {/* 1. Quick Select Visit Boxes (Visit 1, 2, 3...) */}
+                <div style={{
+                  display: "flex",
+                  gap: "8px",
+                  overflowX: "auto",
+                  paddingBottom: "10px",
+                  marginBottom: "14px",
+                  WebkitOverflowScrolling: "touch"
+                }}>
+                  {recordsData.visits.map((v) => {
+                    const isExp = !!expandedVisitIds[v.visitId];
+                    return (
+                      <button
+                        key={v.visitId}
+                        type="button"
+                        onClick={() => toggleVisitExpand(v.visitId)}
+                        style={{
+                          flex: "0 0 auto",
+                          padding: "8px 14px",
+                          borderRadius: "10px",
+                          border: isExp ? "2px solid #0284c7" : "1.5px solid #cbd5e1",
+                          background: isExp ? "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)" : "#ffffff",
+                          color: isExp ? "#0369a1" : "#334155",
+                          fontWeight: "800",
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "flex-start",
+                          boxShadow: isExp ? "0 4px 10px rgba(2, 132, 199, 0.15)" : "0 1px 3px rgba(0,0,0,0.04)",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        <span style={{ color: isExp ? "#0284c7" : "#0f172a" }}>Visit #{v.visitNumber || 1}</span>
+                        <span style={{ fontSize: "11px", fontWeight: "600", color: isExp ? "#0369a1" : "#64748b" }}>
+                          {cleanDateOnly(v.date)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
 
-                      <div className="detailed-card-body">
-                        <div className="info-block">
-                          <label>Clinical Diagnosis / Assessment</label>
-                          <div className="diagnosis-highlight">
-                            {v.diagnosis || "Initial Clinical Evaluation"}
+                {/* 2. Compact Expandable Visit Cards */}
+                <div className="visits-full-list" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {recordsData.visits.map((v) => {
+                    const receiptObj = makeReceiptObj(v);
+                    const isExpanded = !!expandedVisitIds[v.visitId];
+                    return (
+                      <div
+                        className="visit-detailed-card"
+                        key={v.visitId}
+                        style={{
+                          background: "#ffffff",
+                          border: isExpanded ? "1.5px solid #0284c7" : "1.5px solid #e2e8f0",
+                          borderRadius: "12px",
+                          padding: "12px 16px",
+                          boxShadow: isExpanded ? "0 4px 14px rgba(2, 132, 199, 0.09)" : "0 1px 4px rgba(0,0,0,0.03)",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        <div
+                          className="detailed-card-header"
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "8px",
+                            cursor: "pointer"
+                          }}
+                          onClick={() => toggleVisitExpand(v.visitId)}
+                          title="Click to view full clinical details"
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                            <span className="visit-num-tag" style={{ background: "#0284c7", color: "#ffffff", padding: "4px 10px", borderRadius: "6px", fontWeight: "800", fontSize: "12.5px" }}>
+                              Visit #{v.visitNumber || 1}
+                            </span>
+                            <span className="visit-date-meta" style={{ fontWeight: "700", color: "#0f172a", fontSize: "13.5px" }}>
+                              📅 {cleanDateOnly(v.date)} {v.time ? `• 🕒 ${cleanTimeOnly(v.time)}` : ""}
+                            </span>
+                            {v.fee && (
+                              <span style={{ fontWeight: "800", color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: "6px", fontSize: "12px" }}>
+                                {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
+                              </span>
+                            )}
+                            <span style={{ fontSize: "12px", color: isExpanded ? "#0284c7" : "#64748b", fontWeight: "700" }}>
+                              {isExpanded ? "▲ Hide Details" : "▼ View Details"}
+                            </span>
+                          </div>
+
+                          <div
+                            className="detailed-card-actions-row"
+                            style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              className="patient-secondary-btn"
+                              style={{ padding: "6px 12px", fontSize: "12px", fontWeight: "700", borderRadius: "6px" }}
+                              onClick={() => setPreviewReceipt(receiptObj)}
+                            >
+                              📄 Digital Slip
+                            </button>
+                            <button
+                              className="patient-primary-btn outline"
+                              style={{ padding: "6px 12px", fontSize: "12px", fontWeight: "700", borderRadius: "6px" }}
+                              onClick={() => downloadReceiptPDF(receiptObj)}
+                              title="Download PDF"
+                            >
+                              📥 Download PDF
+                            </button>
                           </div>
                         </div>
 
-                        {v.complaint && (
-                          <div className="info-block">
-                            <label>Patient Chief Complaint</label>
-                            <p>{v.complaint}</p>
+                        {/* Collapsible Details Content Inside the Box */}
+                        {isExpanded && (
+                          <div
+                            className="detailed-card-body"
+                            style={{
+                              marginTop: "12px",
+                              paddingTop: "12px",
+                              borderTop: "1px dashed #cbd5e1",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                              fontSize: "13.5px",
+                              color: "#334155"
+                            }}
+                          >
+                            <div className="info-block">
+                              <strong style={{ color: "#0f172a", display: "block", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                🩺 Clinical Diagnosis / Assessment:
+                              </strong>
+                              <div className="diagnosis-highlight" style={{ marginTop: "2px", fontWeight: "700", color: "#0369a1" }}>
+                                {v.diagnosis || "Initial Clinical Evaluation"}
+                              </div>
+                            </div>
+
+                            {v.reason && (
+                              <div className="info-block">
+                                <strong style={{ color: "#0f172a", display: "block", fontSize: "12px" }}>Focus:</strong>
+                                <p style={{ margin: "2px 0 0 0" }}>{v.reason}</p>
+                              </div>
+                            )}
+
+                            {v.complaint && (
+                              <div className="info-block">
+                                <strong style={{ color: "#0f172a", display: "block", fontSize: "12px" }}>Patient Complaint:</strong>
+                                <p style={{ margin: "2px 0 0 0" }}>{v.complaint}</p>
+                              </div>
+                            )}
+
+                            {v.treatmentNotes && (
+                              <div className="info-block">
+                                <strong style={{ color: "#0f172a", display: "block", fontSize: "12px" }}>Therapy Delivered & Protocol:</strong>
+                                <p style={{ margin: "2px 0 0 0", color: "#0284c7" }}>{v.treatmentNotes}</p>
+                              </div>
+                            )}
+
+                            <div className="info-row-split" style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "4px" }}>
+                              <div className="split-item">
+                                <span style={{ fontSize: "11.5px", color: "#64748b" }}>Consulting Doctor: </span>
+                                <strong>{v.doctor || "Dr. Satyam Vishwakarma"}</strong>
+                              </div>
+                              <div className="split-item">
+                                <span style={{ fontSize: "11.5px", color: "#64748b" }}>Next Follow-Up: </span>
+                                <strong style={{ color: "#16a34a" }}>{cleanDateOnly(v.followUpDate) || v.followUpDate || "As needed / SOS"}</strong>
+                              </div>
+                            </div>
                           </div>
                         )}
-
-                        {v.treatmentNotes && (
-                          <div className="info-block">
-                            <label>Treatment Delivered & Rehabilitation Protocol</label>
-                            <p>{v.treatmentNotes}</p>
-                          </div>
-                        )}
-
-                        <div className="info-row-split">
-                          <div className="split-item">
-                            <label>Consulting Doctor</label>
-                            <strong>{v.doctor || "Dr. Satyam Vishwakarma"}</strong>
-                          </div>
-                          <div className="split-item">
-                            <label>Next Follow-Up</label>
-                            <strong>{cleanDateOnly(v.followUpDate) || v.followUpDate || "As needed / SOS"}</strong>
-                          </div>
-                        </div>
                       </div>
-
-                      <div className="detailed-card-actions">
-                        <button
-                          className="patient-primary-btn outline"
-                          onClick={() => downloadReceiptPDF(receiptObj)}
-                        >
-                          📥 Download Official PDF Receipt
-                        </button>
-                        <button
-                          className="patient-secondary-btn"
-                          onClick={() => setPreviewReceipt(receiptObj)}
-                        >
-                          👁️ View Digital Slip
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}

@@ -77,6 +77,22 @@ export default function PatientPortal({ onClose, themeProps }) {
     setExpandedVisitIds((prev) => ({ ...prev, [vId]: !prev[vId] }));
   };
 
+  // Lock background body scroll when any modal or sheet is open
+  useEffect(() => {
+    const isModalActive = Boolean(previewReceipt || showContactModal || showMoreSheet);
+    if (isModalActive) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [previewReceipt, showContactModal, showMoreSheet]);
+
   // Phone hardware/browser back button navigation handling
   useEffect(() => {
     // Initial history anchor for patient portal
@@ -834,24 +850,24 @@ export default function PatientPortal({ onClose, themeProps }) {
                         style={{
                           background: "#ffffff",
                           border: isExpanded ? "1.5px solid #0284c7" : "1.5px solid #e2e8f0",
-                          borderRadius: "12px",
-                          padding: "12px 16px",
-                          boxShadow: isExpanded ? "0 4px 14px rgba(2, 132, 199, 0.09)" : "0 1px 4px rgba(0,0,0,0.03)",
+                          borderRadius: "14px",
+                          padding: "16px 18px",
+                          boxShadow: isExpanded ? "0 4px 14px rgba(2, 132, 199, 0.12)" : "0 1px 4px rgba(0,0,0,0.04)",
                           transition: "all 0.2s ease"
                         }}
                       >
+                        {/* 1. Header: Visit Num, Date/Time & Right-Aligned View Details Toggle Arrow */}
                         <div
                           className="detailed-card-header"
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
-                            flexWrap: "wrap",
-                            gap: "8px",
+                            gap: "10px",
                             cursor: "pointer"
                           }}
                           onClick={() => toggleVisitExpand(v.visitId)}
-                          title="Click to view full clinical details"
+                          title="Click to expand/collapse clinical details"
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                             <span className="visit-num-tag" style={{ background: "#0284c7", color: "#ffffff", padding: "4px 10px", borderRadius: "6px", fontWeight: "800", fontSize: "12.5px" }}>
@@ -865,32 +881,100 @@ export default function PatientPortal({ onClose, themeProps }) {
                                 {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
                               </span>
                             )}
-                            <span style={{ fontSize: "12px", color: isExpanded ? "#0284c7" : "#64748b", fontWeight: "700" }}>
-                              {isExpanded ? "▲ Hide Details" : "▼ View Details"}
-                            </span>
                           </div>
 
-                          <div
-                            className="detailed-card-actions-row"
-                            style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              className="patient-secondary-btn"
-                              style={{ padding: "6px 12px", fontSize: "12px", fontWeight: "700", borderRadius: "6px" }}
-                              onClick={() => setPreviewReceipt(receiptObj)}
-                            >
-                              📄 Digital Slip
-                            </button>
-                            <button
-                              className="patient-primary-btn outline"
-                              style={{ padding: "6px 12px", fontSize: "12px", fontWeight: "700", borderRadius: "6px" }}
-                              onClick={() => downloadReceiptPDF(receiptObj)}
-                              title="Download PDF"
-                            >
-                              📥 Download PDF
-                            </button>
+                          {/* Right-Aligned Details Toggle Arrow Button */}
+                          <div style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            padding: "4px 10px",
+                            borderRadius: "6px",
+                            background: isExpanded ? "rgba(2, 132, 199, 0.1)" : "#f1f5f9",
+                            color: isExpanded ? "#0284c7" : "#475569",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            flexShrink: 0
+                          }}>
+                            <span>{isExpanded ? "▲ Hide Details" : "▼ View Details"}</span>
                           </div>
+                        </div>
+
+                        {/* 2. Patient Condition & Problem Heading */}
+                        <div style={{
+                          margin: "12px 0 14px 0",
+                          padding: "10px 14px",
+                          background: "#f8fafc",
+                          borderRadius: "10px",
+                          borderLeft: "4px solid #0284c7"
+                        }}>
+                          <div style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>🩺</span>
+                            <span>{v.diagnosis || v.reason || patientProfile?.firstVisitReason || "Physiotherapy Rehabilitation"}</span>
+                          </div>
+                          <div style={{ fontSize: "12.5px", color: "#64748b", marginTop: "3px" }}>
+                            Condition / Focus: <strong style={{ color: "#334155" }}>{v.reason || v.diagnosis || "Clinical Session"}</strong>
+                            {patientProfile?.age ? ` • Patient: ${patientProfile.name} (${patientProfile.age}y)` : ""}
+                          </div>
+                        </div>
+
+                        {/* 3. Action Buttons in ONE Single Row & Equal Size */}
+                        <div
+                          className="detailed-card-actions-row"
+                          style={{
+                            display: "flex",
+                            gap: "8px",
+                            width: "100%"
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className="patient-secondary-btn"
+                            style={{
+                              flex: 1,
+                              minHeight: "42px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "6px",
+                              padding: "8px 14px",
+                              fontSize: "13px",
+                              fontWeight: "700",
+                              borderRadius: "8px",
+                              background: "#0f172a",
+                              color: "#ffffff",
+                              border: "1px solid #1e293b",
+                              cursor: "pointer"
+                            }}
+                            onClick={() => setPreviewReceipt(receiptObj)}
+                          >
+                            <span>👁️ View PDF</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="patient-primary-btn"
+                            style={{
+                              flex: 1,
+                              minHeight: "42px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "6px",
+                              padding: "8px 14px",
+                              fontSize: "13px",
+                              fontWeight: "700",
+                              borderRadius: "8px",
+                              background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                              color: "#ffffff",
+                              border: "none",
+                              cursor: "pointer",
+                              boxShadow: "0 2px 6px rgba(2, 132, 199, 0.3)"
+                            }}
+                            onClick={() => downloadReceiptPDF(receiptObj)}
+                            title="Download PDF"
+                          >
+                            <span>📥 Download PDF</span>
+                          </button>
                         </div>
 
                         {/* Collapsible Details Content Inside the Box */}

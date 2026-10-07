@@ -3322,7 +3322,9 @@ textarea:focus {
 .patient-profile-modal-overlay,
 .receipt-modal-overlay,
 .add-visit-modal-overlay,
-.inner-modal-overlay {
+.inner-modal-overlay,
+.patient-submodal-overlay,
+.doctor-link-overlay {
   position: fixed;
   inset: 0;
   z-index: 1100;
@@ -3333,6 +3335,8 @@ textarea:focus {
   justify-content: center;
   padding: 20px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .patient-profile-card {

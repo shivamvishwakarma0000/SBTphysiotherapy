@@ -774,6 +774,24 @@ export default function DoctorPortal({ onClose, themeProps }) {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [showDoctorMore, showAddVisitModal, activeReceipt, selectedPatient, activeTab, onClose]);
 
+  // Lock background body scroll when any modal or sheet is open
+  useEffect(() => {
+    const isModalActive = Boolean(
+      selectedPatient || showAddVisitModal || activeReceipt || activeConsultPatient || convertingLead || linkingEnquiry || showDoctorMore
+    );
+    if (isModalActive) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [selectedPatient, showAddVisitModal, activeReceipt, activeConsultPatient, convertingLead, linkingEnquiry, showDoctorMore]);
+
   const selectDoctorTab = (tab) => {
     if (tab !== activeTab) {
       window.history.pushState({ portal: "doctor", tab }, "");

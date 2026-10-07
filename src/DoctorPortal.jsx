@@ -4744,46 +4744,55 @@ _(Saved in patient clinic records)_`;
       {/* ================= STEP 2: DOCTOR CONSULTATION & FEE DIALOG MODAL ================= */}
       {activeConsultPatient && (
         <div className="add-visit-modal-overlay">
-          <div className="add-visit-card boxy-consult-card" style={{ maxWidth: "680px", width: "100%" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-              <div>
-                <span className="status-pill warning" style={{ marginBottom: "6px", display: "inline-block" }}>🩺 Doctor Consultation Room</span>
-                <h3 style={{ margin: "4px 0", color: "#fff", fontSize: "18px" }}>
-                  Clinical Diagnosis & Treatment: {activeConsultPatient.name}
-                </h3>
-                <p style={{ margin: 0, color: "#94a3b8", fontSize: "13px" }}>
-                  Patient ID: <strong>{activeConsultPatient.patientId}</strong> • Phone: +91 {activeConsultPatient.phone}
-                </p>
+          <div className="add-visit-card boxy-consult-card" style={{ maxWidth: "680px", width: "100%", background: "#ffffff", borderRadius: "16px", border: "1.5px solid #e2e8f0", boxShadow: "0 20px 40px rgba(0,0,0,0.15)", padding: "20px 22px" }}>
+            
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", gap: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <PatientAvatar patient={activeConsultPatient} size={50} />
+                <div>
+                  <span style={{ fontSize: "11px", fontWeight: "800", background: "#fef3c7", color: "#b45309", padding: "2px 8px", borderRadius: "6px", display: "inline-block", marginBottom: "2px" }}>
+                    🩺 Doctor Consultation & Prescription
+                  </span>
+                  <h3 style={{ margin: "2px 0", color: "#0f172a", fontSize: "18px", fontWeight: "800" }}>
+                    {activeConsultPatient.name}
+                  </h3>
+                  <p style={{ margin: 0, color: "#64748b", fontSize: "12.5px" }}>
+                    ID: <strong style={{ color: "#0284c7" }}>{activeConsultPatient.patientId}</strong> • {activeConsultPatient.age}y/{activeConsultPatient.gender} • <strong>+91 {activeConsultPatient.phone}</strong>
+                  </p>
+                </div>
               </div>
-              <button className="secondary-btn close-btn" onClick={() => setActiveConsultPatient(null)}>✕</button>
+              <button className="secondary-btn close-btn" onClick={() => setActiveConsultPatient(null)} style={{ fontSize: "14px", padding: "4px 10px" }}>✕</button>
             </div>
 
-            {/* Quick Patient Intake Summary Box */}
-            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "8px", padding: "12px", marginBottom: "16px", fontSize: "13px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "6px" }}>
-                <div><span style={{ color: "#94a3b8" }}>Chief Problem:</span> <strong style={{ color: "#38bdf8" }}>{activeConsultPatient.firstVisitReason}</strong></div>
-                <div><span style={{ color: "#94a3b8" }}>Duration / Frequency:</span> <strong style={{ color: "#f59e0b" }}>{activeConsultPatient.duration || "Initial"}</strong></div>
+            {/* Quick Patient Intake Problem Banner */}
+            <div style={{ background: "#f0f9ff", border: "1.5px solid #bae6fd", borderRadius: "10px", padding: "10px 14px", marginBottom: "14px", fontSize: "13px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <div><span style={{ color: "#0369a1", fontWeight: "600" }}>Chief Concern:</span> <strong style={{ color: "#0c4a6e" }}>{activeConsultPatient.firstVisitReason}</strong></div>
+                <div><span style={{ color: "#0369a1", fontWeight: "600" }}>Duration:</span> <strong style={{ color: "#b45309" }}>{activeConsultPatient.duration || "Initial onset"}</strong></div>
               </div>
               {activeConsultPatient.complaint && (
-                <div style={{ color: "#cbd5e1", marginTop: "4px" }}>
-                  <span style={{ color: "#94a3b8" }}>Reported Symptoms:</span> <em>"{activeConsultPatient.complaint}"</em>
+                <div style={{ color: "#334155", marginTop: "4px", fontSize: "12.5px" }}>
+                  <span style={{ color: "#0369a1", fontWeight: "600" }}>Reported Symptoms:</span> <em>"{activeConsultPatient.complaint}"</em>
                 </div>
               )}
             </div>
 
-            <form onSubmit={handleFinalizeConsultationSubmit}>
+            <form onSubmit={handleFinalizeConsultationSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {/* Consultation Date & Time */}
               <div className="form-row-2">
-                <label>
+                <label style={{ margin: 0, fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
                   Consultation Date *
                   <input
                     type="date"
                     required
                     value={consultForm.visitDate}
                     onChange={(e) => setConsultForm({ ...consultForm, visitDate: e.target.value })}
+                    style={{ marginTop: "4px", width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", fontSize: "13px", color: "#0f172a", background: "#ffffff" }}
                   />
                 </label>
 
-                <label>
+                <label style={{ margin: 0, fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
                   Consultation Time *
                   <select
                     value={consultForm.visitTimeSelect || "10:30 AM"}
@@ -4795,6 +4804,7 @@ _(Saved in patient clinic records)_`;
                         visitTime: val === "Custom" ? "" : val
                       });
                     }}
+                    style={{ marginTop: "4px", width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", fontSize: "13px", color: "#0f172a", background: "#ffffff", fontWeight: "600" }}
                   >
                     <option value="09:00 AM">09:00 AM</option>
                     <option value="09:30 AM">09:30 AM</option>
@@ -4821,8 +4831,8 @@ _(Saved in patient clinic records)_`;
               </div>
 
               {consultForm.visitTimeSelect === "Custom" && (
-                <div className="form-row-1" style={{ marginTop: "6px" }}>
-                  <label>
+                <div className="form-row-1">
+                  <label style={{ margin: 0, fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
                     Enter Specific Consultation Time *
                     <input
                       type="text"
@@ -4830,15 +4840,17 @@ _(Saved in patient clinic records)_`;
                       value={consultForm.visitTime}
                       onChange={(e) => setConsultForm({ ...consultForm, visitTime: e.target.value })}
                       placeholder="e.g. 03:15 PM"
+                      style={{ marginTop: "4px", width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", fontSize: "13px", color: "#0f172a", background: "#ffffff" }}
                     />
                   </label>
                 </div>
               )}
 
+              {/* Diagnosis Field */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "8px" }}>
-                  <label style={{ margin: 0, fontWeight: "700", color: "#f1f5f9" }}>
-                    Final Clinical Diagnosis & Assessment *
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", flexWrap: "wrap", gap: "6px" }}>
+                  <label style={{ margin: 0, fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
+                    🩺 Final Clinical Diagnosis & Assessment *
                   </label>
                   <button
                     type="button"
@@ -4849,9 +4861,9 @@ _(Saved in patient clinic records)_`;
                     }}
                     disabled={!consultForm.diagnosis}
                     style={{
-                      background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                      background: "linear-gradient(135deg, #7c3aed, #6d28d9)",
                       color: "#ffffff",
-                      border: "1px solid #a78bfa",
+                      border: "none",
                       borderRadius: "6px",
                       padding: "4px 10px",
                       fontSize: "11.5px",
@@ -4870,13 +4882,15 @@ _(Saved in patient clinic records)_`;
                   required
                   value={consultForm.diagnosis}
                   onChange={(e) => setConsultForm({ ...consultForm, diagnosis: e.target.value })}
-                  placeholder="e.g. Lumbar Disc Herniation (L4-L5) with Right Sciatica & Muscle Spasm"
+                  placeholder="e.g. Lumbar Disc Herniation (L4-L5) with Muscle Spasm"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", fontSize: "13.5px", color: "#0f172a", background: "#ffffff", fontWeight: "600", boxSizing: "border-box" }}
                 />
               </div>
 
-              <div style={{ marginTop: "14px", marginBottom: "14px" }}>
-                <label style={{ display: "block", marginBottom: "6px", fontWeight: "700", color: "#f1f5f9" }}>
-                  Therapy & Treatment Administered Today *
+              {/* Therapy & Treatment Notes */}
+              <div>
+                <label style={{ display: "block", marginBottom: "4px", fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
+                  ⚡ Therapy & Treatment Administered Today *
                 </label>
                 <textarea
                   rows="3"
@@ -4884,37 +4898,48 @@ _(Saved in patient clinic records)_`;
                   value={consultForm.treatmentNotes}
                   onChange={(e) => setConsultForm({ ...consultForm, treatmentNotes: e.target.value })}
                   placeholder="e.g. IFT + Ultrasonic therapy for 15 mins. Manual spinal decompression + Isometric core stabilization."
-                  style={{ display: "block", width: "100%", minHeight: "85px", boxSizing: "border-box" }}
+                  style={{ display: "block", width: "100%", minHeight: "75px", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", fontSize: "13px", color: "#0f172a", background: "#ffffff", lineHeight: "1.4", boxSizing: "border-box" }}
                 />
               </div>
 
-              {/* Fee Entry with Quick Presets */}
-              <div style={{ marginTop: "16px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "8px", padding: "14px", clear: "both" }}>
-                <label style={{ margin: "0 0 6px 0", color: "#6ee7b7", fontWeight: "700", display: "block" }}>
-                  Consultation & Therapy Fee (₹) *
-                </label>
-                <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+              {/* Fee Entry with Quick 1-Tap Chips */}
+              <div style={{
+                background: "#ecfdf5",
+                border: "1.5px solid #a7f3d0",
+                borderRadius: "10px",
+                padding: "12px 14px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                  <label style={{ margin: 0, color: "#065f46", fontWeight: "800", fontSize: "13.5px" }}>
+                    Today's Session Fee (₹) *
+                  </label>
+                  <span style={{ fontSize: "12px", color: "#047857", fontWeight: "600" }}>
+                    Tap amount to change in 1 tap
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
                   {["200", "300", "500", "700", "1000", "0"].map((amt) => (
                     <button
                       key={amt}
                       type="button"
                       onClick={() => setConsultForm({ ...consultForm, fee: amt })}
                       style={{
-                        padding: "6px 14px",
+                        padding: "6px 12px",
                         borderRadius: "6px",
-                        fontSize: "13px",
-                        fontWeight: "700",
+                        fontSize: "12.5px",
+                        fontWeight: "800",
                         cursor: "pointer",
-                        border: String(consultForm.fee) === amt ? "2px solid #10b981" : "1px solid rgba(255,255,255,0.15)",
-                        background: String(consultForm.fee) === amt ? "#10b981" : "rgba(255,255,255,0.05)",
-                        color: "#fff"
+                        border: String(consultForm.fee) === amt ? "2px solid #059669" : "1.5px solid #cbd5e1",
+                        background: String(consultForm.fee) === amt ? "#10b981" : "#ffffff",
+                        color: String(consultForm.fee) === amt ? "#ffffff" : "#0f172a",
+                        boxShadow: String(consultForm.fee) === amt ? "0 2px 6px rgba(16, 185, 129, 0.3)" : "none"
                       }}
                     >
                       {amt === "0" ? "₹0 (Pkg / Free)" : `₹${amt}`}
                     </button>
                   ))}
                 </div>
-                <div className="phone-prefix-input" style={{ maxWidth: "200px" }}>
+                <div className="phone-prefix-input" style={{ maxWidth: "180px" }}>
                   <span>₹</span>
                   <input
                     type="number"
@@ -4924,15 +4949,16 @@ _(Saved in patient clinic records)_`;
                     value={consultForm.fee}
                     onChange={(e) => setConsultForm({ ...consultForm, fee: e.target.value })}
                     placeholder="500"
+                    style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a" }}
                   />
                 </div>
               </div>
 
-              {/* Follow-up Section (Optional) */}
-              <div style={{ marginTop: "14px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "12px" }}>
+              {/* Next Follow-Up Session Section */}
+              <div style={{ background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: "10px", padding: "12px 14px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
-                  <label style={{ margin: 0, color: "#94a3b8", fontWeight: "700" }}>
-                    🗓️ Next Follow-Up Session <span style={{ color: "#f59e0b", fontSize: "12px" }}>(Optional)</span>
+                  <label style={{ margin: 0, color: "#0f172a", fontWeight: "700", fontSize: "13px" }}>
+                    🗓️ Next Follow-Up Session <span style={{ color: "#64748b", fontSize: "12px", fontWeight: "400" }}>(Optional)</span>
                   </label>
                   <div style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>
                     <button
@@ -4947,9 +4973,9 @@ _(Saved in patient clinic records)_`;
                         fontSize: "11px",
                         fontWeight: "700",
                         borderRadius: "6px",
-                        border: "1px solid #10b981",
-                        background: "rgba(16, 185, 129, 0.2)",
-                        color: "#6ee7b7",
+                        border: "1.5px solid #10b981",
+                        background: "#ecfdf5",
+                        color: "#047857",
                         cursor: "pointer"
                       }}
                     >
@@ -4967,9 +4993,9 @@ _(Saved in patient clinic records)_`;
                         fontSize: "11px",
                         fontWeight: "700",
                         borderRadius: "6px",
-                        border: "1px solid rgba(255,255,255,0.2)",
-                        background: "rgba(255,255,255,0.08)",
-                        color: "#cbd5e1",
+                        border: "1.5px solid #cbd5e1",
+                        background: "#ffffff",
+                        color: "#334155",
                         cursor: "pointer"
                       }}
                     >
@@ -4982,11 +5008,11 @@ _(Saved in patient clinic records)_`;
                         style={{
                           padding: "4px 8px",
                           fontSize: "11px",
-                          fontWeight: "600",
+                          fontWeight: "700",
                           borderRadius: "6px",
-                          border: "1px solid rgba(248, 113, 113, 0.4)",
-                          background: "rgba(248, 113, 113, 0.15)",
-                          color: "#fca5a5",
+                          border: "1.5px solid #fca5a5",
+                          background: "#fef2f2",
+                          color: "#dc2626",
                           cursor: "pointer"
                         }}
                       >
@@ -4996,20 +5022,22 @@ _(Saved in patient clinic records)_`;
                   </div>
                 </div>
                 <div className="form-row-2">
-                  <label>
+                  <label style={{ margin: 0, fontWeight: "600", color: "#334155", fontSize: "12.5px" }}>
                     Follow-Up Date
                     <input
                       type="date"
                       value={consultForm.followUpDate}
                       onChange={(e) => setConsultForm({ ...consultForm, followUpDate: e.target.value })}
+                      style={{ marginTop: "4px", width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", color: "#0f172a", background: "#ffffff" }}
                     />
                   </label>
-                  <label>
+                  <label style={{ margin: 0, fontWeight: "600", color: "#334155", fontSize: "12.5px" }}>
                     Follow-Up Time
                     <select
                       value={consultForm.followUpTime || "10:30 AM"}
                       onChange={(e) => setConsultForm({ ...consultForm, followUpTime: e.target.value })}
                       disabled={!consultForm.followUpDate}
+                      style={{ marginTop: "4px", width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", color: "#0f172a", background: "#ffffff" }}
                     >
                       <option value="10:00 AM">10:00 AM</option>
                       <option value="10:30 AM">10:30 AM</option>
@@ -5027,14 +5055,26 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              <div className="form-actions-bar" style={{ marginTop: "20px" }}>
+              {/* Submit Button */}
+              <div className="form-actions-bar" style={{ marginTop: "8px" }}>
                 <button
                   type="submit"
                   className="primary-btn"
                   disabled={consultLoading}
-                  style={{ minHeight: "48px", fontSize: "14px", fontWeight: "700", width: "100%", background: "#10b981" }}
+                  style={{
+                    minHeight: "48px",
+                    fontSize: "14.5px",
+                    fontWeight: "800",
+                    width: "100%",
+                    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)",
+                    cursor: "pointer"
+                  }}
                 >
-                  {consultLoading ? "Finalizing Consultation..." : "⚡ Complete Consultation & Issue Official Receipt"}
+                  {consultLoading ? "Finalizing Consultation..." : "🩺 Issue Slip & Finalize Receipt (WhatsApp PDF)"}
                 </button>
               </div>
             </form>

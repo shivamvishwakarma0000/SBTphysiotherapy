@@ -3119,8 +3119,6 @@ textarea:focus {
 
 .enroll-form-card input,
 .enroll-form-card select,
-.add-visit-card input,
-.add-visit-card select,
 .consult-form input,
 .consult-form select {
   height: 44px !important;
@@ -3137,8 +3135,23 @@ textarea:focus {
   width: 100% !important;
 }
 
+.add-visit-card input,
+.add-visit-card select {
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  box-sizing: border-box !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  font-size: 13.5px !important;
+  line-height: normal !important;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  width: 100% !important;
+}
+
 .enroll-form-card textarea,
-.add-visit-card textarea,
 .consult-form textarea {
   box-sizing: border-box !important;
   padding: 10px 12px !important;
@@ -3147,6 +3160,18 @@ textarea:focus {
   background: var(--input-bg) !important;
   border: 1px solid var(--input-border) !important;
   color: var(--heading) !important;
+  width: 100% !important;
+  min-height: 80px !important;
+}
+
+.add-visit-card textarea {
+  box-sizing: border-box !important;
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+  font-size: 13.5px !important;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
   width: 100% !important;
   min-height: 80px !important;
 }
@@ -3482,8 +3507,6 @@ textarea:focus {
 .add-visit-card,
 .inner-modal-card {
   width: min(680px, 100%);
-  max-height: 90vh !important;
-  overflow-y: auto !important;
   background: #ffffff !important;
   color: #0f172a !important;
   border: 1.5px solid #cbd5e1 !important;
@@ -3509,7 +3532,6 @@ textarea:focus {
 .inner-modal-card label {
   margin-bottom: 6px;
   color: #0f172a !important;
-  font-weight: 700 !important;
 }
 
 .add-visit-card input,
@@ -4177,11 +4199,9 @@ textarea:focus {
   .receipt-modal-card,
   .add-visit-card {
     width: 100% !important;
-    max-height: 90vh !important;
-    overflow-y: auto !important;
+    max-height: 92vh !important;
     border-radius: 16px 16px 0 0 !important;
     margin: 0 !important;
-    background: #ffffff !important;
   }
 
   .profile-header {
@@ -8917,13 +8937,15 @@ textarea:focus {
   color: #cbd5e1 !important;
 }
 
-/* Add Visit Form Explicit White Theme Continuity */
+/* Add Visit Card Unified Pure White Form Everywhere */
 .add-visit-card,
 [data-theme="dark"] .add-visit-card,
 [data-theme="light"] .add-visit-card {
   background: #ffffff !important;
   color: #0f172a !important;
   border: 1.5px solid #cbd5e1 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
 }
 
 .add-visit-card h3,
@@ -8942,18 +8964,6 @@ textarea:focus {
 [data-theme="dark"] .add-visit-card label,
 [data-theme="light"] .add-visit-card label {
   color: #0f172a !important;
-  font-weight: 700 !important;
-}
-
-.add-visit-card input,
-.add-visit-card select,
-.add-visit-card textarea,
-[data-theme="dark"] .add-visit-card input,
-[data-theme="dark"] .add-visit-card select,
-[data-theme="dark"] .add-visit-card textarea {
-  background: #ffffff !important;
-  color: #0f172a !important;
-  border: 1.5px solid #cbd5e1 !important;
 }
 
 /* Patient Portal Appointments View - Explicit Black Text (Image 2) */

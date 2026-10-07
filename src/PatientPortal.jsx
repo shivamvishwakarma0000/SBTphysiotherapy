@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { patientApi, subscribeRealtimeEvent } from "./apiService";
+import { patientApi } from "./apiService";
 import { downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
 import { CLINIC_LOGO_B64 } from "./pdfAssets";
 import { PatientAvatar } from "./DoctorPortal";
@@ -165,47 +165,6 @@ export default function PatientPortal({ onClose, themeProps }) {
       loadPatientData();
     }
   }, [patientToken]);
-
-  // Real-time synchronization for Patient Portal (Live Visits, Profile & Cloud Sync)
-  useEffect(() => {
-    if (!patientToken || !patientProfile?.patientId) return;
-
-    const unsubscribe = subscribeRealtimeEvent((event) => {
-      const pid = patientProfile.patientId;
-      const pPhone = (patientProfile.phone || "").replace(/\D/g, "");
-
-      if (
-        event.type === "visit.created" ||
-        event.type === "visit.deleted" ||
-        event.type === "patient.updated" ||
-        event.type === "cloud.synced" ||
-        event.type === "appointment.created" ||
-        event.type === "appointment.updated"
-      ) {
-        // If event matches this patient or is a cloud sync, seamlessly reload records
-        const eventPid = event.data?.patientId || event.data?.id;
-        const eventPhone = (event.data?.phone || "").replace(/\D/g, "");
-        if (!eventPid || eventPid === pid || (eventPhone && eventPhone === pPhone) || event.type === "cloud.synced") {
-          loadPatientData();
-        }
-      }
-    });
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        loadPatientData();
-      }
-    };
-
-    window.addEventListener("focus", handleVisibilityChange);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      unsubscribe();
-      window.removeEventListener("focus", handleVisibilityChange);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [patientToken, patientProfile?.patientId, patientProfile?.phone]);
 
   const loadPatientData = async () => {
     setLoading(true);

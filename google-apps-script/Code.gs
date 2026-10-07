@@ -1487,7 +1487,8 @@ function handleDoctorFetchAll(ss) {
 
   var pSheet = ss.getSheetByName("PATIENTS");
   if (pSheet && pSheet.getLastRow() > 1) {
-    var pData = pSheet.getRange(2, 1, pSheet.getLastRow() - 1, 12).getValues();
+    var pCols = Math.max(14, pSheet.getLastColumn());
+    var pData = pSheet.getRange(2, 1, pSheet.getLastRow() - 1, pCols).getValues();
     pData.forEach(function(r) {
       if (r[0]) {
         patients.push({
@@ -1497,12 +1498,13 @@ function handleDoctorFetchAll(ss) {
           age: String(r[3]),
           gender: String(r[4]),
           phone: String(r[5]),
-          altPhone: String(r[6]),
-          address: String(r[7]),
-          dob: String(r[8]),
-          emergencyContact: String(r[9]),
-          firstVisitReason: String(r[10]),
-          status: String(r[11]) || "Active"
+          altPhone: String(r[6] || ""),
+          address: String(r[7] || "Vindhyachal, Mirzapur"),
+          dob: String(r[8] || ""),
+          emergencyContact: String(r[9] || ""),
+          firstVisitReason: String(r[10] || "Spine & Back Pain"),
+          status: String(r[11]) || "Active",
+          intakeTime: String(r[12] || "10:30 AM")
         });
       }
     });
@@ -1510,9 +1512,12 @@ function handleDoctorFetchAll(ss) {
 
   var vSheet = ss.getSheetByName("VISITS");
   if (vSheet && vSheet.getLastRow() > 1) {
-    var vData = vSheet.getRange(2, 1, vSheet.getLastRow() - 1, 14).getValues();
+    var vCols = Math.max(18, vSheet.getLastColumn());
+    var vData = vSheet.getRange(2, 1, vSheet.getLastRow() - 1, vCols).getValues();
     vData.forEach(function(r) {
       if (r[0] && r[1]) {
+        var rawFee = r[15] !== undefined && r[15] !== "" ? r[15] : 500;
+        var feeFormatted = String(rawFee).indexOf("₹") === 0 ? String(rawFee) : "₹" + String(rawFee);
         visits.push({
           visitId: String(r[0]),
           patientId: String(r[1]),
@@ -1520,14 +1525,16 @@ function handleDoctorFetchAll(ss) {
           phone: String(r[3]),
           visitNumber: Number(r[4]) || 1,
           date: String(r[5]),
-          time: String(r[6]),
-          reason: String(r[7]),
-          complaint: String(r[8]),
-          diagnosis: String(r[9]),
-          treatmentNotes: String(r[10]),
-          followUpDate: String(r[11]),
+          time: String(r[6] || "10:30 AM"),
+          reason: String(r[7] || "Physiotherapy Treatment"),
+          complaint: String(r[8] || ""),
+          diagnosis: String(r[9] || "Under Active Physiotherapy Management"),
+          treatmentNotes: String(r[10] || ""),
+          followUpDate: String(r[11] || ""),
           status: String(r[12]) || "Completed",
-          doctor: String(r[13]) || "Dr. Satyam Vishwakarma"
+          doctor: String(r[13]) || "Dr. Satyam Vishwakarma",
+          amount: Number(String(rawFee).replace(/[^0-9]/g, "")) || 500,
+          fee: feeFormatted
         });
       }
     });
@@ -1535,7 +1542,8 @@ function handleDoctorFetchAll(ss) {
 
   var eSheet = ss.getSheetByName("ENQUIRIES");
   if (eSheet && eSheet.getLastRow() > 1) {
-    var eData = eSheet.getRange(2, 1, eSheet.getLastRow() - 1, 10).getValues();
+    var eCols = Math.max(12, eSheet.getLastColumn());
+    var eData = eSheet.getRange(2, 1, eSheet.getLastRow() - 1, eCols).getValues();
     eData.forEach(function(r) {
       if (r[0]) {
         enquiries.push({

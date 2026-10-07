@@ -1,3 +1,79 @@
+// =============================================================================
+// PATIENT VECTOR FACE AVATAR COMPONENT (Clean clinical avatar without photo upload)
+// =============================================================================
+export function PatientAvatar({ patient, size = 68 }) {
+  const gender = String(patient?.gender || "").toLowerCase();
+  const name = patient?.name || "Patient";
+  const isFemale = gender.includes("female") || gender === "f" || gender.includes("woman") || gender.includes("girl");
+
+  const charCode = name.charCodeAt(0) || 0;
+  const gradients = [
+    "linear-gradient(135deg, #0284c7, #0369a1)",
+    "linear-gradient(135deg, #10b981, #047857)",
+    "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+    "linear-gradient(135deg, #f59e0b, #b45309)",
+    "linear-gradient(135deg, #ec4899, #be185d)",
+    "linear-gradient(135deg, #06b6d4, #0e7490)"
+  ];
+  const bg = gradients[charCode % gradients.length];
+
+  return (
+    <div
+      className="patient-vector-avatar"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        minWidth: `${size}px`,
+        borderRadius: "50%",
+        background: bg,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 4px 14px rgba(0, 0, 0, 0.18)",
+        border: "3px solid #ffffff",
+        position: "relative",
+        flexShrink: 0
+      }}
+    >
+      <svg
+        viewBox="0 0 64 64"
+        width={size * 0.72}
+        height={size * 0.72}
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {isFemale ? (
+          <>
+            <circle cx="32" cy="22" r="11" fill="#ffffff" />
+            <path d="M18 25C18 16 24 10 32 10C40 10 46 16 46 25C46 32 43 37 43 37L21 37C21 37 18 32 18 25Z" fill="#ffffff" opacity="0.35" />
+            <path d="M14 56C14 44 22 39 32 39C42 39 50 44 50 56H14Z" fill="#ffffff" />
+          </>
+        ) : (
+          <>
+            <circle cx="32" cy="21" r="11" fill="#ffffff" />
+            <path d="M12 56C12 43 21 38 32 38C43 38 52 43 52 56H12Z" fill="#ffffff" />
+          </>
+        )}
+      </svg>
+      <span
+        style={{
+          position: "absolute",
+          bottom: "1px",
+          right: "1px",
+          width: "14px",
+          height: "14px",
+          borderRadius: "50%",
+          background: "#10b981",
+          border: "2px solid #ffffff",
+          display: "block"
+        }}
+        title="Active Clinic Patient"
+      />
+    </div>
+  );
+}
+
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import jsPDF from "jspdf";
 import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets";
@@ -765,6 +841,42 @@ export default function DoctorPortal({ onClose, themeProps }) {
 
   const [syncLoading, setSyncLoading] = useState(false);
   const receiptPrintRef = useRef(null);
+
+  // ================= REAL-TIME CLOUD AUTO-SYNC (6s Live Background Sync) =================
+  useEffect(() => {
+    if (!token) return;
+
+    let syncInterval;
+    const performLiveSync = async () => {
+      if (document.hidden) return; // Save bandwidth if tab is in background
+      try {
+        if (getWebhookUrl()) {
+          await restoreFromGoogleSheets();
+        }
+        await Promise.all([fetchStats(), fetchPatients(), fetchTodayVisits(), fetchEnquiries()]);
+      } catch (e) {
+        // silent background sync
+      }
+    };
+
+    // 1. Instant sync when browser tab is opened / focused
+    const handleWindowFocus = () => {
+      performLiveSync();
+    };
+    window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener("online", handleWindowFocus);
+    document.addEventListener("visibilitychange", handleWindowFocus);
+
+    // 2. Continuous 7-second background live sync loop
+    syncInterval = setInterval(performLiveSync, 7000);
+
+    return () => {
+      clearInterval(syncInterval);
+      window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener("online", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleWindowFocus);
+    };
+  }, [token]);
 
   useEffect(() => {
     if (token) {
@@ -3601,70 +3713,218 @@ _(Saved in patient clinic records)_`;
         )}
       </main>
 
-      {/* ================= PATIENT PROFILE MODAL ================= */}
+      {/* ================= PATIENT PROFILE MODAL (BOXY CLINICAL DESIGN WITH AVATAR) ================= */}
       {selectedPatient && (
         <div className="patient-profile-modal-overlay">
-          <div className="patient-profile-card">
-            <div className="profile-header">
-              <div>
-                <span className="patient-id-badge large">{selectedPatient.patientId}</span>
-                <h2>{selectedPatient.name}</h2>
-                <p>
-                  {selectedPatient.age} Yrs • {selectedPatient.gender} • Phone: +91 {selectedPatient.phone}
-                  {selectedPatient.registrationDate && (
-                    <> • Reg: {String(selectedPatient.registrationDate).slice(0, 10)}</>
-                  )}
-                </p>
-              </div>
-              <div className="profile-header-actions">
-                <button 
-                  className="primary-btn"
-                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", borderColor: "#059669", boxShadow: "0 2px 8px rgba(16, 185, 129, 0.35)", fontWeight: "800" }}
-                  onClick={() => openQuickDailyVisitModal(selectedPatient)}
+          <div className="patient-profile-card boxy-profile-card" style={{ maxWidth: "820px", width: "95%", maxHeight: "92vh", overflowY: "auto", borderRadius: "16px" }}>
+            
+            {/* 1. MASTER TOP HEADER BOX (Vector Avatar + Info + 1-Tap Daily Session Action) */}
+            <div className="profile-master-header-box" style={{
+              background: "linear-gradient(135deg, #071927, #0B2A3D)",
+              borderRadius: "14px",
+              padding: "18px 20px",
+              color: "#ffffff",
+              marginBottom: "16px",
+              boxShadow: "0 6px 20px rgba(7, 25, 39, 0.25)",
+              border: "1px solid rgba(255, 255, 255, 0.1)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" }}>
+                
+                {/* Left: Vector Avatar & Patient Key Demographics */}
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: "1 1 320px", minWidth: 0 }}>
+                  <PatientAvatar patient={selectedPatient} size={70} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                      <span className="patient-id-badge large" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #059669", fontWeight: "800", fontSize: "12.5px" }}>
+                        {selectedPatient.patientId}
+                      </span>
+                      <span style={{ fontSize: "12px", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "2px 8px", borderRadius: "6px", fontWeight: "700" }}>
+                        {selectedPatient.status || "Active"}
+                      </span>
+                    </div>
+                    
+                    <h2 style={{ margin: "2px 0 4px 0", fontSize: "22px", fontWeight: "800", color: "#ffffff", letterSpacing: "-0.3px", wordBreak: "break-word" }}>
+                      {selectedPatient.name}
+                    </h2>
+                    
+                    <div style={{ fontSize: "13px", color: "#cbd5e1", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span>{selectedPatient.age} Yrs • {selectedPatient.gender}</span>
+                      <span>•</span>
+                      <a
+                        href={`tel:+91${selectedPatient.phone}`}
+                        style={{ color: "#38bdf8", textDecoration: "none", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                      >
+                        📞 +91 {selectedPatient.phone}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Close button */}
+                <button
+                  className="secondary-btn close-btn"
+                  onClick={() => setSelectedPatient(null)}
+                  style={{ background: "rgba(255, 255, 255, 0.15)", color: "#ffffff", border: "none", width: "36px", height: "36px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", cursor: "pointer" }}
+                  title="Close Patient Profile"
                 >
-                  ⚡ +1 Daily Session
+                  ✕
                 </button>
-                <button className="secondary-btn" onClick={() => setShowAddVisitModal(true)}>
+              </div>
+
+              {/* Action Toolbar on Master Header */}
+              <div style={{
+                display: "flex",
+                gap: "8px",
+                marginTop: "16px",
+                paddingTop: "14px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.12)",
+                flexWrap: "wrap"
+              }}>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  style={{
+                    flex: "2 1 180px",
+                    minHeight: "44px",
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    borderColor: "#059669",
+                    color: "#ffffff",
+                    fontSize: "14px",
+                    fontWeight: "800",
+                    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
+                  }}
+                  onClick={() => openQuickDailyVisitModal(selectedPatient)}
+                  title="Auto-fill and record today's daily physiotherapy visit with AI clinical progression"
+                >
+                  <span>⚡ +1 Daily Physio Session</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  style={{ flex: "1 1 110px", minHeight: "44px", background: "rgba(2, 132, 199, 0.25)", color: "#38bdf8", borderColor: "#0284c7", fontWeight: "700" }}
+                  onClick={() => setShowAddVisitModal(true)}
+                >
                   ➕ Custom Visit
                 </button>
-                <button 
-                  className="secondary-btn" 
-                  style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5" }}
-                  onClick={() => handleDeletePatient(selectedPatient.patientId, selectedPatient.name)}
-                  title="Permanently Delete Patient"
+
+                <a
+                  href={`https://wa.me/91${String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="secondary-btn"
+                  style={{ flex: "1 1 100px", minHeight: "44px", background: "rgba(37, 211, 102, 0.2)", color: "#4ade80", borderColor: "#22c55e", fontWeight: "700", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px", textDecoration: "none" }}
                 >
-                  🗑️ Delete
-                </button>
-                <button className="secondary-btn close-btn" onClick={() => setSelectedPatient(null)}>
-                  ✕
+                  💬 Chat
+                </a>
+
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  style={{ minHeight: "44px", background: "rgba(239, 68, 68, 0.2)", color: "#f87171", borderColor: "#ef4444", fontWeight: "700", padding: "0 12px" }}
+                  onClick={() => handleDeletePatient(selectedPatient.patientId, selectedPatient.name)}
+                  title="Permanently Delete Patient Record"
+                >
+                  🗑️
                 </button>
               </div>
             </div>
 
             <div className="profile-body">
-              {/* Quick Patient Receipt & WhatsApp Toolbar */}
-              <div className="quick-receipt-actions-box" style={{
-                background: "linear-gradient(135deg, rgba(37, 211, 102, 0.12), rgba(2, 132, 199, 0.12))",
-                border: "1px solid rgba(37, 211, 102, 0.35)",
-                borderRadius: "10px",
-                padding: "14px",
-                marginBottom: "18px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px"
+              {/* 2. BOXY TILES GRID (Matching Doctor Dashboard Box Aesthetic) */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "12px",
+                marginBottom: "16px"
               }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                  <strong style={{ color: "#25d366", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                
+                {/* Box A: Clinical Diagnosis & Condition */}
+                <div style={{
+                  background: "#ffffff",
+                  border: "1.5px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "14px 16px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <strong style={{ fontSize: "13px", color: "#0284c7", display: "flex", alignItems: "center", gap: "6px" }}>
+                      🩺 Chief Problem & Condition
+                    </strong>
+                    <span style={{ fontSize: "11px", fontWeight: "800", background: "#ecfdf5", color: "#059669", padding: "2px 8px", borderRadius: "6px" }}>
+                      {selectedPatient.totalVisits || (patientVisits.length > 0 ? patientVisits.length : 1)} Total Visits
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", marginBottom: "4px" }}>
+                    {selectedPatient.firstVisitReason || "Physiotherapy Rehabilitation"}
+                  </div>
+                  <div style={{ fontSize: "12.5px", color: "#64748b" }}>
+                    <strong>Onset/Duration:</strong> {selectedPatient.duration || "Initial onset"}
+                  </div>
+                  {selectedPatient.complaint && (
+                    <div style={{ fontSize: "12px", color: "#475569", marginTop: "6px", background: "#f8fafc", padding: "6px 8px", borderRadius: "6px", border: "1px solid #f1f5f9" }}>
+                      <em>"{selectedPatient.complaint}"</em>
+                    </div>
+                  )}
+                </div>
+
+                {/* Box B: Patient Contact & Demographics */}
+                <div style={{
+                  background: "#ffffff",
+                  border: "1.5px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "14px 16px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+                }}>
+                  <strong style={{ fontSize: "13px", color: "#0284c7", display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                    📍 Contact & Demographics
+                  </strong>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "12.5px" }}>
+                    <div>
+                      <span style={{ color: "#64748b", display: "block", fontSize: "11px" }}>Address</span>
+                      <strong style={{ color: "#0f172a" }}>{selectedPatient.address || "Vindhyachal, Mirzapur"}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "#64748b", display: "block", fontSize: "11px" }}>Registered Date</span>
+                      <strong style={{ color: "#0f172a" }}>{cleanDateOnly(selectedPatient.registrationDate)}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "#64748b", display: "block", fontSize: "11px" }}>Alt Phone</span>
+                      <strong style={{ color: "#0f172a" }}>{selectedPatient.altPhone ? `+91 ${selectedPatient.altPhone}` : "None"}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "#64748b", display: "block", fontSize: "11px" }}>Emergency Contact</span>
+                      <strong style={{ color: "#0f172a" }}>{selectedPatient.emergencyContact || "None"}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. PRESCRIPTION & OFFICIAL RECEIPT HUB BOX */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(37, 211, 102, 0.08), rgba(2, 132, 199, 0.08))",
+                border: "1.5px solid rgba(37, 211, 102, 0.35)",
+                borderRadius: "12px",
+                padding: "14px 16px",
+                marginBottom: "16px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                  <strong style={{ color: "#15803d", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px", fontWeight: "800" }}>
                     📄 Patient Official Receipt & Prescription Slip
                   </strong>
-                  <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                  <span style={{ fontSize: "12px", color: "#64748b" }}>
                     Patient: +91 {selectedPatient.phone}
                   </span>
                 </div>
+                
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   <button
                     className="whatsapp-share-btn"
-                    style={{ flex: "1 1 200px", minHeight: "42px", fontSize: "13px", padding: "10px 16px", borderRadius: "8px", fontWeight: "700" }}
+                    style={{ flex: "1 1 180px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", fontWeight: "800" }}
                     onClick={() => {
                       const latestVisit = patientVisits[0] || {
                         visitId: `VST-${selectedPatient.patientId}-1`,
@@ -3689,7 +3949,7 @@ _(Saved in patient clinic records)_`;
                   </button>
                   <button
                     className="primary-btn"
-                    style={{ flex: "1 1 130px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px" }}
+                    style={{ flex: "1 1 130px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", fontWeight: "700" }}
                     onClick={() => {
                       const latestVisit = patientVisits[0] || {
                         visitId: `VST-${selectedPatient.patientId}-1`,
@@ -3714,7 +3974,7 @@ _(Saved in patient clinic records)_`;
                   </button>
                   <button
                     className="secondary-btn"
-                    style={{ flex: "1 1 120px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", background: "rgba(2, 132, 199, 0.15)", color: "#38bdf8", borderColor: "#0284c7" }}
+                    style={{ flex: "1 1 110px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", background: "#e0f2fe", color: "#0284c7", borderColor: "#7dd3fc", fontWeight: "700" }}
                     onClick={() => handleCopyPhoneNumber(selectedPatient.phone)}
                     title="Copy Patient Phone Number"
                   >
@@ -3722,7 +3982,7 @@ _(Saved in patient clinic records)_`;
                   </button>
                   <button
                     className="secondary-btn"
-                    style={{ flex: "1 1 100px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px" }}
+                    style={{ flex: "1 1 100px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", fontWeight: "700" }}
                     onClick={() => {
                       const latestVisit = patientVisits[0] || {
                         visitId: `VST-${selectedPatient.patientId}-1`,
@@ -3748,46 +4008,26 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              <div className="demographics-grid">
-                <div>
-                  <label>Alternate Phone</label>
-                  <span>{selectedPatient.altPhone ? `+91 ${selectedPatient.altPhone}` : "None"}</span>
-                </div>
-                <div>
-                  <label>Address</label>
-                  <span>{selectedPatient.address || "Vindhyachal, Mirzapur"}</span>
-                </div>
-                <div>
-                  <label>Emergency Contact</label>
-                  <span>{selectedPatient.emergencyContact || "None"}</span>
-                </div>
-                <div>
-                  <label>Completed Visits</label>
-                  <span className="visit-count-tag">{selectedPatient.totalVisits || (patientVisits.length > 0 ? patientVisits.length : 1)} Visits</span>
-                </div>
-              </div>
-
-              {/* Patient Portal Account & Recovery PIN (Doctor Control) */}
-              <div className="patient-portal-account-card" style={{
-                background: "linear-gradient(135deg, rgba(8, 120, 201, 0.08), rgba(118, 184, 42, 0.08))",
-                border: "1px solid rgba(8, 120, 201, 0.25)",
-                borderRadius: "10px",
+              {/* 4. PATIENT PORTAL ACCESS & PIN BOX */}
+              <div style={{
+                background: "#ffffff",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: "12px",
                 padding: "14px 16px",
-                marginTop: "16px",
-                marginBottom: "20px"
+                marginBottom: "16px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span style={{ fontSize: "18px" }}>🔐</span>
-                    <strong style={{ fontSize: "14px", color: "var(--text-primary, #0f172a)" }}>
-                      Patient Portal Access & 4-Digit Recovery PIN
+                    <strong style={{ fontSize: "14px", color: "#0f172a", fontWeight: "800" }}>
+                      Patient Portal Access & PIN (Doctor Control)
                     </strong>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span style={{
-                      fontSize: "11px",
-                      fontWeight: "700",
-                      textTransform: "uppercase",
+                      fontSize: "11.5px",
+                      fontWeight: "800",
                       padding: "3px 8px",
                       borderRadius: "6px",
                       background: (patientAccountData?.status === "disabled") ? "#fee2e2" : "#dcfce7",
@@ -3807,33 +4047,30 @@ _(Saved in patient clinic records)_`;
                   </div>
                 </div>
 
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                     <div>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted, #64748b)", display: "block" }}>Universal Default Password</span>
+                      <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>Universal Default Password</span>
                       <strong style={{
-                        fontSize: "18px",
-                        letterSpacing: "1.5px",
+                        fontSize: "16px",
+                        letterSpacing: "1px",
                         color: "#16a34a",
                         fontFamily: "monospace",
                         background: "rgba(34, 197, 94, 0.12)",
-                        padding: "4px 10px",
+                        padding: "3px 8px",
                         borderRadius: "6px",
                         display: "inline-block"
                       }}>
                         vindhy
                       </strong>
-                      <span style={{ fontSize: "11px", marginLeft: "8px", color: "var(--text-muted, #64748b)" }}>
-                        ({patientAccountData?.hasCustomPassword ? "Custom password active" : "Default active"})
-                      </span>
                     </div>
                     <button
                       type="button"
                       className="secondary-btn"
-                      style={{ fontSize: "12px", padding: "6px 12px" }}
+                      style={{ fontSize: "11.5px", padding: "5px 10px" }}
                       onClick={handleDoctorResetToDefault}
                       disabled={accountActionLoading}
-                      title="Reset patient's password back to universal default 'vindhy'"
+                      title="Reset patient password back to universal default 'vindhy'"
                     >
                       🔄 Reset to 'vindhy'
                     </button>
@@ -3845,15 +4082,15 @@ _(Saved in patient clinic records)_`;
                   >
                     <input
                       type="text"
-                      placeholder="Set custom password"
+                      placeholder="Set custom PIN/password"
                       value={newPatientPassInput}
                       onChange={(e) => setNewPatientPassInput(e.target.value)}
                       style={{
                         padding: "6px 10px",
                         fontSize: "12px",
                         borderRadius: "6px",
-                        border: "1px solid var(--border, #cbd5e1)",
-                        width: "170px"
+                        border: "1px solid #cbd5e1",
+                        width: "160px"
                       }}
                     />
                     <button
@@ -3866,61 +4103,80 @@ _(Saved in patient clinic records)_`;
                     </button>
                   </form>
                 </div>
-
-                {accountActionMsg.text && (
-                  <div style={{
-                    marginTop: "8px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: accountActionMsg.isError ? "#dc2626" : "#16a34a"
-                  }}>
-                    {accountActionMsg.text}
-                  </div>
-                )}
-
-                <div style={{ marginTop: "8px", fontSize: "11px", color: "var(--text-muted, #64748b)" }}>
-                  💡 Patient can log into their Patient Portal using Registered Mobile <strong>+91 {selectedPatient.phone}</strong> (or ID <strong>{selectedPatient.patientId}</strong>) and password <strong>vindhy</strong>.
-                </div>
               </div>
 
-              <h3 className="section-subtitle">Chronological Consultation & Visit Records</h3>
+              {/* 5. CHRONOLOGICAL VISITS TIMELINE */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                <h3 className="section-subtitle" style={{ margin: 0, fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>
+                  📜 Chronological Consultation & Visit Records ({patientVisits.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => openQuickDailyVisitModal(selectedPatient)}
+                  style={{
+                    background: "#ecfdf5",
+                    color: "#059669",
+                    border: "1px solid #86efac",
+                    padding: "4px 10px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: "800",
+                    cursor: "pointer"
+                  }}
+                >
+                  ⚡ +1 Add Today's Visit
+                </button>
+              </div>
+
               <div className="visit-timeline">
                 {patientVisits.map(v => (
-                  <div className="timeline-visit-card" key={v.visitId}>
-                    <div className="timeline-visit-head">
+                  <div className="timeline-visit-card" key={v.visitId} style={{ background: "#ffffff", border: "1.5px solid #e2e8f0", borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
+                    <div className="timeline-visit-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <span className="visit-num-badge">Visit #{v.visitNumber}</span>
-                        <span className="visit-date">{String(v.date || "").slice(0, 10)} {v.time ? `(${v.time})` : ""}</span>
+                        <span className="visit-num-badge" style={{ background: "#0284c7", color: "#ffffff", fontWeight: "800", padding: "3px 8px", borderRadius: "6px", fontSize: "12px" }}>
+                          Visit #{v.visitNumber}
+                        </span>
+                        <span className="visit-date" style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
+                          📅 {String(v.date || "").slice(0, 10)} {v.time ? `• 🕒 ${v.time}` : ""}
+                        </span>
+                        {v.fee && (
+                          <span style={{ fontWeight: "800", color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: "6px", fontSize: "12px" }}>
+                            {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
+                          </span>
+                        )}
                       </div>
-                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                         <button
                           className="receipt-btn finalize-action-btn"
+                          style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700" }}
                           onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
                         >
-                          📄 Slip & WhatsApp PDF
+                          📄 Receipt & WhatsApp
                         </button>
                         <button
                           className="secondary-btn"
                           onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
-                          style={{ padding: "6px 12px", minHeight: "36px", fontSize: "12px" }}
+                          style={{ padding: "5px 10px", fontSize: "11.5px" }}
                           title="Instant Download PDF"
                         >
-                          📥 Download
+                          📥 PDF
                         </button>
                       </div>
                     </div>
-                    <div className="timeline-visit-details">
-                      <p><strong>Reason:</strong> {v.reason}</p>
-                      {v.complaint && <p><strong>Complaint:</strong> {v.complaint}</p>}
-                      {v.diagnosis && <p><strong>Diagnosis:</strong> {v.diagnosis}</p>}
-                      {v.treatmentNotes && <p><strong>Therapy Notes:</strong> {v.treatmentNotes}</p>}
-                      {v.followUpDate && <p><strong>Next Follow-Up:</strong> {v.followUpDate}</p>}
+                    <div className="timeline-visit-details" style={{ fontSize: "13px", color: "#334155", display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <p style={{ margin: 0 }}><strong>Therapy Focus:</strong> {v.reason}</p>
+                      {v.diagnosis && <p style={{ margin: 0 }}><strong>Diagnosis:</strong> {v.diagnosis}</p>}
+                      {v.treatmentNotes && <p style={{ margin: 0, color: "#0369a1" }}><strong>Administered:</strong> {v.treatmentNotes}</p>}
+                      {v.followUpDate && <p style={{ margin: 0, color: "#059669" }}><strong>Next Follow-Up:</strong> {cleanDateOnly(v.followUpDate)}</p>}
                     </div>
                   </div>
                 ))}
+
                 {patientVisits.length === 0 && (
-                  <div style={{ background: "var(--panel)", border: "1px dashed var(--line)", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
-                    <p style={{ margin: "0 0 12px 0", color: "var(--muted)", fontSize: "13px" }}>Initial Registration Consultation Record</p>
+                  <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "10px", padding: "18px", textAlign: "center" }}>
+                    <p style={{ margin: "0 0 10px 0", color: "#64748b", fontSize: "13px" }}>
+                      Initial Registration Consultation Record
+                    </p>
                     <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
                       <button
                         className="receipt-btn finalize-action-btn"
@@ -3945,31 +4201,6 @@ _(Saved in patient clinic records)_`;
                         }}
                       >
                         📄 Generate Slip & Send WhatsApp PDF
-                      </button>
-                      <button
-                        className="secondary-btn"
-                        onClick={() => {
-                          const fallbackVisit = {
-                            visitId: `VST-${selectedPatient.patientId}-1`,
-                            patientId: selectedPatient.patientId,
-                            patientName: selectedPatient.name,
-                            phone: selectedPatient.phone,
-                            visitNumber: 1,
-                            date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
-                            time: "10:00 AM",
-                            reason: selectedPatient.firstVisitReason || "Initial Consultation & Assessment",
-                            complaint: selectedPatient.firstVisitReason || "Initial Consultation",
-                            diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
-                            treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
-                            followUpDate: "As advised by doctor",
-                            status: "Completed",
-                            doctor: "Dr. Satyam Vishwakarma"
-                          };
-                          handleDownloadPDF({ patient: selectedPatient, visit: fallbackVisit });
-                        }}
-                        style={{ padding: "8px 14px", fontSize: "13px" }}
-                      >
-                        📥 Download PDF
                       </button>
                     </div>
                   </div>

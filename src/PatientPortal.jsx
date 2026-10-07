@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { patientApi } from "./apiService";
 import { downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
 import { CLINIC_LOGO_B64 } from "./pdfAssets";
+import { PatientAvatar } from "./DoctorPortal";
 
 export default function PatientPortal({ onClose, themeProps }) {
   const handleToggleTheme = () => {
@@ -335,191 +336,53 @@ export default function PatientPortal({ onClose, themeProps }) {
           </div>
 
           <div className="patient-login-card">
-            {/* Segmented Tab Switcher */}
-            <div className="patient-auth-tab-bar">
-              <button
-                type="button"
-                className={`patient-auth-tab ${authMode === "login" ? "active" : ""}`}
-                onClick={() => { setAuthMode("login"); setLoginError(""); setRegisterError(""); }}
-              >
-                🔐 Sign In
+            <h3 style={{ marginTop: "6px", fontSize: "18px", fontWeight: "800", color: "var(--heading)" }}>
+              🔐 Sign In to Your Health Portal
+            </h3>
+
+            {loginError && <div className="patient-alert error">{loginError}</div>}
+
+            <form onSubmit={handleLogin} className="patient-login-form">
+              <label>
+                Patient ID or Registered Mobile (10 Digits)
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 8858496345 or VPR-0001"
+                  value={loginForm.identifier}
+                  onChange={(e) => setLoginForm({ ...loginForm, identifier: e.target.value })}
+                  autoComplete="username"
+                />
+              </label>
+
+              <label>
+                Password (Default is \x27vindhy\x27)
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter password (default: vindhy)"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  autoComplete="current-password"
+                />
+              </label>
+
+              <button type="submit" className="patient-primary-btn" disabled={loading} style={{ marginTop: "6px" }}>
+                {loading ? "Signing in..." : "Sign In to Portal →"}
               </button>
-              <button
-                type="button"
-                className={`patient-auth-tab ${authMode === "register" ? "active" : ""}`}
-                onClick={() => { setAuthMode("register"); setLoginError(""); setRegisterError(""); }}
-              >
-                ✨ New Patient Registration
-              </button>
+            </form>
+
+            <div className="patient-support-note">
+              <span>💡 First time here or newly registered?</span>
+              <p>
+                Use your <strong>10-digit Registered Mobile Number</strong> or <strong>Patient ID</strong>.<br />
+                Your universal clinic password is <strong>vindhy</strong>.
+              </p>
+              <div className="helpline-chips">
+                <a href="tel:+919793093316" className="help-chip">📞 Call: +91 9793093316</a>
+                <a href="https://wa.me/918382024264" target="_blank" rel="noreferrer" className="help-chip wa">💬 WhatsApp Helpline</a>
+              </div>
             </div>
-
-            {authMode === "login" ? (
-              <>
-                <h3 style={{ marginTop: "14px" }}>Sign In to Your Health Portal</h3>
-
-                {loginError && <div className="patient-alert error">{loginError}</div>}
-
-                <form onSubmit={handleLogin} className="patient-login-form">
-                  <label>
-                    Patient ID or Registered Mobile (10 Digits)
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 8858496345 or VPR-0001"
-                      value={loginForm.identifier}
-                      onChange={(e) => setLoginForm({ ...loginForm, identifier: e.target.value })}
-                      autoComplete="username"
-                    />
-                  </label>
-
-                  <label>
-                    Password (Default is 'vindhy')
-                    <input
-                      type="password"
-                      required
-                      placeholder="Enter password (default: vindhy)"
-                      value={loginForm.password}
-                      onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                      autoComplete="current-password"
-                    />
-                  </label>
-
-                  <button type="submit" className="patient-primary-btn" disabled={loading} style={{ marginTop: "6px" }}>
-                    {loading ? "Signing in..." : "Sign In to Portal →"}
-                  </button>
-                </form>
-
-                <div className="patient-support-note">
-                  <span>💡 First time here or newly registered?</span>
-                  <p>
-                    Use your <strong>10-digit Registered Mobile Number</strong> or <strong>Patient ID</strong>.<br />
-                    Your universal clinic password is <strong>vindhy</strong>.<br />
-                    <em>Don't have an account yet? Switch to the "New Patient Registration" tab above to sign up instantly!</em>
-                  </p>
-                  <div className="helpline-chips">
-                    <a href="tel:+919793093316" className="help-chip">📞 Call: +91 9793093316</a>
-                    <a href="https://wa.me/918382024264" target="_blank" rel="noreferrer" className="help-chip wa">💬 WhatsApp Helpline</a>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 style={{ marginTop: "14px" }}>Register as a New Patient</h3>
-                <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "12px" }}>
-                  Create your health profile to view consultation records, exercise routines, and receipts.
-                </p>
-
-                {registerError && <div className="patient-alert error">{registerError}</div>}
-                {registerSuccess && <div className="patient-alert success">{registerSuccess}</div>}
-
-                <form onSubmit={handleRegister} className="patient-login-form">
-                  <label>
-                    Patient Full Name *
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Rajesh Kumar"
-                      value={registerForm.name}
-                      onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
-                      autoComplete="name"
-                    />
-                  </label>
-
-                  <div className="patient-form-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                    <label>
-                      Age (Years) *
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        max="120"
-                        placeholder="e.g. 35"
-                        value={registerForm.age}
-                        onChange={(e) => setRegisterForm({ ...registerForm, age: e.target.value })}
-                      />
-                    </label>
-
-                    <label>
-                      Gender *
-                      <select
-                        value={registerForm.gender}
-                        onChange={(e) => setRegisterForm({ ...registerForm, gender: e.target.value })}
-                      >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <label>
-                    Mobile Number (10 Digits) *
-                    <div className="auto-enquiry-phone-row" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ fontWeight: "700", color: "var(--text-secondary)" }}>+91</span>
-                      <input
-                        type="tel"
-                        required
-                        maxLength="10"
-                        placeholder="9876543210"
-                        value={registerForm.phone}
-                        onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value })}
-                        autoComplete="tel"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  </label>
-
-                  <label>
-                    City / Address
-                    <input
-                      type="text"
-                      placeholder="e.g. Vindhyachal, Mirzapur"
-                      value={registerForm.address}
-                      onChange={(e) => setRegisterForm({ ...registerForm, address: e.target.value })}
-                    />
-                  </label>
-
-                  <label>
-                    Primary Pain Area / Health Concern *
-                    <select
-                      value={registerForm.reasonForVisit}
-                      onChange={(e) => setRegisterForm({ ...registerForm, reasonForVisit: e.target.value })}
-                    >
-                      <option value="Spine & Back Pain">Spine & Back Pain (Slip Disc / Sciatica)</option>
-                      <option value="Cup Therapy / Cupping">Cupping Therapy / Hijama</option>
-                      <option value="Cervical & Neck Spondylosis">Cervical & Neck Pain</option>
-                      <option value="Knee Pain & Arthritis / ACL">Knee Pain & Arthritis / ACL</option>
-                      <option value="Paralysis & Neuro Rehabilitation">Paralysis & Neuro Rehabilitation</option>
-                      <option value="Frozen Shoulder & Shoulder Pain">Frozen Shoulder & Rotator Cuff</option>
-                      <option value="Sports Injury Recovery">Sports Injury & Ligament Recovery</option>
-                      <option value="Post-Surgical Rehabilitation">Post-Surgical Rehabilitation</option>
-                      <option value="General Physiotherapy">General Physiotherapy / Body Pain</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Set Password (Optional, default is 'vindhy')
-                    <input
-                      type="password"
-                      placeholder="Leave blank for default: vindhy"
-                      value={registerForm.password}
-                      onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-                      autoComplete="new-password"
-                    />
-                  </label>
-
-                  <button type="submit" className="patient-primary-btn" disabled={loading} style={{ marginTop: "8px" }}>
-                    {loading ? "Registering..." : "Complete Registration & Access Portal →"}
-                  </button>
-                </form>
-
-                <div className="patient-support-note" style={{ marginTop: "12px" }}>
-                  <p style={{ margin: 0 }}>
-                    Already have an account? <button type="button" onClick={() => setAuthMode("login")} style={{ background: "none", border: "none", color: "var(--brand-primary, #0878C9)", fontWeight: "700", cursor: "pointer", textDecoration: "underline", padding: 0 }}>Sign in here</button>.
-                  </p>
-                </div>
-              </>
-            )}
           </div>
 
           <div className="patient-login-footer">
@@ -664,7 +527,7 @@ export default function PatientPortal({ onClose, themeProps }) {
 
               <div className="greeting-text-col">
                 <span className="greeting-salutation">👋 Hello, {patientFirstName}</span>
-                <h2 className="greeting-headline">Take Charge of Your Recovery!</h2>
+                <h2 className="greeting-headline" style={{ color: "#ffffff", margin: "4px 0", fontSize: "22px", fontWeight: "800", textShadow: "0 2px 4px rgba(0,0,0,0.4)" }}>Take Charge of Your Recovery!</h2>
 
                 <div className="patient-hero-id-badge">
                   <span className="id-sub-label">PATIENT ID</span>
@@ -1341,76 +1204,138 @@ export default function PatientPortal({ onClose, themeProps }) {
         {/* ================================================================= */}
         {activeTab === "security" && (
           <div className="tab-pane security-pane">
-            <div className="section-title-box">
-              <h2>My Profile & Password Settings</h2>
-              <p>View your patient registration details and manage your portal login password.</p>
+            <div className="section-title-box" style={{ marginBottom: "16px" }}>
+              <h2 style={{ fontSize: "20px", fontWeight: "800", margin: "0 0 4px 0" }}>My Profile & Password Settings</h2>
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>View your patient registration details and manage your portal login password.</p>
             </div>
 
-            {/* Profile Demographics */}
-            <div className="security-card">
-              <h3>Patient Personal Details</h3>
-              <div className="patient-details-grid">
-                <div className="detail-cell">
-                  <label>Full Name</label>
-                  <strong>{patientProfile?.name || "Patient"}</strong>
+            {/* 1. MASTER TOP HEADER BOX (Matching Image 5 Reference) */}
+            <div className="profile-master-header-box" style={{
+              background: "linear-gradient(135deg, #071927, #0B2A3D)",
+              borderRadius: "16px",
+              padding: "20px",
+              color: "#ffffff",
+              marginBottom: "16px",
+              boxShadow: "0 6px 20px rgba(7, 25, 39, 0.25)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              display: "flex",
+              alignItems: "center",
+              gap: "18px",
+              flexWrap: "wrap"
+            }}>
+              <PatientAvatar patient={patientProfile} size={76} />
+              <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "6px" }}>
+                  <span style={{
+                    background: "rgba(16, 185, 129, 0.2)",
+                    color: "#34d399",
+                    border: "1px solid #059669",
+                    fontWeight: "800",
+                    fontSize: "12.5px",
+                    padding: "3px 10px",
+                    borderRadius: "6px"
+                  }}>
+                    {patientProfile?.patientId || "VPR-2026-1001"}
+                  </span>
+                  <span style={{
+                    fontSize: "12px",
+                    background: "rgba(56, 189, 248, 0.15)",
+                    color: "#38bdf8",
+                    padding: "3px 10px",
+                    borderRadius: "6px",
+                    fontWeight: "700"
+                  }}>
+                    {patientProfile?.status || "Active"}
+                  </span>
                 </div>
-                <div className="detail-cell">
-                  <label>Patient ID</label>
-                  <strong className="accent-id">{patientProfile?.patientId || "VPR"}</strong>
-                </div>
-                <div className="detail-cell">
-                  <label>Age / Gender</label>
-                  <span>{patientProfile?.age || "--"} Yrs • {patientProfile?.gender || "--"}</span>
-                </div>
-                <div className="detail-cell">
-                  <label>Registered Mobile</label>
-                  <span>+91 {patientProfile?.phone || ""}</span>
-                </div>
-                <div className="detail-cell">
-                  <label>Alternate Mobile</label>
-                  <span>{patientProfile?.altPhone ? `+91 ${patientProfile.altPhone}` : "Not provided"}</span>
-                </div>
-                <div className="detail-cell">
-                  <label>Clinic Address</label>
-                  <span>{patientProfile?.address || "Vindhyachal, Mirzapur"}</span>
-                </div>
-                <div className="detail-cell">
-                  <label>Emergency Contact</label>
-                  <span>{patientProfile?.emergencyContact || "Not provided"}</span>
-                </div>
-                <div className="detail-cell">
-                  <label>Registration Date</label>
-                  <span>{cleanDateOnly(patientProfile?.registrationDate)}</span>
+
+                <h2 style={{ margin: "2px 0 6px 0", fontSize: "24px", fontWeight: "800", color: "#ffffff", letterSpacing: "-0.3px", wordBreak: "break-word" }}>
+                  {patientProfile?.name || "Patient"}
+                </h2>
+
+                <div style={{ fontSize: "13.5px", color: "#cbd5e1", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <span>{patientProfile?.age || "--"} Yrs • {patientProfile?.gender || "Not specified"}</span>
+                  <span>•</span>
+                  <a
+                    href={`tel:+91${patientProfile?.phone}`}
+                    style={{ color: "#38bdf8", textDecoration: "none", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                  >
+                    📞 +91 {patientProfile?.phone}
+                  </a>
                 </div>
               </div>
             </div>
 
-            {/* Universal Password Information Card */}
-            <div className="security-card credentials-info-box">
+            {/* 2. DEMOGRAPHICS DETAILS BOXES (Boxy Grid Aesthetic) */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gap: "12px",
+              marginBottom: "16px"
+            }}>
+              <div className="profile-detail-card" style={{ background: "var(--bg-card, #ffffff)", border: "1.5px solid var(--line, #e2e8f0)", borderRadius: "12px", padding: "14px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+                  📱 Alternate Mobile
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--heading, #0f172a)" }}>
+                  {patientProfile?.altPhone ? `+91 ${patientProfile.altPhone}` : "Not provided"}
+                </div>
+              </div>
+
+              <div className="profile-detail-card" style={{ background: "var(--bg-card, #ffffff)", border: "1.5px solid var(--line, #e2e8f0)", borderRadius: "12px", padding: "14px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+                  📍 Clinic / Home Address
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--heading, #0f172a)" }}>
+                  {patientProfile?.address || "Vindhyachal, Mirzapur"}
+                </div>
+              </div>
+
+              <div className="profile-detail-card" style={{ background: "var(--bg-card, #ffffff)", border: "1.5px solid var(--line, #e2e8f0)", borderRadius: "12px", padding: "14px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+                  🚨 Emergency Contact
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--heading, #0f172a)" }}>
+                  {patientProfile?.emergencyContact || "Not provided"}
+                </div>
+              </div>
+
+              <div className="profile-detail-card" style={{ background: "var(--bg-card, #ffffff)", border: "1.5px solid var(--line, #e2e8f0)", borderRadius: "12px", padding: "14px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+                  📅 Registration Date
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--heading, #0f172a)" }}>
+                  {cleanDateOnly(patientProfile?.registrationDate)}
+                </div>
+              </div>
+            </div>
+
+            {/* 3. UNIVERSAL PASSWORD INFORMATION CARD */}
+            <div className="security-card credentials-info-box" style={{ borderRadius: "14px", border: "1.5px solid var(--line, #e2e8f0)", padding: "18px 20px", marginBottom: "16px", background: "var(--bg-card, #ffffff)" }}>
               <div className="pin-head">
                 <div className="pin-title-row">
                   <span className="pin-icon">🔑</span>
                   <div>
-                    <h3>Clinic Login Credentials</h3>
-                    <p>
+                    <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: "800", color: "var(--heading)" }}>Clinic Login Credentials</h3>
+                    <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
                       Your account was enrolled at Vindhy Physio & Rehab Center by Dr. Satyam Vishwakarma.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="patient-details-grid" style={{ marginTop: "14px" }}>
-                <div className="detail-cell">
-                  <label>Login ID</label>
-                  <strong style={{ color: "#0878C9" }}>+91 {patientProfile?.phone || ""} <small style={{ color: "var(--text-muted)", fontWeight: "normal" }}>or {patientProfile?.patientId || "VPR"}</small></strong>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", marginTop: "14px" }}>
+                <div style={{ background: "rgba(2, 132, 199, 0.05)", padding: "10px 14px", borderRadius: "10px", border: "1px solid rgba(2, 132, 199, 0.2)" }}>
+                  <label style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", display: "block", marginBottom: "2px" }}>LOGIN ID</label>
+                  <strong style={{ color: "#0284c7", fontSize: "14px" }}>+91 {patientProfile?.phone || ""} <small style={{ color: "var(--text-muted)", fontWeight: "normal" }}>({patientProfile?.patientId || "VPR"})</small></strong>
                 </div>
-                <div className="detail-cell">
-                  <label>Initial Universal Password</label>
-                  <strong style={{ fontFamily: "monospace", letterSpacing: "1px", color: "#16a34a" }}>vindhy</strong>
+                <div style={{ background: "rgba(22, 163, 74, 0.05)", padding: "10px 14px", borderRadius: "10px", border: "1px solid rgba(22, 163, 74, 0.2)" }}>
+                  <label style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", display: "block", marginBottom: "2px" }}>INITIAL DEFAULT PASSWORD</label>
+                  <strong style={{ fontFamily: "monospace", letterSpacing: "1px", color: "#16a34a", fontSize: "14px" }}>vindhy</strong>
                 </div>
               </div>
 
-              <div className="pin-security-tips" style={{ marginTop: "16px" }}>
+              <div className="pin-security-tips" style={{ marginTop: "14px" }}>
                 <span>🛡️ Security Tip:</span>
                 <p>
                   The initial default password for all patients is <strong>vindhy</strong>. You can change your password below to your own private password anytime. If you ever forget it, the doctor can reset it back to default for you at the clinic.
@@ -1418,10 +1343,10 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
             </div>
 
-            {/* Change Password Form */}
-            <div className="security-card">
-              <h3>Change Your Password</h3>
-              <p className="card-subtext">
+            {/* 4. CHANGE PASSWORD FORM */}
+            <div className="security-card" style={{ borderRadius: "14px", border: "1.5px solid var(--line, #e2e8f0)", padding: "18px 20px", background: "var(--bg-card, #ffffff)" }}>
+              <h3 style={{ margin: "0 0 6px 0", fontSize: "16px", fontWeight: "800", color: "var(--heading)" }}>Change Your Password</h3>
+              <p className="card-subtext" style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "14px" }}>
                 Enter your current password (enter <strong>vindhy</strong> if this is your first time) and choose a new password.
               </p>
 
@@ -1469,7 +1394,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   </label>
                 </div>
 
-                <button type="submit" className="patient-primary-btn" disabled={loading} style={{ alignSelf: "flex-start", minWidth: "180px" }}>
+                <button type="submit" className="patient-primary-btn" disabled={loading} style={{ alignSelf: "flex-start", minWidth: "180px", marginTop: "8px" }}>
                   {loading ? "Updating..." : "Update Password"}
                 </button>
               </form>

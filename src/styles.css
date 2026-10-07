@@ -8784,8 +8784,8 @@ textarea:focus {
 [data-theme="light"] .doctor-main-content h2,
 [data-theme="light"] .doctor-main-content h3,
 [data-theme="light"] .doctor-main-content h4,
-[data-theme="light"] .patient-main-container h1,
-[data-theme="light"] .patient-main-container h2,
+[data-theme="light"] .patient-main-container h1:not(.greeting-headline),
+[data-theme="light"] .patient-main-container h2:not(.greeting-headline),
 [data-theme="light"] .patient-main-container h3,
 [data-theme="light"] .patient-main-container h4,
 [data-theme="light"] .section-header-row h1,
@@ -8797,6 +8797,26 @@ textarea:focus {
 [data-theme="light"] .section-title-box h3,
 [data-theme="light"] .section-title-box h4 {
   color: #0f172a !important;
+}
+
+/* Master Dark Headers always retain crisp white text */
+.mobile-app-greeting-card h2,
+.mobile-app-greeting-card .greeting-headline,
+.profile-master-header-box h2,
+[data-theme="light"] .mobile-app-greeting-card h2,
+[data-theme="light"] .mobile-app-greeting-card .greeting-headline,
+[data-theme="light"] .profile-master-header-box h2,
+[data-theme="dark"] .mobile-app-greeting-card h2,
+[data-theme="dark"] .mobile-app-greeting-card .greeting-headline,
+[data-theme="dark"] .profile-master-header-box h2 {
+  color: #ffffff !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+.mobile-app-greeting-card .greeting-salutation,
+[data-theme="light"] .mobile-app-greeting-card .greeting-salutation,
+[data-theme="dark"] .mobile-app-greeting-card .greeting-salutation {
+  color: #93c5fd !important;
 }
 
 [data-theme="light"] .doctor-main-content p,

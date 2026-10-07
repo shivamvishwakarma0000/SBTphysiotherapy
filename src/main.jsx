@@ -434,94 +434,16 @@ function LeadConsultant() {
             Consultant Physiotherapist • BPT, DPT, CCYP (BHU)
           </p>
 
-          {/* Quick Doctor Stats Bar */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-            gap: "10px",
-            margin: "14px 0",
-            padding: "12px 14px",
-            background: "rgba(2, 132, 199, 0.06)",
-            border: "1px solid rgba(2, 132, 199, 0.2)",
-            borderRadius: "12px"
-          }}>
-            <div style={{ textAlign: "center" }}>
-              <strong style={{ fontSize: "16px", color: "#0284c7", display: "block", fontWeight: "800" }}>7+ Years</strong>
-              <span style={{ fontSize: "11px", color: "#475569", fontWeight: "600" }}>Clinical Exp.</span>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <strong style={{ fontSize: "16px", color: "#059669", display: "block", fontWeight: "800" }}>5,000+</strong>
-              <span style={{ fontSize: "11px", color: "#475569", fontWeight: "600" }}>Happy Recoveries</span>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <strong style={{ fontSize: "16px", color: "#7c3aed", display: "block", fontWeight: "800" }}>BHU</strong>
-              <span style={{ fontSize: "11px", color: "#475569", fontWeight: "600" }}>Certified Expert</span>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <strong style={{ fontSize: "16px", color: "#d97706", display: "block", fontWeight: "800" }}>⭐️ 4.9 / 5</strong>
-              <span style={{ fontSize: "11px", color: "#475569", fontWeight: "600" }}>Patient Rating</span>
-            </div>
-          </div>
-
           <p className="consultant-bio">
             Dedicated to restoring natural, pain-free movement through clinical diagnostics and advanced rehabilitation. Trained at Banaras Hindu University (BHU), Dr. Satyam specializes in non-surgical spine decompression, paralysis rehabilitation, cupping therapy, pediatric care, and sports injury recovery with over 7 years of trusted practice in Vindhyachal & Mirzapur.
           </p>
-          <div className="consultant-specialties">
+          <div className="consultant-specialties" style={{ marginBottom: "20px" }}>
             <span>Spine & Back Pain</span>
             <span>Cupping Therapy</span>
             <span>Neuro & Paralysis</span>
             <span>CP Child Rehab</span>
             <span>Sports Injury</span>
             <span>Post-Surgical</span>
-          </div>
-
-          {/* Social Follow Bar for Dr. Satyam */}
-          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginTop: "12px", marginBottom: "16px" }}>
-            <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "700" }}>Connect with Doctor:</span>
-            <a
-              href="https://www.instagram.com/vindhyadrsatyam1/?hl=en#"
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 14px",
-                borderRadius: "20px",
-                background: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
-                color: "#ffffff",
-                fontSize: "12px",
-                fontWeight: "700",
-                textDecoration: "none",
-                boxShadow: "0 3px 10px rgba(220, 39, 67, 0.35)",
-                transition: "transform 0.15s ease"
-              }}
-            >
-              <InstagramIcon />
-              <span>@vindhyadrsatyam1</span>
-            </a>
-            <a
-              href="https://www.facebook.com"
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 14px",
-                borderRadius: "20px",
-                background: "#1877f2",
-                color: "#ffffff",
-                fontSize: "12px",
-                fontWeight: "700",
-                textDecoration: "none",
-                boxShadow: "0 3px 10px rgba(24, 119, 242, 0.35)",
-                transition: "transform 0.15s ease"
-              }}
-            >
-              <FacebookIcon />
-              <span>Facebook</span>
-            </a>
           </div>
 
           <div className="consultant-btn-group">

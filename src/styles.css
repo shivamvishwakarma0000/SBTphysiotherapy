@@ -4488,6 +4488,60 @@ textarea:focus {
   box-shadow: var(--shadow-lg) !important;
 }
 
+/* Consultation Modal Explicit High Contrast & Crisp Visibility */
+.consultation-premium-card,
+[data-theme="dark"] .consultation-premium-card,
+[data-theme="light"] .consultation-premium-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.consultation-premium-card h3,
+[data-theme="dark"] .consultation-premium-card h3,
+[data-theme="light"] .consultation-premium-card h3 {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.consultation-premium-card p,
+[data-theme="dark"] .consultation-premium-card p,
+[data-theme="light"] .consultation-premium-card p {
+  color: #475569 !important;
+}
+
+.consultation-premium-card label,
+[data-theme="dark"] .consultation-premium-card label,
+[data-theme="light"] .consultation-premium-card label {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+}
+
+.consultation-premium-card input,
+.consultation-premium-card select,
+.consultation-premium-card textarea,
+[data-theme="dark"] .consultation-premium-card input,
+[data-theme="dark"] .consultation-premium-card select,
+[data-theme="dark"] .consultation-premium-card textarea,
+[data-theme="light"] .consultation-premium-card input,
+[data-theme="light"] .consultation-premium-card select,
+[data-theme="light"] .consultation-premium-card textarea {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-weight: 600 !important;
+}
+
+.consultation-premium-card input:focus,
+.consultation-premium-card select:focus,
+.consultation-premium-card textarea:focus {
+  border-color: #059669 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15) !important;
+}
+
 /* ================= MOBILE CLINICAL COMMAND HUB (PHONE DASHBOARD) ================= */
 .hide-on-desktop {
   display: none;

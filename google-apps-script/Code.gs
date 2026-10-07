@@ -3,18 +3,16 @@
 // Clinic: Vindhya Physio & Rehab Center (Dr. Satyam Vishwakarma)
 // Location: Amravati Chauraha, Vindhyachal, Mirzapur, Uttar Pradesh
 // Authorized Doctor Account: shivamupsc8@gmail.com
-// Version: 3.1.0 — Unified Patient Portal + Doctor Portal + Google Sheets Engine
+// Version: 3.2.0 — Unified Patient Portal + Doctor Portal + Google Sheets Engine
 // Source of Truth: Google Sheets (Version 1 Primary Database)
 // =============================================================================
 
-// Configuration & Secrets
 var AUTHORIZED_DOCTOR_EMAIL = "shivamupsc8@gmail.com";
 var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30-Day persistent session
-var SPREADSHEET_URL = ""; // Optional: If running as standalone script, paste Sheet URL here, or leave blank to auto-detect
+var SPREADSHEET_URL = ""; // Optional: Paste Sheet URL here, or leave blank to auto-detect
 
 /**
  * 1. UNIVERSAL SPREADSHEET RESOLVER
- * Automatically binds to the active spreadsheet or discovers it in Google Drive.
  */
 function getDatabaseSpreadsheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -40,7 +38,6 @@ function getDatabaseSpreadsheet() {
 
 /**
  * 2. DATABASE INITIALIZER & SCHEMA FORMATTER
- * Safely creates missing tabs and appends new columns WITHOUT destroying or shifting existing data.
  */
 function setupDatabase() {
   var ss = getDatabaseSpreadsheet();
@@ -73,7 +70,7 @@ function setupDatabase() {
   ];
   ensureSheetHeaders(enquirySheet, enquiryHeaders, "#071927", "#38bdf8");
 
-  // Tab 4: PATIENT_AUTH (Authentication & Recovery Credentials — Protected)
+  // Tab 4: PATIENT_AUTH
   var authSheet = ss.getSheetByName("PATIENT_AUTH") || ss.insertSheet("PATIENT_AUTH");
   var authHeaders = [
     "Patient ID", "Login Identifier", "Password Hash", "Password Salt", 
@@ -112,7 +109,6 @@ function setupDatabase() {
   ];
   ensureSheetHeaders(auditSheet, auditHeaders, "#071927", "#94a3b8");
 
-  // Clean default Sheet1 if empty
   var defaultSheet = ss.getSheetByName("Sheet1");
   if (defaultSheet && ss.getSheets().length > 1 && defaultSheet.getLastRow() === 0) {
     try { ss.deleteSheet(defaultSheet); } catch (e) {}
@@ -121,9 +117,6 @@ function setupDatabase() {
   Logger.log("✅ Database initialized successfully: " + ss.getUrl());
 }
 
-/**
- * Ensures header row exists without destroying existing data.
- */
 function ensureSheetHeaders(sheet, expectedHeaders, bgColor, fontColor) {
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
@@ -149,7 +142,7 @@ function ensureSheetHeaders(sheet, expectedHeaders, bgColor, fontColor) {
 }
 
 // =============================================================================
-// 3. SECURITY, CRYPTOGRAPHY & HELPER UTILITIES
+// 3. SECURITY & CRYPTOGRAPHY UTILITIES
 // =============================================================================
 
 function normalizePhone(phone) {
@@ -270,7 +263,6 @@ function doGet(e) {
     var action = params.action || "ping";
     var ss = getDatabaseSpreadsheet();
 
-    // 1. Health check
     if (action === "ping" || action === "health") {
       return successResponse({
         service: "vindhya-sheets-api",
@@ -279,22 +271,18 @@ function doGet(e) {
       }, "Google Sheets Cloud Engine is Online!");
     }
 
-    // 2. Doctor: Pull full database (Patients, Visits, Enquiries)
     if (action === "fetchAll") {
       return handleDoctorFetchAll(ss);
     }
 
-    // 3. Doctor: Search Patient
     if (action === "doctor_patient_search") {
       return handleDoctorPatientSearch(ss, params.query);
     }
 
-    // 4. Doctor: Get Single Patient Full Clinical Profile
     if (action === "doctor_get_patient") {
       return handleDoctorGetPatientDetails(ss, params.patientId);
     }
 
-    // 5. Patient Protected Endpoints (Session Token verification)
     if (action.indexOf("patient_") === 0) {
       var token = params.sessionToken || params.token;
       var session = verifySessionToken(token);
@@ -311,13 +299,13 @@ function doGet(e) {
 }
 
 // =============================================================================
-// 5. HTTP POST DISPATCHER
+// 5. HTTP POST DISPATCHER (CONCURRENCY PROTECTED)
 // =============================================================================
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
   try {
-    lock.waitLock(15000); // Concurrency guard against race conditions
+    lock.waitLock(15000);
 
     var rawContent = (e && e.postData && e.postData.contents) ? e.postData.contents : "{}";
     var payload = JSON.parse(rawContent);
@@ -325,7 +313,6 @@ function doPost(e) {
     var data = payload.data || {};
     var ss = getDatabaseSpreadsheet();
 
-    // 1. PUBLIC ACTIONS (No authentication required)
     if (action === "sync_enquiry" || action === "submit_enquiry") {
       return handlePublicEnquiry(ss, data);
     }
@@ -342,7 +329,6 @@ function doPost(e) {
       return handlePatientResetPasswordWithPin(ss, payload.identifier || data.identifier, payload.recoveryPin || data.recoveryPin, payload.newPassword || data.newPassword);
     }
 
-    // 2. PATIENT PROTECTED ACTIONS (Requires Session Token)
     if (action.indexOf("patient_") === 0) {
       var token = payload.sessionToken || payload.token;
       var session = verifySessionToken(token);
@@ -352,7 +338,6 @@ function doPost(e) {
       return handlePatientPostAction(ss, session.patientId, action, payload);
     }
 
-    // 3. DOCTOR ACTIONS (Synchronizations and clinical management)
     if (action === "sync_patient") return handleDoctorSyncPatient(ss, data);
     if (action === "sync_visit") return handleDoctorSyncVisit(ss, data);
     if (action === "sync_patient_auth") return handleDoctorSyncPatientAuth(ss, data);
@@ -361,7 +346,7 @@ function doPost(e) {
     if (action === "delete_enquiry") return handleDoctorDeleteEnquiry(ss, data);
     if (action === "doctor_convert_enquiry") return handleDoctorConvertEnquiry(ss, data);
     if (action === "doctor_link_enquiry") return handleDoctorLinkEnquiry(ss, data);
-    if (action === "doctor_hide_enquiry" || action === "enquiry_status") return handleDoctorHideEnquiry(ss, data);
+    if (action === "doctor_hide_enquiry" || action === "hide_enquiry") return handleDoctorHideEnquiry(ss, data);
     if (action === "doctor_set_password") return handleDoctorSetPatientPassword(ss, data);
     if (action === "doctor_toggle_status") return handleDoctorTogglePatientStatus(ss, data);
     if (action === "doctor_sync_appointment") return handleDoctorSyncAppointment(ss, data);
@@ -377,7 +362,7 @@ function doPost(e) {
 }
 
 // =============================================================================
-// 6. PATIENT AUTHENTICATION & PORTAL CONTROLLERS
+// 6. PATIENT AUTHENTICATION CONTROLLERS
 // =============================================================================
 
 function handlePatientLogin(ss, identifier, password) {
@@ -388,7 +373,6 @@ function handlePatientLogin(ss, identifier, password) {
   var cleanId = String(identifier).trim().toUpperCase();
   var cleanPhone = normalizePhone(identifier);
 
-  // 1. Locate patient in PATIENTS tab
   var patientSheet = ss.getSheetByName("PATIENTS");
   if (!patientSheet || patientSheet.getLastRow() < 2) {
     return errorResponse("PATIENT_NOT_FOUND", "No patient records on file.");
@@ -418,7 +402,6 @@ function handlePatientLogin(ss, identifier, password) {
     return errorResponse("PATIENT_NOT_FOUND", "No patient record matching that ID or Mobile number.");
   }
 
-  // 2. Fetch or initialize PATIENT_AUTH record
   var authSheet = ss.getSheetByName("PATIENT_AUTH") || ss.insertSheet("PATIENT_AUTH");
   var authData = authSheet.getLastRow() > 1 ? authSheet.getRange(2, 1, authSheet.getLastRow() - 1, 9).getValues() : [];
   var authRowIndex = -1;
@@ -439,7 +422,6 @@ function handlePatientLogin(ss, identifier, password) {
     }
   }
 
-  // Create initial auth record if missing
   if (!authRecord) {
     var initialPin = generateRecoveryPin();
     var salt = generateSalt();
@@ -470,7 +452,6 @@ function handlePatientLogin(ss, identifier, password) {
     return errorResponse("ACCOUNT_DISABLED", "Your patient portal account has been deactivated. Please contact clinic reception.");
   }
 
-  // 3. Verify Password or Recovery PIN
   var cleanPass = String(password).trim();
   var isMatch = false;
   if (authRecord.passwordHash && authRecord.passwordSalt) {
@@ -486,7 +467,6 @@ function handlePatientLogin(ss, identifier, password) {
     return errorResponse("AUTH_FAILED", "Incorrect password. You can also use your 4-digit Recovery PIN.");
   }
 
-  // 4. Update Last Login timestamp
   if (authRowIndex > 0) {
     authSheet.getRange(authRowIndex, 7).setValue(new Date().toISOString());
   }
@@ -584,41 +564,34 @@ function handlePatientResetPasswordWithPin(ss, identifier, recoveryPin, newPassw
 }
 
 // =============================================================================
-// 7. PATIENT PROTECTED DATA APIS (AUTOMATIC PATIENT-ID ISOLATION)
+// 7. PATIENT DATA APIS (AUTOMATIC DATA ISOLATION)
 // =============================================================================
 
 function handlePatientGetAction(ss, patientId, action, params) {
-  // Session Validation Check
   if (action === "patient_session" || action === "patient_validate_session") {
     return successResponse({ valid: true, patientId: patientId, role: "patient" });
   }
 
-  // Complete Patient Dashboard Aggregation
   if (action === "patient_dashboard") {
     return handlePatientDashboard(ss, patientId);
   }
 
-  // Visits
   if (action === "patient_visits" || action === "patient_get_visits") {
     return handlePatientVisits(ss, patientId);
   }
 
-  // Appointments
   if (action === "patient_appointments" || action === "patient_get_appointments") {
     return handlePatientAppointments(ss, patientId);
   }
 
-  // Receipts
   if (action === "patient_receipts" || action === "patient_get_receipts") {
     return handlePatientReceipts(ss, patientId);
   }
 
-  // Treatment Plans
   if (action === "patient_treatment" || action === "patient_plans") {
     return handlePatientTreatmentPlans(ss, patientId);
   }
 
-  // Profile & Recovery PIN
   if (action === "patient_profile" || action === "patient_get_profile") {
     return handlePatientProfile(ss, patientId);
   }
@@ -795,7 +768,7 @@ function handlePatientProfile(ss, patientId) {
   }
 
   if (!patient) return errorResponse("NOT_FOUND", "Profile not found.");
-  patient.recoveryPin = pin; // Safe: only 4-digit PIN for self-service recovery, NO hash or salt
+  patient.recoveryPin = pin;
   return successResponse({ patient: patient });
 }
 
@@ -869,8 +842,8 @@ function handlePublicEnquiry(ss, data) {
     data.appointmentDate || "Flexible",
     data.concern || "",
     "NEW",
-    "", // Converted Patient ID
-    "", // Internal Notes
+    "",
+    "",
     new Date().toISOString(),
     new Date().toISOString()
   ]);
@@ -880,7 +853,7 @@ function handlePublicEnquiry(ss, data) {
 }
 
 // =============================================================================
-// 9. DOCTOR CONTROLLERS & SECURE SYNC ENGINE
+// 9. DOCTOR CONTROLLERS & SYNC ENGINE
 // =============================================================================
 
 function handleDoctorPatientSearch(ss, query) {
@@ -921,7 +894,6 @@ function handleDoctorGetPatientDetails(ss, patientId) {
 
   var patient = profileRes.data.patient;
 
-  // Fetch Auth Status
   var authSheet = ss.getSheetByName("PATIENT_AUTH");
   var accountStatus = "active";
   var lastLogin = "";
@@ -936,7 +908,6 @@ function handleDoctorGetPatientDetails(ss, patientId) {
     }
   }
 
-  // All visits including internal notes
   var visitSheet = ss.getSheetByName("VISITS");
   var visits = [];
   if (visitSheet && visitSheet.getLastRow() > 1) {
@@ -958,11 +929,8 @@ function handleDoctorGetPatientDetails(ss, patientId) {
     });
   }
 
-  // Appointments
   var apptsRes = handlePatientAppointments(ss, cleanId);
-  // Receipts
   var receiptsRes = handlePatientReceipts(ss, cleanId);
-  // Plans
   var plansRes = handlePatientTreatmentPlans(ss, cleanId);
 
   return successResponse({
@@ -1195,93 +1163,45 @@ function handleDoctorSyncPatientAuth(ss, data) {
 }
 
 function handleDoctorDeletePatient(ss, data) {
-  var patientId = String(data.patientId || "").trim().toUpperCase();
-  if (!patientId) {
-    return errorResponse("MISSING_ID", "Patient ID is required for deletion.");
-  }
-
-  var deletedInfo = {
-    patientsCount: 0,
-    visitsCount: 0,
-    authCount: 0,
-    appointmentsCount: 0,
-    receiptsCount: 0,
-    treatmentPlansCount: 0
-  };
-
-  // Helper function to delete matching rows by checking target column
-  function deleteRowsMatching(sheetName, colIndex, targetValue) {
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet || sheet.getLastRow() < 2) return 0;
-    var count = 0;
-    var values = sheet.getRange(2, colIndex, sheet.getLastRow() - 1, 1).getValues();
-    for (var i = values.length - 1; i >= 0; i--) {
-      if (String(values[i][0]).trim().toUpperCase() === targetValue) {
-        sheet.deleteRow(i + 2);
-        count++;
+  var pSheet = ss.getSheetByName("PATIENTS");
+  if (pSheet && pSheet.getLastRow() > 1) {
+    var pValues = pSheet.getRange(2, 1, pSheet.getLastRow() - 1, 1).getValues();
+    for (var i = pValues.length - 1; i >= 0; i--) {
+      if (String(pValues[i][0]).trim().toUpperCase() === String(data.patientId).trim().toUpperCase()) {
+        pSheet.deleteRow(i + 2);
       }
     }
-    return count;
   }
-
-  // 1. Delete from PATIENTS sheet (Col 1 is Patient ID)
-  deletedInfo.patientsCount = deleteRowsMatching("PATIENTS", 1, patientId);
-
-  // 2. Delete from VISITS sheet (Col 2 is Patient ID)
-  deletedInfo.visitsCount = deleteRowsMatching("VISITS", 2, patientId);
-
-  // 3. Delete from PATIENT_AUTH sheet (Col 1 is Patient ID)
-  deletedInfo.authCount = deleteRowsMatching("PATIENT_AUTH", 1, patientId);
-
-  // 4. Delete from APPOINTMENTS sheet (Col 2 is Patient ID)
-  deletedInfo.appointmentsCount = deleteRowsMatching("APPOINTMENTS", 2, patientId);
-
-  // 5. Delete from RECEIPTS sheet (Col 2 is Patient ID)
-  deletedInfo.receiptsCount = deleteRowsMatching("RECEIPTS", 2, patientId);
-
-  // 6. Delete from TREATMENT_PLANS sheet (Col 1 is Patient ID)
-  deletedInfo.treatmentPlansCount = deleteRowsMatching("TREATMENT_PLANS", 1, patientId);
-
-  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "PERMANENT_DELETE_PATIENT", patientId, JSON.stringify(deletedInfo));
-  return successResponse({ patientId: patientId, deletedInfo: deletedInfo }, "Patient and all associated records permanently purged from all Google Sheets.");
+  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "DELETE_PATIENT", data.patientId, "OK");
+  return successResponse({ patientId: data.patientId }, "Patient removed from Sheet.");
 }
 
 function handleDoctorDeleteVisit(ss, data) {
-  var visitId = String(data.visitId || "").trim().toUpperCase();
-  if (!visitId) return errorResponse("MISSING_ID", "Visit ID required for deletion.");
-  
   var vSheet = ss.getSheetByName("VISITS");
-  var deletedCount = 0;
   if (vSheet && vSheet.getLastRow() > 1) {
     var vValues = vSheet.getRange(2, 1, vSheet.getLastRow() - 1, 1).getValues();
     for (var i = vValues.length - 1; i >= 0; i--) {
-      if (String(vValues[i][0]).trim().toUpperCase() === visitId) {
+      if (String(vValues[i][0]) === String(data.visitId)) {
         vSheet.deleteRow(i + 2);
-        deletedCount++;
       }
     }
   }
-  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "DELETE_VISIT", visitId, "Deleted: " + deletedCount);
-  return successResponse({ visitId: visitId, deletedCount: deletedCount }, "Visit removed from Google Sheets.");
+  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "DELETE_VISIT", data.visitId, "OK");
+  return successResponse({ visitId: data.visitId }, "Visit removed from Sheet.");
 }
 
 function handleDoctorDeleteEnquiry(ss, data) {
-  var enquiryId = String(data.enquiryId || "").trim().toUpperCase();
-  if (!enquiryId) return errorResponse("MISSING_ID", "Enquiry ID required for deletion.");
-  
   var eSheet = ss.getSheetByName("ENQUIRIES");
-  var deletedCount = 0;
   if (eSheet && eSheet.getLastRow() > 1) {
     var eValues = eSheet.getRange(2, 1, eSheet.getLastRow() - 1, 1).getValues();
     for (var i = eValues.length - 1; i >= 0; i--) {
-      if (String(eValues[i][0]).trim().toUpperCase() === enquiryId) {
+      if (String(eValues[i][0]) === String(data.enquiryId)) {
         eSheet.deleteRow(i + 2);
-        deletedCount++;
       }
     }
   }
-  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "DELETE_ENQUIRY", enquiryId, "Deleted: " + deletedCount);
-  return successResponse({ enquiryId: enquiryId, deletedCount: deletedCount }, "Enquiry removed from Google Sheets.");
+  logAudit("DOCTOR", AUTHORIZED_DOCTOR_EMAIL, "DELETE_ENQUIRY", data.enquiryId, "OK");
+  return successResponse({ enquiryId: data.enquiryId }, "Enquiry removed from Sheet.");
 }
 
 function handleDoctorConvertEnquiry(ss, data) {
@@ -1308,7 +1228,6 @@ function handleDoctorConvertEnquiry(ss, data) {
 
   if (targetEnquiryRow === -1) return errorResponse("NOT_FOUND", "Enquiry not found.");
 
-  // Check if patient with normalized phone already exists
   var patientSheet = ss.getSheetByName("PATIENTS");
   var pRows = patientSheet.getLastRow() > 1 ? patientSheet.getRange(2, 1, patientSheet.getLastRow() - 1, 6).getValues() : [];
   var existingPatientId = null;
@@ -1336,7 +1255,6 @@ function handleDoctorConvertEnquiry(ss, data) {
     finalPatientId = "VPR-" + ("0000" + (maxNum + 1)).slice(-4);
     isNewPatient = true;
 
-    // Register Patient
     patientSheet.appendRow([
       finalPatientId,
       new Date().toISOString().slice(0, 10),
@@ -1354,7 +1272,6 @@ function handleDoctorConvertEnquiry(ss, data) {
       new Date().toISOString()
     ]);
 
-    // Create Auth & PIN
     var authSheet = ss.getSheetByName("PATIENT_AUTH");
     var pin = generateRecoveryPin();
     var salt = generateSalt();
@@ -1371,7 +1288,6 @@ function handleDoctorConvertEnquiry(ss, data) {
     ]);
   }
 
-  // Update Enquiry Status
   enquirySheet.getRange(targetEnquiryRow, 10).setValue("CONVERTED");
   enquirySheet.getRange(targetEnquiryRow, 11).setValue(finalPatientId);
   enquirySheet.getRange(targetEnquiryRow, 14).setValue(new Date().toISOString());
@@ -1404,17 +1320,14 @@ function handleDoctorLinkEnquiry(ss, data) {
 }
 
 function handleDoctorHideEnquiry(ss, data) {
-  var enquiryId = data.enquiryId || data.id;
+  var enquiryId = data.enquiryId;
   var enquirySheet = ss.getSheetByName("ENQUIRIES");
-  if (!enquirySheet || enquirySheet.getLastRow() < 2) return errorResponse("NOT_FOUND", "Enquiries sheet empty.");
-
   var eRows = enquirySheet.getRange(2, 1, enquirySheet.getLastRow() - 1, 1).getValues();
   for (var i = 0; i < eRows.length; i++) {
-    if (String(eRows[i][0]).trim().toUpperCase() === String(enquiryId).trim().toUpperCase()) {
+    if (String(eRows[i][0]) === String(enquiryId)) {
       var currentStatus = enquirySheet.getRange(i + 2, 10).getValue();
-      var newStatus = data.status ? data.status.toUpperCase() : ((currentStatus === "HIDDEN" || currentStatus === "Hidden / Spam") ? "NEW" : "HIDDEN");
+      var newStatus = (currentStatus === "HIDDEN" || currentStatus === "Hidden / Spam") ? "NEW" : "HIDDEN";
       enquirySheet.getRange(i + 2, 10).setValue(newStatus);
-      enquirySheet.getRange(i + 2, 14).setValue(new Date().toISOString());
       return successResponse({ enquiryId: enquiryId, status: newStatus }, "Status updated.");
     }
   }
@@ -1465,7 +1378,7 @@ function handleDoctorSetPatientPassword(ss, data) {
 
 function handleDoctorTogglePatientStatus(ss, data) {
   var patientId = data.patientId;
-  var targetStatus = data.status; // "active" or "disabled"
+  var targetStatus = data.status;
   var authSheet = ss.getSheetByName("PATIENT_AUTH");
   var aRows = authSheet.getRange(2, 1, authSheet.getLastRow() - 1, 1).getValues();
 
@@ -1487,8 +1400,7 @@ function handleDoctorFetchAll(ss) {
 
   var pSheet = ss.getSheetByName("PATIENTS");
   if (pSheet && pSheet.getLastRow() > 1) {
-    var pCols = Math.max(14, pSheet.getLastColumn());
-    var pData = pSheet.getRange(2, 1, pSheet.getLastRow() - 1, pCols).getValues();
+    var pData = pSheet.getRange(2, 1, pSheet.getLastRow() - 1, 12).getValues();
     pData.forEach(function(r) {
       if (r[0]) {
         patients.push({
@@ -1498,13 +1410,12 @@ function handleDoctorFetchAll(ss) {
           age: String(r[3]),
           gender: String(r[4]),
           phone: String(r[5]),
-          altPhone: String(r[6] || ""),
-          address: String(r[7] || "Vindhyachal, Mirzapur"),
-          dob: String(r[8] || ""),
-          emergencyContact: String(r[9] || ""),
-          firstVisitReason: String(r[10] || "Spine & Back Pain"),
-          status: String(r[11]) || "Active",
-          intakeTime: String(r[12] || "10:30 AM")
+          altPhone: String(r[6]),
+          address: String(r[7]),
+          dob: String(r[8]),
+          emergencyContact: String(r[9]),
+          firstVisitReason: String(r[10]),
+          status: String(r[11]) || "Active"
         });
       }
     });
@@ -1512,12 +1423,9 @@ function handleDoctorFetchAll(ss) {
 
   var vSheet = ss.getSheetByName("VISITS");
   if (vSheet && vSheet.getLastRow() > 1) {
-    var vCols = Math.max(18, vSheet.getLastColumn());
-    var vData = vSheet.getRange(2, 1, vSheet.getLastRow() - 1, vCols).getValues();
+    var vData = vSheet.getRange(2, 1, vSheet.getLastRow() - 1, 14).getValues();
     vData.forEach(function(r) {
       if (r[0] && r[1]) {
-        var rawFee = r[15] !== undefined && r[15] !== "" ? r[15] : 500;
-        var feeFormatted = String(rawFee).indexOf("₹") === 0 ? String(rawFee) : "₹" + String(rawFee);
         visits.push({
           visitId: String(r[0]),
           patientId: String(r[1]),
@@ -1525,16 +1433,14 @@ function handleDoctorFetchAll(ss) {
           phone: String(r[3]),
           visitNumber: Number(r[4]) || 1,
           date: String(r[5]),
-          time: String(r[6] || "10:30 AM"),
-          reason: String(r[7] || "Physiotherapy Treatment"),
-          complaint: String(r[8] || ""),
-          diagnosis: String(r[9] || "Under Active Physiotherapy Management"),
-          treatmentNotes: String(r[10] || ""),
-          followUpDate: String(r[11] || ""),
+          time: String(r[6]),
+          reason: String(r[7]),
+          complaint: String(r[8]),
+          diagnosis: String(r[9]),
+          treatmentNotes: String(r[10]),
+          followUpDate: String(r[11]),
           status: String(r[12]) || "Completed",
-          doctor: String(r[13]) || "Dr. Satyam Vishwakarma",
-          amount: Number(String(rawFee).replace(/[^0-9]/g, "")) || 500,
-          fee: feeFormatted
+          doctor: String(r[13]) || "Dr. Satyam Vishwakarma"
         });
       }
     });
@@ -1542,8 +1448,7 @@ function handleDoctorFetchAll(ss) {
 
   var eSheet = ss.getSheetByName("ENQUIRIES");
   if (eSheet && eSheet.getLastRow() > 1) {
-    var eCols = Math.max(12, eSheet.getLastColumn());
-    var eData = eSheet.getRange(2, 1, eSheet.getLastRow() - 1, eCols).getValues();
+    var eData = eSheet.getRange(2, 1, eSheet.getLastRow() - 1, 10).getValues();
     eData.forEach(function(r) {
       if (r[0]) {
         enquiries.push({

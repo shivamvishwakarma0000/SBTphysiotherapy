@@ -174,6 +174,22 @@ function WhatsAppIcon() {
   );
 }
 
+function InstagramIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '18px', height: '18px', marginRight: '6px', verticalAlign: 'middle' }}>
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '18px', height: '18px', marginRight: '6px', verticalAlign: 'middle' }}>
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  );
+}
+
 function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, showDownloadBtn, themeProps }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDark = true;
@@ -385,16 +401,70 @@ function LeadConsultant() {
               className="consultant-main-photo"
             />
             <div className="consultant-lead-badge">Lead Consultant</div>
+            <div className="consultant-exp-badge" style={{
+              position: "absolute",
+              bottom: "16px",
+              left: "16px",
+              background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+              color: "#ffffff",
+              padding: "6px 14px",
+              borderRadius: "30px",
+              fontSize: "12.5px",
+              fontWeight: "800",
+              boxShadow: "0 6px 16px rgba(0, 0, 0, 0.35)",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              border: "1.5px solid rgba(255, 255, 255, 0.3)"
+            }}>
+              <span>🏆</span>
+              <span>7+ Years Experience</span>
+            </div>
           </div>
         </div>
         <div className="consultant-info-side">
-          <p className="consultant-eyebrow">CHIEF PHYSIOTHERAPIST & FOUNDER</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+            <p className="consultant-eyebrow" style={{ margin: 0 }}>CHIEF PHYSIOTHERAPIST & FOUNDER</p>
+            <span style={{ fontSize: "11px", fontWeight: "800", background: "#fef3c7", color: "#92400e", padding: "2px 8px", borderRadius: "12px" }}>
+              7+ Years Clinical Practice
+            </span>
+          </div>
           <h2>Dr. Satyam Vishwakarma</h2>
           <p className="consultant-qualification">
             Consultant Physiotherapist • BPT, DPT, CCYP (BHU)
           </p>
+
+          {/* Quick Doctor Stats Bar */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+            gap: "10px",
+            margin: "14px 0",
+            padding: "12px 14px",
+            background: "rgba(2, 132, 199, 0.06)",
+            border: "1px solid rgba(2, 132, 199, 0.2)",
+            borderRadius: "12px"
+          }}>
+            <div style={{ textAlign: "center" }}>
+              <strong style={{ fontSize: "16px", color: "#0284c7", display: "block", fontWeight: "800" }}>7+ Years</strong>
+              <span style={{ fontSize: "11px", color: "#475569", fontWeight: "600" }}>Clinical Exp.</span>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <strong style={{ fontSize: "16px", color: "#059669", display: "block", fontWeight: "800" }}>5,000+</strong>
+              <span style={{ fontSize: "11px", color: "#475569", fontWeight: "600" }}>Happy Recoveries</span>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <strong style={{ fontSize: "16px", color: "#7c3aed", display: "block", fontWeight: "800" }}>BHU</strong>
+              <span style={{ fontSize: "11px", color: "#475569", fontWeight: "600" }}>Certified Expert</span>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <strong style={{ fontSize: "16px", color: "#d97706", display: "block", fontWeight: "800" }}>⭐️ 4.9 / 5</strong>
+              <span style={{ fontSize: "11px", color: "#475569", fontWeight: "600" }}>Patient Rating</span>
+            </div>
+          </div>
+
           <p className="consultant-bio">
-            Dedicated to restoring natural, pain-free movement through clinical diagnostics and advanced rehabilitation. Trained at Banaras Hindu University (BHU), Dr. Satyam specializes in non-surgical spine decompression, paralysis rehabilitation, cupping therapy, pediatric care, and sports injury recovery.
+            Dedicated to restoring natural, pain-free movement through clinical diagnostics and advanced rehabilitation. Trained at Banaras Hindu University (BHU), Dr. Satyam specializes in non-surgical spine decompression, paralysis rehabilitation, cupping therapy, pediatric care, and sports injury recovery with over 7 years of trusted practice in Vindhyachal & Mirzapur.
           </p>
           <div className="consultant-specialties">
             <span>Spine & Back Pain</span>
@@ -404,6 +474,56 @@ function LeadConsultant() {
             <span>Sports Injury</span>
             <span>Post-Surgical</span>
           </div>
+
+          {/* Social Follow Bar for Dr. Satyam */}
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginTop: "12px", marginBottom: "16px" }}>
+            <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "700" }}>Connect with Doctor:</span>
+            <a
+              href="https://www.instagram.com/vindhyadrsatyam1/?hl=en#"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 14px",
+                borderRadius: "20px",
+                background: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+                color: "#ffffff",
+                fontSize: "12px",
+                fontWeight: "700",
+                textDecoration: "none",
+                boxShadow: "0 3px 10px rgba(220, 39, 67, 0.35)",
+                transition: "transform 0.15s ease"
+              }}
+            >
+              <InstagramIcon />
+              <span>@vindhyadrsatyam1</span>
+            </a>
+            <a
+              href="https://www.facebook.com"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 14px",
+                borderRadius: "20px",
+                background: "#1877f2",
+                color: "#ffffff",
+                fontSize: "12px",
+                fontWeight: "700",
+                textDecoration: "none",
+                boxShadow: "0 3px 10px rgba(24, 119, 242, 0.35)",
+                transition: "transform 0.15s ease"
+              }}
+            >
+              <FacebookIcon />
+              <span>Facebook</span>
+            </a>
+          </div>
+
           <div className="consultant-btn-group">
             <a 
               href="#consultation" 
@@ -1009,9 +1129,62 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
             <h2>DR. SATYAM VISHWAKARMA</h2>
           </div>
           <p className="footer-credentials">Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</p>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.4)", borderRadius: "20px", padding: "4px 10px", margin: "6px 0 10px", color: "#34d399", fontSize: "11.5px", fontWeight: "800" }}>
+            <span>⭐</span>
+            <span>7+ Years Clinical Excellence</span>
+          </div>
           <p className="footer-address">
             📍 {clinicLoc.address || clinicAddress}
           </p>
+
+          {/* Social Media Follow Section */}
+          <div style={{ marginTop: "12px" }}>
+            <h4 style={{ color: "#ffffff", fontSize: "12.5px", fontWeight: "700", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Follow Dr. Satyam</h4>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <a
+                href="https://www.instagram.com/vindhyadrsatyam1/?hl=en#"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 12px",
+                  borderRadius: "20px",
+                  background: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+                  color: "#ffffff",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(220, 39, 67, 0.3)"
+                }}
+              >
+                <InstagramIcon />
+                <span>Instagram</span>
+              </a>
+              <a
+                href="https://www.facebook.com"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 12px",
+                  borderRadius: "20px",
+                  background: "#1877f2",
+                  color: "#ffffff",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(24, 119, 242, 0.3)"
+                }}
+              >
+                <FacebookIcon />
+                <span>Facebook</span>
+              </a>
+            </div>
+          </div>
         </div>
         <div className="footer-col contact-col">
           <h3>Clinic Contact & Timings</h3>
@@ -1050,7 +1223,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
         </div>
       </div>
       <div className="footer-bottom-bar">
-        <p>© {new Date().getFullYear()} Vindhy Physio & Rehab Center. All rights reserved. Dr. Satyam Vishwakarma (BPT, DPT, CCYP BHU).</p>
+        <p>© {new Date().getFullYear()} Vindhy Physio & Rehab Center. All rights reserved. Dr. Satyam Vishwakarma (BPT, DPT, CCYP BHU) • 7+ Years Experience.</p>
       </div>
     </footer>
   );

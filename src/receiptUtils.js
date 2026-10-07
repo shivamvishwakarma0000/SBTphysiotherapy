@@ -206,14 +206,14 @@ export const buildReceiptPDF = (receipt) => {
   doc.setFont("helvetica", "normal");
   doc.setTextColor(71, 85, 105);
   doc.text("Consultant Physiotherapist", 157.5, 245, { align: "center" });
-  doc.text("Vindhya Physio & Rehab Center", 157.5, 249, { align: "center" });
+  doc.text("Vindhy Physio & Rehab Center", 157.5, 249, { align: "center" });
 
   // Footer
   doc.setFillColor(7, 25, 39);
   doc.rect(0, 276, 210, 21, "F");
   doc.setFontSize(8.5);
   doc.setTextColor(255, 255, 255);
-  doc.text("Thank you for choosing Vindhya Physio & Rehab Center", 105, 283, { align: "center" });
+  doc.text("Thank you for choosing Vindhy Physio & Rehab Center", 105, 283, { align: "center" });
   doc.setFontSize(7);
   doc.setTextColor(180, 200, 210);
   doc.text("For appointments & medical inquiries: Call 9793093316 | WhatsApp: 8382024264 | Amravati Chauraha, Vindhyachal", 105, 289, { align: "center" });
@@ -224,7 +224,7 @@ export const buildReceiptPDF = (receipt) => {
 export const downloadReceiptPDF = (receipt) => {
   if (!receipt || !receipt.patient || !receipt.visit) return false;
   const doc = buildReceiptPDF(receipt);
-  const fileName = `Vindhya_Receipt_${receipt.patient.name.replace(/\s+/g, "_")}_${receipt.patient.patientId}_Visit${receipt.visit.visitNumber || 1}.pdf`;
+  const fileName = `Vindhy_Receipt_${receipt.patient.name.replace(/\s+/g, "_")}_${receipt.patient.patientId}_Visit${receipt.visit.visitNumber || 1}.pdf`;
   doc.save(fileName);
   return fileName;
 };

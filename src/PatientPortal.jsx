@@ -13,7 +13,7 @@ export default function PatientPortal({ onClose, themeProps }) {
       document.documentElement.setAttribute("data-theme", next);
       document.documentElement.classList.remove("light", "dark");
       document.documentElement.classList.add(next);
-      try { localStorage.setItem("vindhya_physio_theme", next); } catch (e) {}
+      try { localStorage.setItem("vindhy_physio_theme", next); } catch (e) {}
     }
   };
 
@@ -320,11 +320,11 @@ export default function PatientPortal({ onClose, themeProps }) {
           <div className="patient-login-header">
             <div className="patient-portal-badge">PATIENT RECOVERY PORTAL</div>
             <img
-              src={CLINIC_LOGO_B64 || "/vindhya-receipt-logo.png"}
-              alt="Vindhya Physio & Rehab Center Logo"
+              src={CLINIC_LOGO_B64 || "/vindhy-receipt-logo.png"}
+              alt="Vindhy Physio & Rehab Center Logo"
               className="patient-portal-logo prominent-landing-logo"
             />
-            <h2>Vindhya Physio & Rehab Center</h2>
+            <h2>Vindhy Physio & Rehab Center</h2>
             <p className="subtext">Dr. Satyam Vishwakarma • Amravati Chauraha, Vindhyachal</p>
           </div>
 
@@ -367,11 +367,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                   </label>
 
                   <label>
-                    Password (Default is 'vindhya')
+                    Password (Default is 'vindhy')
                     <input
                       type="password"
                       required
-                      placeholder="Enter password (default: vindhya)"
+                      placeholder="Enter password (default: vindhy)"
                       value={loginForm.password}
                       onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                       autoComplete="current-password"
@@ -387,7 +387,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   <span>💡 First time here or newly registered?</span>
                   <p>
                     Use your <strong>10-digit Registered Mobile Number</strong> or <strong>Patient ID</strong>.<br />
-                    Your universal clinic password is <strong>vindhya</strong>.<br />
+                    Your universal clinic password is <strong>vindhy</strong>.<br />
                     <em>Don't have an account yet? Switch to the "New Patient Registration" tab above to sign up instantly!</em>
                   </p>
                   <div className="helpline-chips">
@@ -492,10 +492,10 @@ export default function PatientPortal({ onClose, themeProps }) {
                   </label>
 
                   <label>
-                    Set Password (Optional, default is 'vindhya')
+                    Set Password (Optional, default is 'vindhy')
                     <input
                       type="password"
-                      placeholder="Leave blank for default: vindhya"
+                      placeholder="Leave blank for default: vindhy"
                       value={registerForm.password}
                       onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                       autoComplete="new-password"
@@ -542,12 +542,12 @@ export default function PatientPortal({ onClose, themeProps }) {
           {CLINIC_LOGO_B64 && (
             <img
               src={CLINIC_LOGO_B64}
-              alt="Vindhya Physio & Rehab Center Logo"
+              alt="Vindhy Physio & Rehab Center Logo"
               className="portal-nav-logo"
             />
           )}
           <div className="portal-clinic-meta">
-            <h1>Vindhya Physio & Rehab Center</h1>
+            <h1>Vindhy Physio & Rehab Center</h1>
             <span className="portal-badge-pill">PATIENT RECOVERY PORTAL</span>
           </div>
         </div>
@@ -650,7 +650,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 {CLINIC_LOGO_B64 && (
                   <img
                     src={CLINIC_LOGO_B64}
-                    alt="Vindhya Physio & Rehab Center"
+                    alt="Vindhy Physio & Rehab Center"
                     className="mobile-hero-logo"
                   />
                 )}
@@ -1031,7 +1031,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                         </div>
                         <div className="receipt-meta-row">
                           <span className="meta-label">Clinic:</span>
-                          <span className="meta-val">Vindhya Physio & Rehab Center</span>
+                          <span className="meta-val">Vindhy Physio & Rehab Center</span>
                         </div>
                       </div>
 
@@ -1279,7 +1279,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   <div>
                     <h3>Clinic Login Credentials</h3>
                     <p>
-                      Your account was enrolled at Vindhya Physio & Rehab Center by Dr. Satyam Vishwakarma.
+                      Your account was enrolled at Vindhy Physio & Rehab Center by Dr. Satyam Vishwakarma.
                     </p>
                   </div>
                 </div>
@@ -1292,14 +1292,14 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </div>
                 <div className="detail-cell">
                   <label>Initial Universal Password</label>
-                  <strong style={{ fontFamily: "monospace", letterSpacing: "1px", color: "#16a34a" }}>vindhya</strong>
+                  <strong style={{ fontFamily: "monospace", letterSpacing: "1px", color: "#16a34a" }}>vindhy</strong>
                 </div>
               </div>
 
               <div className="pin-security-tips" style={{ marginTop: "16px" }}>
                 <span>🛡️ Security Tip:</span>
                 <p>
-                  The initial default password for all patients is <strong>vindhya</strong>. You can change your password below to your own private password anytime. If you ever forget it, the doctor can reset it back to default for you at the clinic.
+                  The initial default password for all patients is <strong>vindhy</strong>. You can change your password below to your own private password anytime. If you ever forget it, the doctor can reset it back to default for you at the clinic.
                 </p>
               </div>
             </div>
@@ -1308,7 +1308,7 @@ export default function PatientPortal({ onClose, themeProps }) {
             <div className="security-card">
               <h3>Change Your Password</h3>
               <p className="card-subtext">
-                Enter your current password (enter <strong>vindhya</strong> if this is your first time) and choose a new password.
+                Enter your current password (enter <strong>vindhy</strong> if this is your first time) and choose a new password.
               </p>
 
               {changePassMsg.text && (
@@ -1323,7 +1323,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   <input
                     type="password"
                     required
-                    placeholder="Enter current password (default: vindhya)"
+                    placeholder="Enter current password (default: vindhy)"
                     value={changePassForm.currentPassword}
                     onChange={(e) => setChangePassForm({ ...changePassForm, currentPassword: e.target.value })}
                   />
@@ -1420,7 +1420,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
 
               <div className="slip-footer">
-                <small>This is an official clinic issued receipt generated by Vindhya Physio & Rehab Center.</small>
+                <small>This is an official clinic issued receipt generated by Vindhy Physio & Rehab Center.</small>
                 <div className="slip-doc-sign">
                   <div className="sign-line"></div>
                   <strong>Authorized Signatory</strong>
@@ -1590,7 +1590,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         <div className="patient-submodal-overlay" onClick={() => setShowContactModal(false)}>
           <div className="patient-submodal-card" onClick={(e) => e.stopPropagation()}>
             <div className="submodal-head">
-              <h3>📞 Contact Vindhya Physio Clinic</h3>
+              <h3>📞 Contact Vindhy Physio Clinic</h3>
               <button className="submodal-close" onClick={() => setShowContactModal(false)}>✕</button>
             </div>
             <p style={{ margin: "8px 0 16px", color: "var(--text-secondary, #475569)", fontSize: "13px", lineHeight: "1.5" }}>

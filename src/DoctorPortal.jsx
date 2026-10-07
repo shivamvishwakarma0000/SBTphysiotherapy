@@ -6,6 +6,411 @@ import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } fro
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
 
+
+// =============================================================================
+// SMART AI CLINICAL PHYSIOTHERAPY PROTOCOL PROGRESSION ENGINE
+// =============================================================================
+export const generateDailyPhysioProtocol = (diagnosisOrConcern, visitNumber = 1) => {
+  const text = (diagnosisOrConcern || "").toLowerCase();
+  const day = parseInt(visitNumber, 10) || 1;
+
+  // 1. Back / Spine / Lumbar / Sciatica
+  if (text.includes("back") || text.includes("lumbar") || text.includes("spine") || text.includes("sciatica") || text.includes("kamar") || text.includes("spondyl")) {
+    if (day <= 1) {
+      return {
+        focus: "Spine Decompression & Acute Analgesia",
+        diagnosis: "Lumbar Spondylosis with Acute Muscle Spasm (Day 1 Assessment)",
+        treatment: "Day 1: Comprehensive physical exam + IFT electrotherapy (15 mins) + gentle manual spinal decompression + cold/thermal application + core isometric cues."
+      };
+    } else if (day <= 3) {
+      return {
+        focus: "Spine Decompression & Traction",
+        diagnosis: "Lumbar Radiculopathy / Disc Alignment (Decompression Phase)",
+        treatment: `Day ${day}: Grade I/II Maitland lumbar mobilization + mechanical spinal traction + pelvic tilting & gluteal activation + piriformis release.`
+      };
+    } else if (day <= 7) {
+      return {
+        focus: "Spinal Core Rehabilitation & Strengthening",
+        diagnosis: "Resolving Lumbar Spondylosis (Strengthening Phase)",
+        treatment: `Day ${day}: Grade III mobilization + dynamic core stabilization (bird-dog, bridges) + lumbar flexion/extension motor control + posture correction.`
+      };
+    } else {
+      return {
+        focus: "Functional Restoration & Maintenance",
+        diagnosis: "Lumbar Rehabilitation (Maintenance & Relapse Prevention)",
+        treatment: `Day ${day}: Advanced resistance band spinal endurance + heavy functional lifting mechanics re-education + tailored home regimen review.`
+      };
+    }
+  }
+
+  // 2. Neck / Cervical / Trapezitis / Headaches
+  if (text.includes("neck") || text.includes("cervical") || text.includes("trapezi") || text.includes("gardan") || text.includes("headache")) {
+    if (day <= 1) {
+      return {
+        focus: "Cervical Decompression & Pain Relief",
+        diagnosis: "Cervical Spondylosis with Muscle Spasm",
+        treatment: "Day 1: TENS/Ultrasonic therapy to upper trapezius + gentle manual cervical traction + active-assisted cervical ROM."
+      };
+    } else if (day <= 4) {
+      return {
+        focus: "Cervical Spine Mobilization & Release",
+        diagnosis: "Cervical Radiculopathy Management",
+        treatment: `Day ${day}: Myofascial trigger point release + deep neck flexor (chin tucks) isometric strengthening + scapular retraction drills.`
+      };
+    } else {
+      return {
+        focus: "Postural Restoration & Ergonomic Rehab",
+        diagnosis: "Cervicogenic Postural Syndrome (Strengthening)",
+        treatment: `Day ${day}: Thoracic spine extension mobilization + resistance band scapular stabilization + screen ergonomics review.`
+      };
+    }
+  }
+
+  // 3. Frozen Shoulder / Shoulder Pain
+  if (text.includes("shoulder") || text.includes("kandha") || text.includes("capsulitis") || text.includes("rotator")) {
+    if (day <= 2) {
+      return {
+        focus: "Shoulder Pain Modulation & Capsular Release",
+        diagnosis: "Adhesive Capsulitis (Frozen Shoulder - Stage 1/2)",
+        treatment: `Day ${day}: Ultrasonic therapy + hot fomentation + Codman pendulum swings + gentle passive glenohumeral mobilization.`
+      };
+    } else if (day <= 6) {
+      return {
+        focus: "Shoulder Mobilization & Range Restoration",
+        diagnosis: "Adhesive Capsulitis (Mobilization Phase)",
+        treatment: `Day ${day}: Grade III inferior/posterior glide mobilization + finger ladder / pulley elevation + isometric rotator cuff strengthening.`
+      };
+    } else {
+      return {
+        focus: "Rotator Cuff Dynamic Strengthening",
+        diagnosis: "Restored Glenohumeral Mobility (Late Rehab)",
+        treatment: `Day ${day}: Theraband internal/external rotation drills + overhead functional reaching + proprioceptive stability drills.`
+      };
+    }
+  }
+
+  // 4. Knee / Osteoarthritis / ACL / Ligament
+  if (text.includes("knee") || text.includes("ghutna") || text.includes("osteoarthritis") || text.includes("patell") || text.includes("acl") || text.includes("meniscus")) {
+    if (day <= 2) {
+      return {
+        focus: "Knee Joint Effusion & Pain Relief",
+        diagnosis: "Knee Osteoarthritis (Grade II/III Pain Relief)",
+        treatment: `Day ${day}: IFT with hot pack over knee joint + static quadriceps activation + passive patellar glides.`
+      };
+    } else if (day <= 6) {
+      return {
+        focus: "Quadriceps & Hamstring Strengthening",
+        diagnosis: "Knee Osteoarthritis Rehabilitation",
+        treatment: `Day ${day}: Straight leg raises (SLR) with 1kg weight cuff + short arc quads + closed chain mini-squats + calf stretching.`
+      };
+    } else {
+      return {
+        focus: "Weight-Bearing & Functional Gait Training",
+        diagnosis: "Knee Rehab (Functional Gait Training)",
+        treatment: `Day ${day}: Step-ups + resistance loop hip abductor activation + proprioceptive wobble board balance drills.`
+      };
+    }
+  }
+
+  // 5. Paralysis / Stroke / Neuro Rehab / Hemiplegia
+  if (text.includes("paralysis") || text.includes("stroke") || text.includes("neuro") || text.includes("hemiplegia") || text.includes("lakwa") || text.includes("brain")) {
+    return {
+      focus: "Neuro Retraining & Gait",
+      diagnosis: "Post-Stroke Motor Hemiparesis Rehabilitation",
+      treatment: `Day ${day}: Neuromuscular electrical stimulation (NMES) + PNF diagonals + weight-shifting in parallel bars + active-assisted hemiplegic limb facilitation.`
+    };
+  }
+
+  // 6. Cerebral Palsy (CP Child)
+  if (text.includes("cp") || text.includes("cerebral") || text.includes("child") || text.includes("pediatric")) {
+    return {
+      focus: "Cerebral Palsy Pediatric Rehab",
+      diagnosis: "Spastic Cerebral Palsy Motor Development",
+      treatment: `Day ${day}: Sensory integration + dynamic trunk balance on Physioball + tone inhibition & prolonged hamstring/tendo-achilles stretching.`
+    };
+  }
+
+  // 7. Cupping Therapy
+  if (text.includes("cup") || text.includes("hijama")) {
+    return {
+      focus: "Cupping Therapy Session",
+      diagnosis: "Myofascial Pain Syndrome & Muscle Adhesions",
+      treatment: `Day ${day}: Dynamic gliding cupping + targeted dry cupping decompression (10-15 mins) + localized soothing massage.`
+    };
+  }
+
+  // Default General Physio Protocol
+  return {
+    focus: "Follow-up Rehabilitation",
+    diagnosis: diagnosisOrConcern ? `${diagnosisOrConcern} (Day ${day} Active Rehab)` : `Daily Physiotherapy Session (Day ${day})`,
+    treatment: `Day ${day}: Targeted therapeutic modality (IFT/TENS) + manual joint mobilization + tailored functional therapeutic exercises.`
+  };
+};
+
+// =============================================================================
+// REUSABLE TOUCH-FRIENDLY TIME PICKER SELECTOR COMPONENT
+// =============================================================================
+export function TimePickerSelector({ value, onChange, label, sublabel, allowLive = true }) {
+  const [mode, setMode] = useState("auto"); // "auto" | "slots" | "custom"
+  const [hour, setHour] = useState("10");
+  const [minute, setMinute] = useState("30");
+  const [period, setPeriod] = useState("AM");
+
+  useEffect(() => {
+    if (value) {
+      const match = String(value).match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (match) {
+        setHour(match[1].padStart(2, "0"));
+        setMinute(match[2]);
+        setPeriod((match[3] || "AM").toUpperCase());
+      }
+    }
+  }, [value]);
+
+  const presetSlots = [
+    "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+    "12:00 PM", "12:30 PM", "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM",
+    "06:00 PM", "06:30 PM", "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM"
+  ];
+
+  const handleSetLiveNow = () => {
+    const nowStr = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+    onChange(nowStr);
+    setMode("auto");
+  };
+
+  const handleCustomChange = (newH, newM, newP) => {
+    const h = newH !== undefined ? newH : hour;
+    const m = newM !== undefined ? newM : minute;
+    const p = newP !== undefined ? newP : period;
+    setHour(h);
+    setMinute(m);
+    setPeriod(p);
+    onChange();
+    setMode("custom");
+  };
+
+  const handleNativeTimeChange = (e) => {
+    const val = e.target.value; // e.g. "14:30"
+    if (!val) return;
+    const [h24, m] = val.split(":");
+    let hNum = parseInt(h24, 10);
+    const p = hNum >= 12 ? "PM" : "AM";
+    hNum = hNum % 12 || 12;
+    const hStr = String(hNum).padStart(2, "0");
+    setHour(hStr);
+    setMinute(m);
+    setPeriod(p);
+    onChange();
+    setMode("custom");
+  };
+
+  const get24HrTime = () => {
+    if (!value) return "";
+    const match = String(value).match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!match) return "";
+    let h = parseInt(match[1], 10);
+    const m = match[2];
+    const isPM = (match[3] || "AM").toUpperCase() === "PM";
+    if (isPM && h < 12) h += 12;
+    if (!isPM && h === 12) h = 0;
+    return ;
+  };
+
+  return (
+    <div className="time-picker-selector-wrap" style={{ marginTop: "6px", marginBottom: "6px" }}>
+      {label && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+          <label style={{ margin: 0, fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px" }}>
+            {label}
+            {sublabel && <small style={{ color: "#0284c7", fontWeight: "600", marginLeft: "6px" }}>{sublabel}</small>}
+          </label>
+          <div style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>
+            {allowLive && (
+              <button
+                type="button"
+                onClick={handleSetLiveNow}
+                style={{
+                  padding: "4px 8px",
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  borderRadius: "6px",
+                  border: "1px solid #0284c7",
+                  background: mode === "auto" ? "linear-gradient(135deg, #0284c7, #0369a1)" : "rgba(2, 132, 199, 0.1)",
+                  color: mode === "auto" ? "#ffffff" : "#0284c7",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}
+                title="Auto-match to current live clock time"
+              >
+                ⚡ Live Clock
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setMode(mode === "slots" ? "auto" : "slots")}
+              style={{
+                padding: "4px 8px",
+                fontSize: "11px",
+                fontWeight: "700",
+                borderRadius: "6px",
+                border: "1px solid #059669",
+                background: mode === "slots" ? "linear-gradient(135deg, #059669, #047857)" : "rgba(5, 150, 105, 0.1)",
+                color: mode === "slots" ? "#ffffff" : "#059669",
+                cursor: "pointer"
+              }}
+            >
+              🕒 Choose Slot
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode(mode === "custom" ? "auto" : "custom")}
+              style={{
+                padding: "4px 8px",
+                fontSize: "11px",
+                fontWeight: "700",
+                borderRadius: "6px",
+                border: "1px solid #d97706",
+                background: mode === "custom" ? "linear-gradient(135deg, #d97706, #b45309)" : "rgba(217, 119, 6, 0.1)",
+                color: mode === "custom" ? "#ffffff" : "#d97706",
+                cursor: "pointer"
+              }}
+            >
+              ⚙️ Hour/Min
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Selected Time Display Pill & Native Quick Picker */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        background: "rgba(2, 132, 199, 0.06)",
+        padding: "8px 12px",
+        borderRadius: "8px",
+        border: "1.5px solid #38bdf8"
+      }}>
+        <span style={{ fontSize: "18px" }}>🕒</span>
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: "14px", fontWeight: "800", color: "var(--heading, #0f172a)", letterSpacing: "0.5px" }}>
+            {value || "10:30 AM"}
+          </span>
+          <span style={{ fontSize: "11px", color: "#64748b", marginLeft: "8px" }}>
+            {mode === "auto" ? "(⚡ Live Auto)" : mode === "slots" ? "(🕒 Slot)" : "(⚙️ Custom)"}
+          </span>
+        </div>
+        <label style={{ margin: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", background: "#0284c7", color: "#ffffff", padding: "5px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: "700", position: "relative" }}>
+          <span>Choose Time ⌚</span>
+          <input
+            type="time"
+            value={get24HrTime()}
+            onChange={handleNativeTimeChange}
+            style={{
+              opacity: 0,
+              width: "100%",
+              height: "100%",
+              position: "absolute",
+              left: 0,
+              top: 0,
+              cursor: "pointer"
+            }}
+          />
+        </label>
+      </div>
+
+      {/* Quick 1-Tap Preset Slots Tray */}
+      {mode === "slots" && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(82px, 1fr))",
+          gap: "6px",
+          marginTop: "8px",
+          padding: "10px",
+          background: "rgba(2, 132, 199, 0.08)",
+          borderRadius: "8px",
+          border: "1px solid rgba(2, 132, 199, 0.25)"
+        }}>
+          {presetSlots.map(slot => (
+            <button
+              key={slot}
+              type="button"
+              onClick={() => { onChange(slot); setMode("slots"); }}
+              style={{
+                padding: "6px 2px",
+                fontSize: "11.5px",
+                fontWeight: value === slot ? "800" : "600",
+                borderRadius: "6px",
+                border: value === slot ? "1.5px solid #0284c7" : "1px solid #cbd5e1",
+                background: value === slot ? "#0284c7" : "#ffffff",
+                color: value === slot ? "#ffffff" : "#0f172a",
+                cursor: "pointer",
+                textAlign: "center"
+              }}
+            >
+              {slot}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Custom Dropdowns (Hour, Minute, Period) */}
+      {mode === "custom" && (
+        <div style={{
+          display: "flex",
+          gap: "8px",
+          alignItems: "center",
+          marginTop: "8px",
+          padding: "10px",
+          background: "rgba(217, 119, 6, 0.08)",
+          borderRadius: "8px",
+          border: "1px solid rgba(217, 119, 6, 0.25)"
+        }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "2px" }}>Hour</label>
+            <select
+              value={hour}
+              onChange={(e) => handleCustomChange(e.target.value, undefined, undefined)}
+              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "700" }}
+            >
+              {["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map(h => (
+                <option key={h} value={h}>{h}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "2px" }}>Minute</label>
+            <select
+              value={minute}
+              onChange={(e) => handleCustomChange(undefined, e.target.value, undefined)}
+              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "700" }}
+            >
+              {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "2px" }}>AM / PM</label>
+            <select
+              value={period}
+              onChange={(e) => handleCustomChange(undefined, undefined, e.target.value)}
+              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "700" }}
+            >
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function DoctorPortal({ onClose, themeProps }) {
   const fallbackTheme = useTheme();
   const theme = themeProps || fallbackTheme;
@@ -64,12 +469,12 @@ export default function DoctorPortal({ onClose, themeProps }) {
     address: "Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)",
     lat: 25.1337,
     lng: 82.5644,
-    name: "Vindhya Physio & Rehab Center"
+    name: "Vindhy Physio & Rehab Center"
   };
 
   const [clinicLocation, setClinicLocation] = useState(() => {
     try {
-      const saved = localStorage.getItem("vindhya_clinic_location");
+      const saved = localStorage.getItem("vindhy_clinic_location");
       return saved ? JSON.parse(saved) : DEFAULT_CLINIC_LOCATION;
     } catch {
       return DEFAULT_CLINIC_LOCATION;
@@ -131,10 +536,10 @@ export default function DoctorPortal({ onClose, themeProps }) {
           address: locationAddressInput.trim(),
           lat: newLat,
           lng: newLng,
-          name: place.display_name.split(",")[0] || "Vindhya Physio & Rehab Center"
+          name: place.display_name.split(",")[0] || "Vindhy Physio & Rehab Center"
         };
         setClinicLocation(updated);
-        localStorage.setItem("vindhya_clinic_location", JSON.stringify(updated));
+        localStorage.setItem("vindhy_clinic_location", JSON.stringify(updated));
         window.dispatchEvent(new CustomEvent("clinic-location-updated", { detail: updated }));
         setLocationSavedMsg("📍 Location found and pinned on map!");
         setTimeout(() => setLocationSavedMsg(""), 5000);
@@ -154,10 +559,10 @@ export default function DoctorPortal({ onClose, themeProps }) {
       address: locationAddressInput.trim() || DEFAULT_CLINIC_LOCATION.address,
       lat: parseFloat(locationLatInput) || DEFAULT_CLINIC_LOCATION.lat,
       lng: parseFloat(locationLngInput) || DEFAULT_CLINIC_LOCATION.lng,
-      name: "Vindhya Physio & Rehab Center"
+      name: "Vindhy Physio & Rehab Center"
     };
     setClinicLocation(updated);
-    localStorage.setItem("vindhya_clinic_location", JSON.stringify(updated));
+    localStorage.setItem("vindhy_clinic_location", JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent("clinic-location-updated", { detail: updated }));
     setLocationSavedMsg("✅ Clinic location and map marker saved successfully!");
     setTimeout(() => setLocationSavedMsg(""), 5000);
@@ -615,6 +1020,35 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
+    const openQuickDailyVisitModal = (patient) => {
+    if (!patient) return;
+    setSelectedPatient(patient);
+
+    const existingCount = (patient.totalVisits || (patientVisits ? patientVisits.length : 0)) || 0;
+    const nextVisitNum = existingCount + 1;
+    const initialConcern = patient.lastDiagnosis || patient.firstVisitReason || patient.reasonForVisit || "Physiotherapy Rehabilitation";
+    const protocol = generateDailyPhysioProtocol(initialConcern, nextVisitNum);
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+    setNewVisitForm({
+      visitDate: new Date().toISOString().slice(0, 10),
+      visitTime: getNowTimeStr(),
+      reasonForVisit: protocol.focus,
+      complaint: `Day ${nextVisitNum} rehabilitation: ${patient.firstVisitReason || initialConcern}`,
+      diagnosis: patient.lastDiagnosis || protocol.diagnosis,
+      treatmentNotes: protocol.treatment,
+      fee: patient.lastFee ? String(patient.lastFee).replace(/[^0-9]/g, "") : "500",
+      followUpDate: tomorrowStr,
+      followUpTime: "10:30 AM",
+      status: "Completed"
+    });
+
+    setShowAddVisitModal(true);
+  };
+
   const handleOpenConsultationModal = (patient) => {
     setActiveConsultPatient(patient);
     setConsultForm({
@@ -735,7 +1169,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     try {
       const res = await api.resetPatientPasswordToDefault(selectedPatient.patientId);
       if (res.ok) {
-        setAccountActionMsg({ text: "✅ Password reset to default 'vindhya' successfully.", isError: false });
+        setAccountActionMsg({ text: "✅ Password reset to default 'vindhy' successfully.", isError: false });
         const acc = await api.getPatientAccount(selectedPatient.patientId);
         if (acc.ok) setPatientAccountData(acc);
       } else {
@@ -1004,7 +1438,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const handleDownloadPDF = (receipt) => {
     if (!receipt || !receipt.patient || !receipt.visit) return;
     const doc = buildReceiptPDF(receipt);
-    const fileName = `Vindhya_Receipt_${receipt.patient.name.replace(/\s+/g, "_")}_${receipt.patient.patientId}_Visit${receipt.visit.visitNumber || 1}.pdf`;
+    const fileName = `Vindhy_Receipt_${receipt.patient.name.replace(/\s+/g, "_")}_${receipt.patient.patientId}_Visit${receipt.visit.visitNumber || 1}.pdf`;
     doc.save(fileName);
     setShareFeedback(`✅ PDF Receipt downloaded successfully as "${fileName}"`);
   };
@@ -1024,7 +1458,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     let cleanDigits = String(patient.phone || "").replace(/\D/g, "");
     if (cleanDigits.startsWith("0")) cleanDigits = cleanDigits.substring(1);
     const patientPhone = cleanDigits.startsWith("91") && cleanDigits.length > 10 ? cleanDigits : `91${cleanDigits}`;
-    const fileName = `Vindhya_Receipt_${patient.name.replace(/\s+/g, "_")}_${patient.patientId}_Visit${visit.visitNumber || 1}.pdf`;
+    const fileName = `Vindhy_Receipt_${patient.name.replace(/\s+/g, "_")}_${patient.patientId}_Visit${visit.visitNumber || 1}.pdf`;
     const doc = buildReceiptPDF(receipt);
     const pdfBlob = doc.output("blob");
 
@@ -1126,8 +1560,8 @@ _(Saved in patient clinic records)_`;
         <div className="doctor-login-card doctor-login-card-dark" data-theme="dark">
           <div className="login-header">
             <img
-              src={CLINIC_LOGO_B64 || "/vindhya-receipt-logo.png"}
-              alt="Vindhya Physio & Rehab Center"
+              src={CLINIC_LOGO_B64 || "/vindhy-receipt-logo.png"}
+              alt="Vindhy Physio & Rehab Center"
               className="login-logo-img prominent-landing-logo"
             />
             <h2>Doctor Portal Login</h2>
@@ -1260,8 +1694,8 @@ _(Saved in patient clinic records)_`;
         <div className="doctor-nav-top-row">
           <div className="doctor-nav-brand">
             <img
-              src="/vindhya-receipt-logo.png"
-              alt="Vindhya Physio & Rehab Center"
+              src="/vindhy-receipt-logo.png"
+              alt="Vindhy Physio & Rehab Center"
               className="doctor-nav-logo"
             />
             <div className="doctor-brand-text">
@@ -1275,7 +1709,7 @@ _(Saved in patient clinic records)_`;
               const isInstalledApp = typeof window !== "undefined" && (
                 window.matchMedia("(display-mode: standalone)").matches ||
                 window.navigator.standalone === true ||
-                localStorage.getItem("vindhya_app_installed") === "true"
+                localStorage.getItem("vindhy_app_installed") === "true"
               );
               const isMobileScreen = typeof window !== "undefined" && (
                 /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || window.innerWidth <= 768
@@ -1288,7 +1722,7 @@ _(Saved in patient clinic records)_`;
                     if (window.deferredPWAInstallPrompt) {
                       window.deferredPWAInstallPrompt.prompt();
                     } else {
-                      alert("To install the Vindhya Physio App on your phone, tap your browser's menu (⋮ or Share icon) and select 'Add to Home Screen' or 'Install App'.");
+                      alert("To install the Vindhy Physio App on your phone, tap your browser's menu (⋮ or Share icon) and select 'Add to Home Screen' or 'Install App'.");
                     }
                   }}
                   title="Download / Install App on Phone"
@@ -1368,7 +1802,7 @@ _(Saved in patient clinic records)_`;
               <div className="mobile-hero-brand">
                 <img
                   src={CLINIC_LOGO_B64}
-                  alt="Vindhya Physio & Rehab Center"
+                  alt="Vindhy Physio & Rehab Center"
                   className="mobile-hero-logo"
                 />
               </div>
@@ -1380,7 +1814,7 @@ _(Saved in patient clinic records)_`;
                     Hello, Dr. Satyam!
                   </h1>
                   <p className="greeting-subtitle" style={{ color: "rgba(255, 255, 255, 0.95)", textShadow: "0 1px 4px rgba(0, 0, 0, 0.6)" }}>
-                    Clinical Operations • Vindhya Physio &amp; Rehab Center
+                    Clinical Operations • Vindhy Physio &amp; Rehab Center
                   </p>
                 </div>
               </div>
@@ -1759,16 +2193,13 @@ _(Saved in patient clinic records)_`;
               )}
 
               <div className="form-row-1" style={{ marginTop: "12px" }}>
-                <label>
-                  Intake / Arrival Time * <small style={{ color: "#38bdf8", fontWeight: "normal" }}>(Auto-matched to current live clock)</small>
-                  <input
-                    type="text"
-                    required
-                    value={newPatientForm.visitTime || getNowTimeStr()}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, visitTime: e.target.value })}
-                    placeholder="e.g. 02:30 PM"
-                  />
-                </label>
+                <TimePickerSelector
+                  value={newPatientForm.visitTime || getNowTimeStr()}
+                  onChange={(val) => setNewPatientForm({ ...newPatientForm, visitTime: val })}
+                  label="Intake / Arrival Time *"
+                  sublabel="(Choose below or auto-sync with live clock)"
+                  allowLive={true}
+                />
               </div>
 
               {/* Patient's Reported Symptoms with AI Translation Button */}
@@ -1845,7 +2276,9 @@ _(Saved in patient clinic records)_`;
                       <span className="status-pill warning">⏳ Waiting for Doctor</span>
                       <span className="patient-id-badge">{p.patientId}</span>
                     </div>
-                    <span className="waiting-time-tag">Reg: {String(p.registrationDate).slice(0, 10)}</span>
+                    <span className="waiting-time-tag" style={{ background: "#e0f2fe", color: "#0369a1", border: "1px solid #7dd3fc", fontWeight: "700" }}>
+                      🕒 Arrived: {p.intakeTime || p.visitTime || "Live Now"}
+                    </span>
                   </div>
 
                   <div className="waiting-card-body">
@@ -1857,7 +2290,7 @@ _(Saved in patient clinic records)_`;
                     <div className="waiting-problem-box">
                       <strong>🩺 Chief Concern:</strong> {p.firstVisitReason}
                       <br />
-                      <strong>⏱️ Duration / Frequency:</strong> {p.duration || "Initial onset"}
+                      <strong>⏱️ Duration:</strong> {p.duration || "Initial onset"} • <strong>🕒 Intake Time:</strong> {p.intakeTime || p.visitTime || "Live Now"}
                       {p.isFirstTime && <span className="first-time-tag"> • First Time Visit</span>}
                     </div>
 
@@ -2033,6 +2466,14 @@ _(Saved in patient clinic records)_`;
                             👤 Profile
                           </button>
                           <button 
+                            className="table-action-btn"
+                            style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", fontWeight: "800" }}
+                            onClick={() => openQuickDailyVisitModal(p)} 
+                            title="1-Tap Quick Daily Session Entry"
+                          >
+                            ⚡ +1 Daily Visit
+                          </button>
+                          <button 
                             className="table-action-btn btn-consult" 
                             onClick={() => {
                               setSelectedPatient(p);
@@ -2111,6 +2552,13 @@ _(Saved in patient clinic records)_`;
                   <div className="mobile-patient-actions">
                     <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)}>
                       👤 Profile
+                    </button>
+                    <button 
+                      className="table-action-btn"
+                      style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", fontWeight: "800" }}
+                      onClick={() => openQuickDailyVisitModal(p)}
+                    >
+                      ⚡ +1 Daily Visit
                     </button>
                     <button 
                       className="table-action-btn btn-consult"
@@ -2471,7 +2919,7 @@ _(Saved in patient clinic records)_`;
                                 📞 Call
                               </a>
                               <a
-                                href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${patientName}, thank you for contacting Vindhya Physio & Rehab Center. Dr. Satyam Vishwakarma is reviewing your consultation booking for ${e.painArea || "Physiotherapy"}.`)}`}
+                                href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${patientName}, thank you for contacting Vindhy Physio & Rehab Center. Dr. Satyam Vishwakarma is reviewing your consultation booking for ${e.painArea || "Physiotherapy"}.`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
@@ -3169,8 +3617,15 @@ _(Saved in patient clinic records)_`;
                 </p>
               </div>
               <div className="profile-header-actions">
-                <button className="primary-btn" onClick={() => setShowAddVisitModal(true)}>
-                  ➕ Record Visit
+                <button 
+                  className="primary-btn"
+                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", borderColor: "#059669", boxShadow: "0 2px 8px rgba(16, 185, 129, 0.35)", fontWeight: "800" }}
+                  onClick={() => openQuickDailyVisitModal(selectedPatient)}
+                >
+                  ⚡ +1 Daily Session
+                </button>
+                <button className="secondary-btn" onClick={() => setShowAddVisitModal(true)}>
+                  ➕ Custom Visit
                 </button>
                 <button 
                   className="secondary-btn" 
@@ -3366,7 +3821,7 @@ _(Saved in patient clinic records)_`;
                         borderRadius: "6px",
                         display: "inline-block"
                       }}>
-                        vindhya
+                        vindhy
                       </strong>
                       <span style={{ fontSize: "11px", marginLeft: "8px", color: "var(--text-muted, #64748b)" }}>
                         ({patientAccountData?.hasCustomPassword ? "Custom password active" : "Default active"})
@@ -3378,9 +3833,9 @@ _(Saved in patient clinic records)_`;
                       style={{ fontSize: "12px", padding: "6px 12px" }}
                       onClick={handleDoctorResetToDefault}
                       disabled={accountActionLoading}
-                      title="Reset patient's password back to universal default 'vindhya'"
+                      title="Reset patient's password back to universal default 'vindhy'"
                     >
-                      🔄 Reset to 'vindhya'
+                      🔄 Reset to 'vindhy'
                     </button>
                   </div>
 
@@ -3424,7 +3879,7 @@ _(Saved in patient clinic records)_`;
                 )}
 
                 <div style={{ marginTop: "8px", fontSize: "11px", color: "var(--text-muted, #64748b)" }}>
-                  💡 Patient can log into their Patient Portal using Registered Mobile <strong>+91 {selectedPatient.phone}</strong> (or ID <strong>{selectedPatient.patientId}</strong>) and password <strong>vindhya</strong>.
+                  💡 Patient can log into their Patient Portal using Registered Mobile <strong>+91 {selectedPatient.phone}</strong> (or ID <strong>{selectedPatient.patientId}</strong>) and password <strong>vindhy</strong>.
                 </div>
               </div>
 
@@ -3525,99 +3980,376 @@ _(Saved in patient clinic records)_`;
         </div>
       )}
 
-      {/* ================= ADD VISIT MODAL ================= */}
-      {showAddVisitModal && selectedPatient && (
-        <div className="add-visit-modal-overlay">
-          <div className="add-visit-card">
-            <h3>Record Follow-Up Visit for {selectedPatient.name}</h3>
-            <p>Patient ID: <strong>{selectedPatient.patientId}</strong> | Allocating: <strong>Visit #{patientVisits.length + 1}</strong></p>
+      {/* ================= ADD VISIT MODAL & 1-TAP REPEAT VISIT ================= */}
+      {showAddVisitModal && selectedPatient && (() => {
+        const nextVisitNum = (selectedPatient.totalVisits || (patientVisits ? patientVisits.length : 0) || 0) + 1;
+        const currentProblem = selectedPatient.lastDiagnosis || selectedPatient.firstVisitReason || selectedPatient.reasonForVisit || "Physiotherapy Rehabilitation";
 
-            <form onSubmit={handleAddVisit}>
-              <div className="form-row-2">
-                <label>
-                  Visit Date *
+        return (
+          <div className="add-visit-modal-overlay">
+            <div className="add-visit-card" style={{ maxWidth: "660px", width: "100%" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                <div>
+                  <span className="status-pill success" style={{ marginBottom: "6px", display: "inline-block", background: "#dcfce7", color: "#15803d", border: "1px solid #86efac", fontWeight: "800" }}>
+                    ⚡ Daily Physiotherapy Session Entry
+                  </span>
+                  <h3 style={{ margin: "2px 0 4px 0", color: "var(--heading, #0f172a)", fontSize: "19px", fontWeight: "800" }}>
+                    Record Follow-Up Visit for {selectedPatient.name}
+                  </h3>
+                  <p style={{ margin: 0, color: "var(--text-muted, #64748b)", fontSize: "13px" }}>
+                    Patient ID: <strong style={{ color: "#0284c7" }}>{selectedPatient.patientId}</strong> | Allocating: <strong style={{ color: "#16a34a" }}>Visit #{nextVisitNum} (Day {nextVisitNum})</strong>
+                  </p>
+                </div>
+                <button className="secondary-btn close-btn" onClick={() => setShowAddVisitModal(false)}>✕</button>
+              </div>
+
+              {/* 1-Tap Pre-Filled Protocol Banner */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(2, 132, 199, 0.12))",
+                border: "1.5px solid rgba(16, 185, 129, 0.35)",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                marginBottom: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+                flexWrap: "wrap"
+              }}>
+                <div>
+                  <div style={{ fontWeight: "800", color: "#065f46", fontSize: "13.5px" }}>
+                    ✨ Auto-Prefilled with Day {nextVisitNum} Clinical Protocol
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#047857" }}>
+                    Condition: <strong>{currentProblem}</strong> • Fee: <strong>₹{newVisitForm.fee || "500"}</strong>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const freshProtocol = generateDailyPhysioProtocol(currentProblem, nextVisitNum);
+                    setNewVisitForm(prev => ({
+                      ...prev,
+                      reasonForVisit: freshProtocol.focus,
+                      diagnosis: selectedPatient.lastDiagnosis || freshProtocol.diagnosis,
+                      treatmentNotes: freshProtocol.treatment
+                    }));
+                  }}
+                  style={{
+                    background: "#059669",
+                    color: "#ffffff",
+                    border: "none",
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                  title="Generate Day-Specific Exercise Progression"
+                >
+                  🔄 AI Regenerate Notes
+                </button>
+              </div>
+
+              <form onSubmit={handleAddVisit}>
+                {/* Date & Date Quick Presets */}
+                <div className="form-row-1" style={{ marginBottom: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                    <label style={{ margin: 0, fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px" }}>
+                      Visit Date *
+                    </label>
+                    <div style={{ display: "inline-flex", gap: "4px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setNewVisitForm({ ...newVisitForm, visitDate: new Date().toISOString().slice(0, 10) })}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          borderRadius: "6px",
+                          border: "1px solid #0284c7",
+                          background: newVisitForm.visitDate === new Date().toISOString().slice(0, 10) ? "#0284c7" : "#e0f2fe",
+                          color: newVisitForm.visitDate === new Date().toISOString().slice(0, 10) ? "#fff" : "#0284c7",
+                          cursor: "pointer"
+                        }}
+                      >
+                        📅 Today
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const yest = new Date();
+                          yest.setDate(yest.getDate() - 1);
+                          setNewVisitForm({ ...newVisitForm, visitDate: yest.toISOString().slice(0, 10) });
+                        }}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          borderRadius: "6px",
+                          border: "1px solid #cbd5e1",
+                          background: "#f8fafc",
+                          color: "#475569",
+                          cursor: "pointer"
+                        }}
+                      >
+                        📅 Yesterday
+                      </button>
+                    </div>
+                  </div>
                   <input
                     type="date"
                     required
                     value={newVisitForm.visitDate}
                     onChange={(e) => setNewVisitForm({ ...newVisitForm, visitDate: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)" }}
                   />
-                </label>
-                <label>
-                  Visit Time
+                </div>
+
+                {/* Visit Time Selector */}
+                <TimePickerSelector
+                  value={newVisitForm.visitTime || getNowTimeStr()}
+                  onChange={(val) => setNewVisitForm({ ...newVisitForm, visitTime: val })}
+                  label="Visit Time *"
+                  sublabel="(1-tap select or live time)"
+                  allowLive={true}
+                />
+
+                {/* Therapy / Visit Focus */}
+                <div className="form-row-1" style={{ marginTop: "12px" }}>
+                  <label style={{ fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px", display: "block", marginBottom: "4px" }}>
+                    Therapy / Visit Focus *
+                  </label>
+                  <select
+                    value={newVisitForm.reasonForVisit}
+                    onChange={(e) => setNewVisitForm({ ...newVisitForm, reasonForVisit: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)", fontSize: "13.5px" }}
+                  >
+                    <option value="Daily Physiotherapy Session">⚡ Daily Physiotherapy Session</option>
+                    <option value="Follow-up Rehabilitation">Follow-up Rehabilitation</option>
+                    <option value="Spine Decompression & Traction">Spine Decompression & Traction</option>
+                    <option value="Cupping Therapy Session">Cupping Therapy Session</option>
+                    <option value="Neuro Retraining & Gait">Neuro Retraining & Gait</option>
+                    <option value="Cerebral Palsy Pediatric Rehab">Cerebral Palsy Pediatric Rehab</option>
+                    <option value="Sports Injury Recovery">Sports Injury Recovery</option>
+                    <option value="Post-Operative Mobilization">Post-Operative Mobilization</option>
+                    <option value="Electro-Therapy (IFT/TENS)">Electro-Therapy (IFT/TENS)</option>
+                    <option value="Progress Review & Discharge">Progress Review & Discharge</option>
+                  </select>
+                </div>
+
+                {/* Clinical Diagnosis */}
+                <div className="form-row-1" style={{ marginTop: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", flexWrap: "wrap", gap: "6px" }}>
+                    <label style={{ margin: 0, fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px" }}>
+                      Clinical Diagnosis / Findings
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newVisitForm.diagnosis) return;
+                        const translated = translateSymptomsToEnglish(newVisitForm.diagnosis);
+                        setNewVisitForm({ ...newVisitForm, diagnosis: translated });
+                      }}
+                      style={{
+                        background: "rgba(139, 92, 246, 0.1)",
+                        color: "#7c3aed",
+                        border: "1px solid #c4b5fd",
+                        borderRadius: "6px",
+                        padding: "3px 8px",
+                        fontSize: "11px",
+                        fontWeight: "700",
+                        cursor: "pointer"
+                      }}
+                    >
+                      ✨ Auto-Translate Medical Terms
+                    </button>
+                  </div>
                   <input
                     type="text"
-                    value={newVisitForm.visitTime}
-                    onChange={(e) => setNewVisitForm({ ...newVisitForm, visitTime: e.target.value })}
+                    value={newVisitForm.diagnosis}
+                    onChange={(e) => setNewVisitForm({ ...newVisitForm, diagnosis: e.target.value })}
+                    placeholder="e.g. Lumbar Spondylosis, Cervical Radiculopathy, Knee OA..."
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)" }}
                   />
-                </label>
-              </div>
+                </div>
 
-              <label>
-                Therapy / Visit Focus *
-                <select
-                  value={newVisitForm.reasonForVisit}
-                  onChange={(e) => setNewVisitForm({ ...newVisitForm, reasonForVisit: e.target.value })}
-                >
-                  <option value="Follow-up Rehabilitation">Follow-up Rehabilitation</option>
-                  <option value="Spine Decompression & Traction">Spine Decompression & Traction</option>
-                  <option value="Cupping Therapy Session">Cupping Therapy Session</option>
-                  <option value="Neuro Retraining & Gait">Neuro Retraining & Gait</option>
-                  <option value="Cerebral Palsy Pediatric Rehab">Cerebral Palsy Pediatric Rehab</option>
-                  <option value="Sports Injury Recovery">Sports Injury Recovery</option>
-                  <option value="Post-Operative Mobilization">Post-Operative Mobilization</option>
-                  <option value="Electro-Therapy (IFT/TENS)">Electro-Therapy (IFT/TENS)</option>
-                  <option value="Progress Review & Discharge">Progress Review & Discharge</option>
-                </select>
-              </label>
+                {/* Therapy Administered & Exercises (Pre-filled by AI) */}
+                <div className="form-row-1" style={{ marginTop: "12px" }}>
+                  <label style={{ fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px", display: "block", marginBottom: "4px" }}>
+                    Therapy Administered Today & Protocol Notes
+                  </label>
+                  <textarea
+                    rows="3"
+                    value={newVisitForm.treatmentNotes}
+                    onChange={(e) => setNewVisitForm({ ...newVisitForm, treatmentNotes: e.target.value })}
+                    placeholder="e.g. IFT 15 mins + Lumbar decompression + core isometric exercises."
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)", fontSize: "13px", lineHeight: "1.4" }}
+                  />
+                </div>
 
-              <label>
-                Current Complaint & Response to Therapy
-                <textarea
-                  rows="2"
-                  value={newVisitForm.complaint}
-                  onChange={(e) => setNewVisitForm({ ...newVisitForm, complaint: e.target.value })}
-                  placeholder="e.g. Pain score reduced from 8/10 to 3/10, walking posture improved."
-                />
-              </label>
+                {/* Fee Entry with Quick 1-Tap Chips */}
+                <div style={{
+                  marginTop: "14px",
+                  background: "rgba(16, 185, 129, 0.08)",
+                  border: "1.5px solid rgba(16, 185, 129, 0.3)",
+                  borderRadius: "8px",
+                  padding: "12px 14px"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                    <label style={{ margin: 0, color: "#065f46", fontWeight: "800", fontSize: "13.5px" }}>
+                      Today's Session Fee (₹) *
+                    </label>
+                    <span style={{ fontSize: "12px", color: "#047857", fontWeight: "600" }}>
+                      Tap amount to change in 1 tap
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
+                    {["300", "500", "700", "1000", "0"].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setNewVisitForm({ ...newVisitForm, fee: amt })}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          fontSize: "12.5px",
+                          fontWeight: "800",
+                          cursor: "pointer",
+                          border: String(newVisitForm.fee) === amt ? "2px solid #10b981" : "1px solid #cbd5e1",
+                          background: String(newVisitForm.fee) === amt ? "#10b981" : "#ffffff",
+                          color: String(newVisitForm.fee) === amt ? "#ffffff" : "#0f172a"
+                        }}
+                      >
+                        {amt === "0" ? "₹0 (Pkg / Free)" : `₹${amt}`}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="phone-prefix-input" style={{ maxWidth: "180px" }}>
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="50"
+                      value={newVisitForm.fee || "500"}
+                      onChange={(e) => setNewVisitForm({ ...newVisitForm, fee: e.target.value })}
+                      placeholder="500"
+                    />
+                  </div>
+                </div>
 
-              <label>
-                Clinical Diagnosis / Findings
-                <input
-                  type="text"
-                  value={newVisitForm.diagnosis}
-                  onChange={(e) => setNewVisitForm({ ...newVisitForm, diagnosis: e.target.value })}
-                  placeholder="e.g. Resolving lumbar strain"
-                />
-              </label>
+                {/* Next Follow-Up Date & Quick Chips */}
+                <div className="form-row-1" style={{ marginTop: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                    <label style={{ margin: 0, fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px" }}>
+                      Next Follow-Up / Session
+                    </label>
+                    <div style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const tom = new Date();
+                          tom.setDate(tom.getDate() + 1);
+                          setNewVisitForm({ ...newVisitForm, followUpDate: tom.toISOString().slice(0, 10) });
+                        }}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          borderRadius: "6px",
+                          border: "1px solid #10b981",
+                          background: "#ecfdf5",
+                          color: "#059669",
+                          cursor: "pointer"
+                        }}
+                      >
+                        ⚡ Tomorrow (Daily)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const in2 = new Date();
+                          in2.setDate(in2.getDate() + 2);
+                          setNewVisitForm({ ...newVisitForm, followUpDate: in2.toISOString().slice(0, 10) });
+                        }}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          borderRadius: "6px",
+                          border: "1px solid #cbd5e1",
+                          background: "#f8fafc",
+                          color: "#475569",
+                          cursor: "pointer"
+                        }}
+                      >
+                        In 2 Days
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewVisitForm({ ...newVisitForm, followUpDate: "" })}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          borderRadius: "6px",
+                          border: "1px solid #cbd5e1",
+                          background: "#f8fafc",
+                          color: "#64748b",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="date"
+                    value={newVisitForm.followUpDate}
+                    onChange={(e) => setNewVisitForm({ ...newVisitForm, followUpDate: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)" }}
+                  />
+                </div>
 
-              <label>
-                Therapy Provided & Home Exercises
-                <textarea
-                  rows="2"
-                  value={newVisitForm.treatmentNotes}
-                  onChange={(e) => setNewVisitForm({ ...newVisitForm, treatmentNotes: e.target.value })}
-                  placeholder="e.g. 20 mins lumbar mobilization, pelvic tilts, isometric core strengthening."
-                />
-              </label>
-
-              <label>
-                Next Recommended Follow-Up
-                <input
-                  type="date"
-                  value={newVisitForm.followUpDate}
-                  onChange={(e) => setNewVisitForm({ ...newVisitForm, followUpDate: e.target.value })}
-                />
-              </label>
-
-              <div className="form-actions-bar">
-                <button type="submit" className="primary-btn">Save Visit to Clinical History</button>
-                <button type="button" className="secondary-btn" onClick={() => setShowAddVisitModal(false)}>Cancel</button>
-              </div>
-            </form>
+                {/* Form Actions */}
+                <div className="form-actions-bar" style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <button
+                    type="submit"
+                    className="primary-btn"
+                    style={{
+                      flex: 1,
+                      minHeight: "48px",
+                      fontSize: "15px",
+                      fontWeight: "800",
+                      background: "linear-gradient(135deg, #10b981, #059669)",
+                      borderColor: "#059669",
+                      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px"
+                    }}
+                  >
+                    <span>⚡ 1-Tap Save Visit & Issue Receipt</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={() => setShowAddVisitModal(false)}
+                    style={{ minHeight: "48px", padding: "0 18px", fontWeight: "700" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ================= PREMIUM REGISTRATION RECEIPT & PDF SLIP ================= */}
       {activeReceipt && (
@@ -3663,8 +4395,8 @@ _(Saved in patient clinic records)_`;
               <div className="receipt-header-banner">
                 <div className="receipt-banner-left">
                   <img
-                    src="/vindhya-receipt-logo.png"
-                    alt="Vindhya Physio & Rehab Center"
+                    src="/vindhy-receipt-logo.png"
+                    alt="Vindhy Physio & Rehab Center"
                     className="receipt-logo"
                   />
                   <p className="receipt-banner-address">
@@ -3779,11 +4511,11 @@ _(Saved in patient clinic records)_`;
                 <div className="sign-line"></div>
                 <p><strong>Dr. Satyam Vishwakarma</strong></p>
                 <span>Consultant Physiotherapist</span>
-                <span>Vindhya Physio & Rehab Center</span>
+                <span>Vindhy Physio & Rehab Center</span>
               </div>
 
               <div className="receipt-footer">
-                <p>Thank you for choosing Vindhya Physio & Rehab Center</p>
+                <p>Thank you for choosing Vindhy Physio & Rehab Center</p>
                 <span>For appointments & medical inquiries: Call 9793093316 | WhatsApp: 8382024264 | Amravati Chauraha, Vindhyachal</span>
               </div>
             </div>

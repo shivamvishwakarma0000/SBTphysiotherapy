@@ -9,15 +9,15 @@ export const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyq_
 
 // Keys for localStorage
 const KEYS = {
-  AUTH: "vindhya_auth_data",
+  AUTH: "vindhy_auth_data",
   TOKEN: "doctor_token",
-  PATIENTS: "vindhya_patients_db",
-  VISITS: "vindhya_visits_db",
-  ENQUIRIES: "vindhya_enquiries_db",
-  WEBHOOK_URL: "vindhya_webhook_url",
-  DELETED_PATIENT_IDS: "vindhya_deleted_patient_ids",
-  DELETED_VISIT_IDS: "vindhya_deleted_visit_ids",
-  DELETED_ENQUIRY_IDS: "vindhya_deleted_enquiry_ids"
+  PATIENTS: "vindhy_patients_db",
+  VISITS: "vindhy_visits_db",
+  ENQUIRIES: "vindhy_enquiries_db",
+  WEBHOOK_URL: "vindhy_webhook_url",
+  DELETED_PATIENT_IDS: "vindhy_deleted_patient_ids",
+  DELETED_VISIT_IDS: "vindhy_deleted_visit_ids",
+  DELETED_ENQUIRY_IDS: "vindhy_deleted_enquiry_ids"
 };
 
 // Helper: Get configured Webhook URL
@@ -259,24 +259,24 @@ export const api = {
     });
 
     if (cleanEmail === auth.email.toLowerCase() && cleanPass === auth.password) {
-      const token = `vindhya_token_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      const token = `vindhy_token_${Date.now()}_${Math.random().toString(36).substring(2)}`;
       const doctor = {
         email: auth.email,
         name: "Dr. Satyam Vishwakarma",
         role: "Chief Physiotherapist & Director",
-        clinic: "Vindhya Physio & Rehab Center"
+        clinic: "Vindhy Physio & Rehab Center"
       };
       return { ok: true, token, doctor };
     }
 
     // Also fallback check for initial default if user hasn't changed it
     if (cleanEmail === DEFAULT_DOCTOR_EMAIL.toLowerCase() && cleanPass === DEFAULT_DOCTOR_PASS) {
-      const token = `vindhya_token_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      const token = `vindhy_token_${Date.now()}_${Math.random().toString(36).substring(2)}`;
       const doctor = {
         email: DEFAULT_DOCTOR_EMAIL,
         name: "Dr. Satyam Vishwakarma",
         role: "Chief Physiotherapist & Director",
-        clinic: "Vindhya Physio & Rehab Center"
+        clinic: "Vindhy Physio & Rehab Center"
       };
       return { ok: true, token, doctor };
     }
@@ -285,7 +285,7 @@ export const api = {
   },
 
   async verifyMe(token) {
-    if (!token || !token.startsWith("vindhya_token_")) {
+    if (!token || !token.startsWith("vindhy_token_")) {
       throw new Error("Invalid session");
     }
     const auth = getLocal(KEYS.AUTH, { email: DEFAULT_DOCTOR_EMAIL });
@@ -295,7 +295,7 @@ export const api = {
         email: auth.email,
         name: "Dr. Satyam Vishwakarma",
         role: "Chief Physiotherapist & Director",
-        clinic: "Vindhya Physio & Rehab Center"
+        clinic: "Vindhy Physio & Rehab Center"
       }
     };
   },
@@ -400,6 +400,7 @@ export const api = {
     const patients = getLocal(KEYS.PATIENTS, []);
     const newId = `VPR-2026-${1000 + patients.length + 1}`;
     const todayStr = new Date().toISOString().split("T")[0];
+    const intakeTimeStr = payload.visitTime || payload.intakeTime || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 
     const newPatient = {
       patientId: newId,
@@ -416,6 +417,7 @@ export const api = {
       isFirstTime: payload.isFirstTime || "Yes",
       complaint: (payload.complaint || "").trim(),
       registrationDate: todayStr,
+      intakeTime: intakeTimeStr,
       status: "Waiting for Doctor",
       totalVisits: 0,
       lastVisitDate: todayStr
@@ -449,13 +451,13 @@ export const api = {
       phone: patient.phone,
       visitNumber: visitNum,
       date: consultData.visitDate || todayStr,
-      time: consultData.visitTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      time: consultData.visitTime || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
       reason: consultData.reason || patient.firstVisitReason || "Physiotherapy Consultation",
       complaint: consultData.complaint || patient.complaint || "Pain / Mobility limitation",
       duration: consultData.duration || patient.duration || "",
       diagnosis: consultData.diagnosis || "Under Active Physiotherapy Management",
       treatmentNotes: consultData.treatmentNotes || "Spinal mobilization, targeted stretches, and rehabilitation therapy.",
-      fee: consultData.fee ? `₹${String(consultData.fee).replace(/[^0-9]/g, "")}` : "₹500",
+      fee: consultData.fee ? (String(consultData.fee).startsWith("₹") ? String(consultData.fee) : `₹${String(consultData.fee).replace(/[^0-9]/g, "")}`) : "₹500",
       followUpDate: consultData.followUpDate || "",
       status: "Completed",
       doctor: "Dr. Satyam Vishwakarma"
@@ -556,7 +558,9 @@ export const api = {
 
     const existingVisits = visits.filter(v => v.patientId === patientId);
     const visitNumber = existingVisits.length + 1;
-    const todayStr = payload.date || new Date().toISOString().split("T")[0];
+    const todayStr = payload.visitDate || payload.date || new Date().toISOString().split("T")[0];
+    const visitTimeStr = payload.visitTime || payload.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const feeStr = payload.fee ? (String(payload.fee).startsWith("₹") ? String(payload.fee) : `₹${String(payload.fee).replace(/[^0-9]/g, "")}`) : (patient.lastFee || "₹500");
 
     const newVisit = {
       visitId: `VST-${patientId.replace("VPR-2026-", "")}-${visitNumber}`,
@@ -565,12 +569,14 @@ export const api = {
       phone: patient.phone,
       visitNumber,
       date: todayStr,
-      time: payload.time || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      reason: payload.reason || "Physiotherapy Treatment Session",
-      complaint: payload.complaint || "",
-      diagnosis: payload.diagnosis || patient.firstVisitReason,
-      treatmentNotes: payload.treatmentNotes || "",
+      time: visitTimeStr,
+      reason: payload.reasonForVisit || payload.reason || "Physiotherapy Treatment Session",
+      complaint: payload.complaint || `Day ${visitNumber} session`,
+      diagnosis: payload.diagnosis || patient.lastDiagnosis || patient.firstVisitReason || "Under Active Physiotherapy Management",
+      treatmentNotes: payload.treatmentNotes || "Targeted physiotherapy mobilization & exercises.",
+      fee: feeStr,
       followUpDate: payload.followUpDate || "",
+      followUpTime: payload.followUpTime || "",
       status: "Completed",
       doctor: "Dr. Satyam Vishwakarma"
     };
@@ -578,6 +584,8 @@ export const api = {
     visits.unshift(newVisit);
     patient.totalVisits = visitNumber;
     patient.lastVisitDate = todayStr;
+    patient.lastDiagnosis = newVisit.diagnosis;
+    patient.lastFee = feeStr;
 
     setLocal(KEYS.VISITS, visits);
     setLocal(KEYS.PATIENTS, patients);
@@ -585,7 +593,7 @@ export const api = {
     // Push to Google Sheets
     syncToGoogleSheets("sync_visit", newVisit);
 
-    return { ok: true, visit: newVisit };
+    return { ok: true, visit: newVisit, patient };
   },
 
   async getTodayVisits() {
@@ -723,7 +731,7 @@ export const api = {
   // 6. EXPORT CSV
   exportCSV(type) {
     let rows = [];
-    let filename = `vindhya_${type}_${new Date().toISOString().split("T")[0]}.csv`;
+    let filename = `vindhy_${type}_${new Date().toISOString().split("T")[0]}.csv`;
 
     if (type === "patients") {
       const patients = getLocal(KEYS.PATIENTS, []);
@@ -771,7 +779,7 @@ export const api = {
       const data = await res.json();
       if (res.ok && data.ok) return data;
     } catch (e) {}
-    return { ok: true, patientId, status: "active", defaultPassword: "vindhya", hasCustomPassword: false };
+    return { ok: true, patientId, status: "active", defaultPassword: "vindhy", hasCustomPassword: false };
   },
 
   async resetPatientPasswordToDefault(patientId) {
@@ -865,8 +873,8 @@ export const api = {
 // ==========================================
 // PATIENT PORTAL API SERVICE
 // ==========================================
-const PATIENT_TOKEN_KEY = "vindhya_patient_token";
-const PATIENT_PROFILE_KEY = "vindhya_patient_profile";
+const PATIENT_TOKEN_KEY = "vindhy_patient_token";
+const PATIENT_PROFILE_KEY = "vindhy_patient_profile";
 
 export const patientApi = {
   getStoredToken() {
@@ -887,7 +895,7 @@ export const patientApi = {
     const cleanGender = String(payload.gender || "Male").trim();
     const cleanAddress = String(payload.address || "Vindhyachal, Mirzapur").trim();
     const cleanReason = String(payload.reasonForVisit || payload.complaint || "Initial Assessment").trim();
-    const cleanPass = String(payload.password || "vindhya").trim();
+    const cleanPass = String(payload.password || "vindhy").trim();
 
     try {
       const res = await fetch("/api/patient/register", {
@@ -964,7 +972,7 @@ export const patientApi = {
 
       const dummyToken = "local_patient_token_" + patientToUse.patientId;
       localStorage.setItem(PATIENT_TOKEN_KEY, dummyToken);
-      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...patientToUse, defaultPassword: "vindhya" }));
+      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...patientToUse, defaultPassword: "vindhy" }));
       return { ok: true, token: dummyToken, patient: patientToUse, message: "Registered and signed in successfully!" };
     }
   },
@@ -1007,18 +1015,18 @@ export const patientApi = {
 
       const inputPass = cleanPassword;
       const customPass = localStorage.getItem("patient_custom_pass_" + p.patientId);
-      const isCorrect = customPass ? (inputPass === customPass) : (inputPass.toLowerCase() === "vindhya");
+      const isCorrect = customPass ? (inputPass === customPass) : (inputPass.toLowerCase() === "vindhy");
 
       if (!isCorrect) {
         return {
           ok: false,
-          error: "Incorrect password. The default clinic password is 'vindhya'. If you customized it, please enter your new password."
+          error: "Incorrect password. The default clinic password is 'vindhy'. If you customized it, please enter your new password."
         };
       }
 
       const dummyToken = "local_patient_token_" + p.patientId;
       localStorage.setItem(PATIENT_TOKEN_KEY, dummyToken);
-      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...p, defaultPassword: "vindhya" }));
+      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...p, defaultPassword: "vindhy" }));
       return { ok: true, token: dummyToken, patient: p };
     }
   },
@@ -1103,9 +1111,9 @@ export const patientApi = {
       if (p) {
         const existingCustom = localStorage.getItem("patient_custom_pass_" + p.patientId);
         const cur = String(currentPassword).trim();
-        const validCur = existingCustom ? (cur === existingCustom) : (cur.toLowerCase() === "vindhya");
+        const validCur = existingCustom ? (cur === existingCustom) : (cur.toLowerCase() === "vindhy");
         if (!validCur) {
-          return { ok: false, error: "Current password is incorrect. (Initial default is 'vindhya')." };
+          return { ok: false, error: "Current password is incorrect. (Initial default is 'vindhy')." };
         }
         localStorage.setItem("patient_custom_pass_" + p.patientId, newPassword);
         return { ok: true, message: "Password updated successfully!" };

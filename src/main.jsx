@@ -126,8 +126,8 @@ function ClinicLogo({ isDark = false }) {
   return (
     <div className="clinic-logo-wrap">
       <img
-        src="/vindhya-receipt-logo.png"
-        alt="Vindhya Physio & Rehab Center"
+        src="/vindhy-receipt-logo.png"
+        alt="Vindhy Physio & Rehab Center"
         className="clinic-logo-img"
       />
     </div>
@@ -185,7 +185,7 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
     <>
       <header className="site-header">
         <div className="header-inner">
-          <a className="brand" href="#home" aria-label="Vindhya Physio & Rehab Center home" onClick={handleNavClick}>
+          <a className="brand" href="#home" aria-label="Vindhy Physio & Rehab Center home" onClick={handleNavClick}>
             <ClinicLogo isDark={isDark} />
           </a>
 
@@ -547,7 +547,7 @@ function BodyMap() {
               <p>{copy}</p>
               <div className="card-action-box">
                 <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent("Vindhya Physio " + title + " treatment")}`}
+                  href={`https://www.google.com/search?q=${encodeURIComponent("Vindhy Physio " + title + " treatment")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="explore-btn"
@@ -581,7 +581,7 @@ function Programs() {
         <p className="eyebrow">CLINICAL METHODOLOGY</p>
         <h2>Structured therapy programs engineered for lasting recovery.</h2>
         <p className="section-sublead">
-          At <strong>Vindhya Physio & Rehab Center</strong>, every patient journey begins with diagnostic evaluation, progressing systematically through pain management, tissue healing, functional strengthening, and relapse prevention.
+          At <strong>Vindhy Physio & Rehab Center</strong>, every patient journey begins with diagnostic evaluation, progressing systematically through pain management, tissue healing, functional strengthening, and relapse prevention.
         </p>
       </div>
       <div className="programs-grid">
@@ -977,7 +977,7 @@ function Testimonials() {
 function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
   const [clinicLoc, setClinicLoc] = useState(() => {
     try {
-      const saved = localStorage.getItem("vindhya_clinic_location");
+      const saved = localStorage.getItem("vindhy_clinic_location");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return {
@@ -1049,7 +1049,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
         </div>
       </div>
       <div className="footer-bottom-bar">
-        <p>© {new Date().getFullYear()} Vindhya Physio & Rehab Center. All rights reserved. Dr. Satyam Vishwakarma (BPT, DPT, CCYP BHU).</p>
+        <p>© {new Date().getFullYear()} Vindhy Physio & Rehab Center. All rights reserved. Dr. Satyam Vishwakarma (BPT, DPT, CCYP BHU).</p>
       </div>
     </footer>
   );
@@ -1071,8 +1071,8 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
         deferredPrompt.prompt();
         const choice = await deferredPrompt.userChoice;
         if (choice && choice.outcome === 'accepted') {
-          sessionStorage.setItem('vindhya_download_prompt_dismissed', 'true');
-          localStorage.setItem('vindhya_app_installed', 'true');
+          sessionStorage.setItem('vindhy_download_prompt_dismissed', 'true');
+          localStorage.setItem('vindhy_app_installed', 'true');
           if (onInstalled) onInstalled();
         }
       } catch (err) {
@@ -1080,11 +1080,11 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
       }
       onClose();
     } else if (isIOS) {
-      localStorage.setItem('vindhya_app_installed', 'true');
+      localStorage.setItem('vindhy_app_installed', 'true');
       if (onInstalled) onInstalled();
       onClose();
     } else {
-      localStorage.setItem('vindhya_app_installed', 'true');
+      localStorage.setItem('vindhy_app_installed', 'true');
       if (onInstalled) onInstalled();
       alert("To install the official app, tap your browser's menu (⋮ or Share icon) and select 'Install app' or 'Add to Home Screen'.");
       onClose();
@@ -1092,7 +1092,7 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
   };
 
   const handleIOSGotIt = () => {
-    localStorage.setItem('vindhya_app_installed', 'true');
+    localStorage.setItem('vindhy_app_installed', 'true');
     if (onInstalled) onInstalled();
     onClose();
   };
@@ -1105,11 +1105,11 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
         <div className="app-download-header">
           <img
             src="/icon-192.png"
-            alt="Vindhya Physio & Rehab Center"
+            alt="Vindhy Physio & Rehab Center"
             className="app-download-logo"
           />
           <div className="app-download-meta">
-            <h3>Get the Vindhya App 📱</h3>
+            <h3>Get the Vindhy App 📱</h3>
             <span className="app-download-badge">Official Clinic App</span>
           </div>
         </div>
@@ -1208,7 +1208,7 @@ function AutoEnquiryModal({ isOpen, onClose }) {
       });
       setStatus("success");
       try {
-        localStorage.setItem("vindhya_auto_enquiry_ever_shown", "true");
+        localStorage.setItem("vindhy_auto_enquiry_ever_shown", "true");
       } catch (e) {}
     } catch (err) {
       console.error(err);
@@ -1389,7 +1389,7 @@ function App() {
       hash === "#patient" ||
       path.startsWith("/patient") ||
       saved === "patient" ||
-      !!localStorage.getItem("vindhya_patient_token")
+      !!localStorage.getItem("vindhy_patient_token")
     );
   });
   const [showAutoEnquiry, setShowAutoEnquiry] = useState(false);
@@ -1400,7 +1400,7 @@ function App() {
     return (
       window.matchMedia("(display-mode: standalone)").matches ||
       window.navigator.standalone === true ||
-      localStorage.getItem("vindhya_app_installed") === "true"
+      localStorage.getItem("vindhy_app_installed") === "true"
     );
   });
   const [isMobileDevice, setIsMobileDevice] = useState(() => {
@@ -1458,7 +1458,7 @@ function App() {
 
     const handleAppInstalled = () => {
       setIsAppInstalled(true);
-      localStorage.setItem('vindhya_app_installed', 'true');
+      localStorage.setItem('vindhy_app_installed', 'true');
       setShowDownloadModal(false);
     };
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -1469,7 +1469,7 @@ function App() {
     window.addEventListener('resize', handleResize);
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-    const dismissed = sessionStorage.getItem('vindhya_download_prompt_dismissed');
+    const dismissed = sessionStorage.getItem('vindhy_download_prompt_dismissed');
 
     let timer;
     const isPortalActive =
@@ -1524,25 +1524,25 @@ function App() {
     const isStandalone = typeof window !== "undefined" && (
       window.matchMedia("(display-mode: standalone)").matches ||
       window.navigator.standalone === true ||
-      localStorage.getItem("vindhya_app_installed") === "true"
+      localStorage.getItem("vindhy_app_installed") === "true"
     );
     if (isStandalone || isAppInstalled) return;
 
     const hasDoctorAccount = !!localStorage.getItem("doctor_token") || localStorage.getItem("doctorLoggedIn") === "true";
-    const hasPatientAccount = !!localStorage.getItem("vindhya_patient_token") || !!localStorage.getItem("vindhya_patient_profile");
+    const hasPatientAccount = !!localStorage.getItem("vindhy_patient_token") || !!localStorage.getItem("vindhy_patient_profile");
     if (hasDoctorAccount || hasPatientAccount) return;
 
     if (showDoctorPortal || showPatientPortal) return;
 
-    const hasEverShown = localStorage.getItem("vindhya_auto_enquiry_ever_shown") === "true";
+    const hasEverShown = localStorage.getItem("vindhy_auto_enquiry_ever_shown") === "true";
     if (hasEverShown) return;
 
     const autoTimer = setTimeout(() => {
-      const stillEverShown = localStorage.getItem("vindhya_auto_enquiry_ever_shown") === "true";
+      const stillEverShown = localStorage.getItem("vindhy_auto_enquiry_ever_shown") === "true";
       const currentlyInPortal = showDoctorPortal || showPatientPortal;
       if (!stillEverShown && !currentlyInPortal) {
         try {
-          localStorage.setItem("vindhya_auto_enquiry_ever_shown", "true");
+          localStorage.setItem("vindhy_auto_enquiry_ever_shown", "true");
         } catch (e) {}
         setShowAutoEnquiry(true);
       }
@@ -1553,13 +1553,13 @@ function App() {
 
   const handleCloseAutoEnquiry = () => {
     try {
-      localStorage.setItem("vindhya_auto_enquiry_ever_shown", "true");
+      localStorage.setItem("vindhy_auto_enquiry_ever_shown", "true");
     } catch (e) {}
     setShowAutoEnquiry(false);
   };
 
   const handleDismissDownload = () => {
-    sessionStorage.setItem('vindhya_download_prompt_dismissed', 'true');
+    sessionStorage.setItem('vindhy_download_prompt_dismissed', 'true');
     setShowDownloadModal(false);
   };
 

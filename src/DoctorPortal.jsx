@@ -2693,53 +2693,57 @@ _(Saved in patient clinic records)_`;
                     <span className="patient-concern-pill">🩺 {p.firstVisitReason}</span>
                     <span className="visit-count-tag">{p.totalVisits || 1} Visits</span>
                   </div>
-                  <div className="mobile-patient-actions">
-                    <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)}>
-                      👤 Profile
-                    </button>
-                    <button 
-                      className="table-action-btn"
-                      style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", fontWeight: "800" }}
-                      onClick={() => openQuickDailyVisitModal(p)}
-                    >
-                      ⚡ +1 Daily Visit
-                    </button>
-                    <button 
-                      className="table-action-btn btn-consult"
-                      onClick={() => {
-                        setSelectedPatient(p);
-                        setShowAddVisitModal(true);
-                      }}
-                    >
-                      ➕ Consult
-                    </button>
-                    <button 
-                      className="table-action-btn btn-whatsapp"
-                      onClick={() => {
-                        handleWhatsAppDirectShare({
-                          patient: p,
-                          visit: {
-                            visitId: `VST-${p.patientId}-1`,
-                            patientId: p.patientId,
-                            patientName: p.name,
-                            phone: p.phone,
-                            visitNumber: p.totalVisits || 1,
-                            date: cleanDateOnly(p.lastVisitDate || p.registrationDate),
-                            time: "10:00 AM",
-                            reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
-                            complaint: p.firstVisitReason || "Consultation",
-                            diagnosis: p.lastDiagnosis || p.firstVisitReason || "Under Evaluation",
-                            treatmentNotes: "Physical evaluation & physiotherapy management.",
-                            followUpDate: "As advised by doctor",
-                            fee: p.lastFee || "₹500",
-                            status: "Completed",
-                            doctor: "Dr. Satyam Vishwakarma"
-                          }
-                        });
-                      }}
-                    >
-                      💬 WhatsApp
-                    </button>
+                  <div className="mobile-patient-actions-2x2">
+                    <div className="mobile-actions-row">
+                      <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)}>
+                        👤 Profile
+                      </button>
+                      <button 
+                        className="table-action-btn btn-daily"
+                        style={{ background: "#ecfdf5", color: "#059669", border: "1.5px solid #a7f3d0", fontWeight: "800" }}
+                        onClick={() => openQuickDailyVisitModal(p)}
+                      >
+                        ⚡ +1 Daily Visit
+                      </button>
+                    </div>
+                    <div className="mobile-actions-row">
+                      <button 
+                        className="table-action-btn btn-consult"
+                        onClick={() => {
+                          setSelectedPatient(p);
+                          setShowAddVisitModal(true);
+                        }}
+                      >
+                        ➕ Consult
+                      </button>
+                      <button 
+                        className="table-action-btn btn-whatsapp"
+                        onClick={() => {
+                          handleWhatsAppDirectShare({
+                            patient: p,
+                            visit: {
+                              visitId: `VST-${p.patientId}-1`,
+                              patientId: p.patientId,
+                              patientName: p.name,
+                              phone: p.phone,
+                              visitNumber: p.totalVisits || 1,
+                              date: cleanDateOnly(p.lastVisitDate || p.registrationDate),
+                              time: "10:00 AM",
+                              reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
+                              complaint: p.firstVisitReason || "Consultation",
+                              diagnosis: p.lastDiagnosis || p.firstVisitReason || "Under Evaluation",
+                              treatmentNotes: "Physical evaluation & physiotherapy management.",
+                              followUpDate: "As advised by doctor",
+                              fee: p.lastFee || "₹500",
+                              status: "Completed",
+                              doctor: "Dr. Satyam Vishwakarma"
+                            }
+                          });
+                        }}
+                      >
+                        💬 WhatsApp
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -3527,58 +3531,51 @@ _(Saved in patient clinic records)_`;
                   </button>
                 </form>
 
-                <button
-                  className="secondary-btn full-btn"
-                  onClick={handleManualSync}
-                  disabled={syncLoading}
-                >
-                  {syncLoading ? "Syncing to Google Sheets..." : "🔄 Push All Records to Google Sheets"}
-                </button>
-                <button
-                  className="primary-btn full-btn"
-                  style={{ marginTop: "10px", background: "linear-gradient(135deg, #0284c7, #0369a1)" }}
-                  onClick={handleRestoreFromSheets}
-                  disabled={restoreLoading}
-                  title="Import and restore all patient profiles, past visits, and bookings from Google Sheets"
-                >
-                  {restoreLoading ? "Restoring from Google Sheets..." : "📥 Restore / Pull All Data from Google Sheets"}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-btn full-btn"
-                  style={{ marginTop: "10px", background: "rgba(16, 185, 129, 0.15)", color: "#10b981", borderColor: "#10b981", fontWeight: "700" }}
-                  onClick={handleCleanAndRestoreFromSheets}
-                  disabled={restoreLoading}
-                  title="Remove old test cache and pull fresh data from your active Jaiprakash Google Sheet"
-                >
-                  {restoreLoading ? "⏳ Pulling from Sheet..." : "🧹 Clear Old Test Cache & Sync Fresh from Sheet"}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-btn full-btn"
-                  style={{ marginTop: "10px", background: "rgba(234, 179, 8, 0.12)", color: "#facc15", borderColor: "rgba(234, 179, 8, 0.4)" }}
-                  onClick={async () => {
-                    const defaultUrl = DEFAULT_WEBHOOK_URL;
-                    setCustomWebhookInput(defaultUrl);
-                    setWebhookUrl(defaultUrl);
-                    setWebhookSavedMsg("⏳ Restoring clinic records from official Google Sheets database...");
-                    setRestoreLoading(true);
-                    try {
-                      const res = await restoreFromGoogleSheets();
-                      setWebhookSavedMsg(`✅ Connected! Synced with official Sheets database.`);
-                      fetchStats();
-                      fetchPatients();
-                      fetchTodayVisits();
-                    } catch (err) {
-                      setWebhookSavedMsg("✅ Official Webhook Configured.");
-                    } finally {
-                      setRestoreLoading(false);
-                      setTimeout(() => setWebhookSavedMsg(""), 5000);
-                    }
-                  }}
-                >
-                  ⚡ Reset to Official Google Sheets Webhook
-                </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px" }}>
+                  <button
+                    className="primary-btn full-btn"
+                    style={{ background: "linear-gradient(135deg, #059669 0%, #047857 100%)", minHeight: "46px", fontSize: "14px", fontWeight: "800", boxShadow: "0 4px 12px rgba(5, 150, 105, 0.35)" }}
+                    onClick={handleCleanAndRestoreFromSheets}
+                    disabled={restoreLoading}
+                    title="Pull all live records directly from your Google Sheets database into the website"
+                  >
+                    {restoreLoading ? "⏳ Pulling All Data from Sheet..." : "🔄 Sync & Pull All Live Records from Google Sheets"}
+                  </button>
+                  <button
+                    className="secondary-btn full-btn"
+                    onClick={handleManualSync}
+                    disabled={syncLoading}
+                    title="Manually push current local records to your Google Sheet"
+                  >
+                    {syncLoading ? "⏳ Sending to Google Sheets..." : "📤 Push Local Records to Google Sheets"}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-btn full-btn"
+                    style={{ background: "rgba(234, 179, 8, 0.08)", color: "#ca8a04", borderColor: "rgba(234, 179, 8, 0.3)" }}
+                    onClick={async () => {
+                      const defaultUrl = DEFAULT_WEBHOOK_URL;
+                      setCustomWebhookInput(defaultUrl);
+                      setWebhookUrl(defaultUrl);
+                      setWebhookSavedMsg("⏳ Restoring clinic records from official Google Sheets database...");
+                      setRestoreLoading(true);
+                      try {
+                        const res = await restoreFromGoogleSheets();
+                        setWebhookSavedMsg(`✅ Connected! Synced with official Sheets database.`);
+                        fetchStats();
+                        fetchPatients();
+                        fetchTodayVisits();
+                      } catch (err) {
+                        setWebhookSavedMsg("✅ Official Webhook Configured.");
+                      } finally {
+                        setRestoreLoading(false);
+                        setTimeout(() => setWebhookSavedMsg(""), 5000);
+                      }
+                    }}
+                  >
+                    ⚡ Reset to Official Google Sheets Webhook
+                  </button>
+                </div>
               </div>
 
               <div className="settings-card">

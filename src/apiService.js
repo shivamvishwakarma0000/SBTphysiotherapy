@@ -117,7 +117,7 @@ export async function syncToGoogleSheets(action, data) {
   }
 }
 
-/// Restore / Fetch all rows from Google Sheet Webhook
+/// Restore / Fetch all rows from Google Sheet Webhook (Google Sheets as Source of Truth)
 export async function restoreFromGoogleSheets() {
   const webhookUrl = getWebhookUrl();
   if (!webhookUrl) {
@@ -144,68 +144,98 @@ export async function restoreFromGoogleSheets() {
       };
     }
 
-    const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
-    const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
-    const deletedEnquiryIds = new Set(getLocal(KEYS.DELETED_ENQUIRY_IDS, []));
+    if (data && (data.patients || data.visits || data.enquiries)) {
+      // Clear soft delete flags for any items existing on sheet
+      localStorage.removeItem(KEYS.DELETED_PATIENT_IDS);
+      localStorage.removeItem(KEYS.DELETED_VISIT_IDS);
+      localStorage.removeItem(KEYS.DELETED_ENQUIRY_IDS);
 
-    const localPatients = getLocal(KEYS.PATIENTS, []).filter(p => !deletedPatientIds.has(p.patientId));
-    const localVisits = getLocal(KEYS.VISITS, []).filter(v => !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId));
-    const localEnquiries = getLocal(KEYS.ENQUIRIES, []).filter(e => !deletedEnquiryIds.has(String(e.id)));
+      const pMap = new Map();
+      (data.patients || []).forEach(rp => {
+        if (rp && rp.patientId) {
+          const cleanId = String(rp.patientId).trim();
+          pMap.set(cleanId, {
+            ...rp,
+            patientId: cleanId,
+            name: rp.name || rp.patientName || "Patient",
+            phone: rp.phone ? String(rp.phone).trim() : "",
+            age: Number(rp.age) || rp.age || "",
+            gender: rp.gender || "Male",
+            address: rp.address || "Vindhyachal, Mirzapur",
+            firstVisitReason: rp.firstVisitReason || "Physiotherapy Consultation",
+            status: rp.status || "Active",
+            totalVisits: Number(rp.totalVisits) || 1,
+            registrationDate: rp.registrationDate ? String(rp.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+            lastVisitDate: rp.lastVisitDate ? String(rp.lastVisitDate).slice(0, 10) : (rp.registrationDate ? String(rp.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10))
+          });
+        }
+      });
 
-    // Merge Patients (excluding deleted)
-    const pMap = new Map();
-    localPatients.forEach(p => pMap.set(p.patientId, p));
-    (data.patients || []).forEach(rp => {
-      if (rp.patientId && !deletedPatientIds.has(rp.patientId)) {
-        pMap.set(rp.patientId, { ...(pMap.get(rp.patientId) || {}), ...rp });
-      }
-    });
-    const mergedPatients = Array.from(pMap.values());
+      // Retain newly added local patients that might not have pushed to sheet yet
+      const localPatients = getLocal(KEYS.PATIENTS, []);
+      localPatients.forEach(lp => {
+        if (lp && lp.patientId && !pMap.has(lp.patientId)) {
+          pMap.set(lp.patientId, lp);
+        }
+      });
+      const mergedPatients = Array.from(pMap.values());
 
-    // Merge Visits (excluding deleted)
-    const vMap = new Map();
-    localVisits.forEach(v => vMap.set(v.visitId, v));
-    (data.visits || []).forEach(rv => {
-      if (rv.visitId && !deletedVisitIds.has(rv.visitId) && !deletedPatientIds.has(rv.patientId)) {
-        vMap.set(rv.visitId, { ...(vMap.get(rv.visitId) || {}), ...rv });
-      }
-    });
-    const mergedVisits = Array.from(vMap.values());
+      // Visits
+      const vMap = new Map();
+      (data.visits || []).forEach(rv => {
+        if (rv && rv.visitId) {
+          vMap.set(String(rv.visitId).trim(), rv);
+        }
+      });
+      const localVisits = getLocal(KEYS.VISITS, []);
+      localVisits.forEach(lv => {
+        if (lv && lv.visitId && !vMap.has(String(lv.visitId).trim())) {
+          vMap.set(String(lv.visitId).trim(), lv);
+        }
+      });
+      const mergedVisits = Array.from(vMap.values());
 
-    // Merge Enquiries (excluding deleted and preserving local Hidden/Converted statuses)
-    const eMap = new Map();
-    localEnquiries.forEach(e => eMap.set(e.id || `${e.phone}_${e.date}`, e));
-    (data.enquiries || []).forEach(re => {
-      const key = re.id || `${re.phone}_${re.date}`;
-      if (deletedEnquiryIds.has(String(re.id)) || deletedEnquiryIds.has(key)) return;
-      const localEnq = eMap.get(key) || (re.id ? eMap.get(re.id) : null);
-      const preservedStatus = (localEnq && (localEnq.status === "Hidden" || localEnq.status === "Converted"))
-        ? localEnq.status
-        : (re.status || "New");
-      eMap.set(key, { ...(localEnq || {}), ...re, status: preservedStatus });
-    });
-    const mergedEnquiries = Array.from(eMap.values());
+      // Enquiries
+      const eMap = new Map();
+      (data.enquiries || []).forEach(re => {
+        if (re && re.id) {
+          eMap.set(String(re.id), re);
+        }
+      });
+      const localEnquiries = getLocal(KEYS.ENQUIRIES, []);
+      localEnquiries.forEach(le => {
+        if (le && le.id && !eMap.has(String(le.id))) {
+          eMap.set(String(le.id), le);
+        }
+      });
+      const mergedEnquiries = Array.from(eMap.values());
 
-    // Recalculate patient total visits
-    mergedPatients.forEach(patient => {
-      const pVisits = mergedVisits.filter(v => v.patientId === patient.patientId);
-      patient.totalVisits = Math.max(patient.totalVisits || 1, pVisits.length);
-      if (pVisits.length > 0) {
-        const sorted = [...pVisits].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-        patient.lastVisitDate = sorted[0].date;
-      }
-    });
+      // Recalculate visit counts accurately
+      mergedPatients.forEach(patient => {
+        const pVisits = mergedVisits.filter(v => String(v.patientId).trim().toUpperCase() === String(patient.patientId).trim().toUpperCase());
+        if (pVisits.length > 0) {
+          patient.totalVisits = pVisits.length;
+          const sorted = [...pVisits].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+          patient.lastVisitDate = sorted[0].date;
+        } else {
+          patient.totalVisits = Math.max(1, Number(patient.totalVisits) || 1);
+        }
+      });
 
-    setLocal(KEYS.PATIENTS, mergedPatients);
-    setLocal(KEYS.VISITS, mergedVisits);
-    setLocal(KEYS.ENQUIRIES, mergedEnquiries);
+      setLocal(KEYS.PATIENTS, mergedPatients);
+      setLocal(KEYS.VISITS, mergedVisits);
+      setLocal(KEYS.ENQUIRIES, mergedEnquiries);
 
-    return {
-      ok: true,
-      patientsCount: mergedPatients.length,
-      visitsCount: mergedVisits.length,
-      enquiriesCount: mergedEnquiries.length
-    };
+      return {
+        ok: true,
+        patientsCount: mergedPatients.length,
+        visitsCount: mergedVisits.length,
+        enquiriesCount: mergedEnquiries.length,
+        message: `Synced ${mergedPatients.length} patients and ${mergedVisits.length} visits directly from Google Sheets.`
+      };
+    }
+
+    return { ok: true, message: "Sync complete." };
   } catch (err) {
     console.warn("restoreFromGoogleSheets notice:", err);
     return { 

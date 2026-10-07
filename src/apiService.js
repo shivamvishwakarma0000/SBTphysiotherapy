@@ -96,6 +96,85 @@ export function clearLocalPatientsCache() {
 // Run init
 initializeLocalDatabase();
 
+// =============================================================================
+// REAL-TIME BROADCASTING & CROSS-TAB/DEVICE LIVE SYNC ENGINE
+// =============================================================================
+const REALTIME_CHANNEL_NAME = "vindhya_physio_realtime_events";
+let rtBroadcastChannel = null;
+try {
+  if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+    rtBroadcastChannel = new BroadcastChannel(REALTIME_CHANNEL_NAME);
+  }
+} catch (e) {
+  console.warn("BroadcastChannel initialization notice:", e);
+}
+
+export function publishRealtimeEvent(type, payload = {}) {
+  const eventObj = {
+    type,
+    payload,
+    timestamp: Date.now(),
+    eventId: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  };
+
+  // 1. Dispatch locally to current window/tab components
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("vindhya:realtime", { detail: eventObj }));
+    } catch (e) {}
+  }
+
+  // 2. Broadcast to other active tabs / windows instantly
+  if (rtBroadcastChannel) {
+    try {
+      rtBroadcastChannel.postMessage(eventObj);
+    } catch (err) {
+      console.warn("Realtime broadcast error:", err);
+    }
+  }
+
+  // 3. Trigger localStorage heartbeat for cross-tab sync in older environments
+  try {
+    localStorage.setItem("vindhy_rt_sync_tick", JSON.stringify({ t: Date.now(), type }));
+  } catch (e) {}
+}
+
+export function subscribeRealtimeEvent(handler) {
+  if (typeof window === "undefined" || !handler) return () => {};
+
+  const localListener = (e) => {
+    if (e && e.detail) {
+      handler(e.detail);
+    }
+  };
+
+  const channelListener = (e) => {
+    if (e && e.data) {
+      handler(e.data);
+    }
+  };
+
+  const storageListener = (e) => {
+    if (e && e.key === "vindhy_rt_sync_tick") {
+      handler({ type: "cloud.synced", payload: {}, timestamp: Date.now() });
+    }
+  };
+
+  window.addEventListener("vindhya:realtime", localListener);
+  window.addEventListener("storage", storageListener);
+  if (rtBroadcastChannel) {
+    rtBroadcastChannel.addEventListener("message", channelListener);
+  }
+
+  return () => {
+    window.removeEventListener("vindhya:realtime", localListener);
+    window.removeEventListener("storage", storageListener);
+    if (rtBroadcastChannel) {
+      rtBroadcastChannel.removeEventListener("message", channelListener);
+    }
+  };
+}
+
 // Sync single item to Google Sheet Webhook in background
 export async function syncToGoogleSheets(action, data) {
   const webhookUrl = getWebhookUrl();
@@ -434,6 +513,7 @@ export const api = {
 
     // Real-time Push to Google Sheets (Non-blocking)
     syncToGoogleSheets("sync_patient", newPatient);
+    publishRealtimeEvent("patient.created", newPatient);
 
     return { ok: true, patient: newPatient };
   },
@@ -482,9 +562,11 @@ export const api = {
     setLocal(KEYS.PATIENTS, patients);
     setLocal(KEYS.VISITS, visits);
 
-    // Sync to Google Sheets
+    // Sync to Google Sheets & Publish Realtime
     syncToGoogleSheets("sync_patient", patient);
     syncToGoogleSheets("sync_visit", newVisit);
+    publishRealtimeEvent("patient.updated", patient);
+    publishRealtimeEvent("visit.created", newVisit);
 
     return { ok: true, patient, visit: newVisit };
   },
@@ -523,8 +605,9 @@ export const api = {
     setLocal(KEYS.VISITS, updatedVisits);
     setLocal(KEYS.PATIENT_AUTH, updatedAuth);
 
-    // 4. Sync deletion to Google Sheets
+    // 4. Sync deletion to Google Sheets & Realtime Broadcast
     syncToGoogleSheets("delete_patient", { patientId });
+    publishRealtimeEvent("patient.deleted", { patientId });
 
     return { ok: true, message: `Patient ${patientId} permanently deleted.` };
   },
@@ -551,6 +634,7 @@ export const api = {
     setLocal(KEYS.VISITS, updatedVisits);
 
     syncToGoogleSheets("delete_visit", { visitId });
+    publishRealtimeEvent("visit.deleted", { visitId });
     return { ok: true, message: `Visit ${visitId} deleted.` };
   },
 
@@ -596,8 +680,10 @@ export const api = {
     setLocal(KEYS.VISITS, visits);
     setLocal(KEYS.PATIENTS, patients);
 
-    // Push to Google Sheets
+    // Push to Google Sheets & Realtime Broadcast
     syncToGoogleSheets("sync_visit", newVisit);
+    publishRealtimeEvent("visit.created", newVisit);
+    publishRealtimeEvent("patient.updated", patient);
 
     return { ok: true, visit: newVisit, patient };
   },
@@ -705,6 +791,7 @@ export const api = {
 
     // Push to Google Sheets in background
     syncToGoogleSheets("sync_enquiry", newEnquiry);
+    publishRealtimeEvent("enquiry.created", newEnquiry);
 
     return { ok: true, enquiry: newEnquiry };
   },
@@ -731,6 +818,7 @@ export const api = {
     setLocal(KEYS.ENQUIRIES, updated);
 
     syncToGoogleSheets("delete_enquiry", { enquiryId });
+    publishRealtimeEvent("enquiry.deleted", { id: enquiryId });
     return { ok: true, message: "Enquiry deleted successfully." };
   },
 

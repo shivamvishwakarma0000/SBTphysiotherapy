@@ -76,8 +76,7 @@ export function PatientAvatar({ patient, size = 68 }) {
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import jsPDF from "jspdf";
-import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets";
-import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets, clearLocalPatientsCache } from "./apiService";
+import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets, clearLocalPatientsCache, subscribeRealtimeEvent, publishRealtimeEvent } from "./apiService";
 import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly, formatVisitDateTimeDisplay } from "./receiptUtils";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
@@ -267,24 +266,38 @@ export function TimePickerSelector({ value, onChange, label, sublabel }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: "10px",
+        gap: "12px",
         background: "rgba(2, 132, 199, 0.06)",
         padding: "10px 14px",
         borderRadius: "10px",
         border: "1.5px solid #38bdf8",
         boxSizing: "border-box"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontSize: "18px" }}>🕒</span>
-          <span style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", letterSpacing: "0.5px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: "1 1 auto" }}>
+          <span style={{ fontSize: "18px", flexShrink: 0 }}>🕒</span>
+          <span style={{ fontSize: "15.5px", fontWeight: "800", color: "#0f172a", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>
             {value || "10:30 AM"}
           </span>
-          <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700" }}>
-            (⚡ Live Auto)
-          </span>
         </div>
-        <label style={{ margin: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "5px", background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#ffffff", padding: "7px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: "800", position: "relative", boxShadow: "0 2px 6px rgba(2, 132, 199, 0.3)" }}>
-          <span>Choose Time ⌚</span>
+        <label style={{
+          margin: 0,
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "5px",
+          background: "linear-gradient(135deg, #0284c7, #0369a1)",
+          color: "#ffffff",
+          padding: "8px 14px",
+          borderRadius: "8px",
+          fontSize: "12.5px",
+          fontWeight: "800",
+          position: "relative",
+          boxShadow: "0 2px 6px rgba(2, 132, 199, 0.3)",
+          whiteSpace: "nowrap",
+          flexShrink: 0
+        }}>
+          <span style={{ whiteSpace: "nowrap" }}>Choose Time ⌚</span>
           <input
             type="time"
             value={get24HrTime()}
@@ -844,6 +857,142 @@ export default function DoctorPortal({ onClose, themeProps }) {
       console.error(e);
     }
   };
+
+  // =============================================================================
+  // REAL-TIME LIVE DATA SYNCHRONIZATION ENGINE (NO-REFRESH / NO-SCROLL)
+  // =============================================================================
+  useEffect(() => {
+    if (!token) return;
+
+    const handleRealtimeEvent = (event) => {
+      if (!event || !event.type) return;
+
+      switch (event.type) {
+        case "patient.created": {
+          const newP = event.payload;
+          if (newP && newP.patientId) {
+            setPatients(prev => {
+              if (prev.some(p => p.patientId === newP.patientId)) return prev;
+              return [newP, ...prev];
+            });
+            fetchStats();
+          }
+          break;
+        }
+        case "patient.updated": {
+          const updatedP = event.payload;
+          if (updatedP && updatedP.patientId) {
+            setPatients(prev => prev.map(p => p.patientId === updatedP.patientId ? { ...p, ...updatedP } : p));
+            if (selectedPatient && selectedPatient.patientId === updatedP.patientId) {
+              setSelectedPatient(prev => ({ ...prev, ...updatedP }));
+            }
+            fetchStats();
+          }
+          break;
+        }
+        case "patient.deleted": {
+          const { patientId } = event.payload || {};
+          if (patientId) {
+            setPatients(prev => prev.filter(p => p.patientId !== patientId));
+            setTodayVisits(prev => prev.filter(v => v.patientId !== patientId));
+            if (selectedPatient && selectedPatient.patientId === patientId) {
+              setSelectedPatient(null);
+            }
+            fetchStats();
+          }
+          break;
+        }
+        case "visit.created": {
+          const newV = event.payload;
+          if (newV && newV.visitId) {
+            const todayStr = new Date().toISOString().split("T")[0];
+            if (newV.date === todayStr) {
+              setTodayVisits(prev => {
+                if (prev.some(v => v.visitId === newV.visitId)) return prev;
+                return [newV, ...prev];
+              });
+            }
+            if (selectedPatient && selectedPatient.patientId === newV.patientId) {
+              setPatientVisits(prev => {
+                if (prev.some(v => v.visitId === newV.visitId)) return prev;
+                return [newV, ...prev];
+              });
+            }
+            fetchStats();
+            fetchPatients();
+          }
+          break;
+        }
+        case "visit.deleted": {
+          const { visitId } = event.payload || {};
+          if (visitId) {
+            setTodayVisits(prev => prev.filter(v => v.visitId !== visitId));
+            setPatientVisits(prev => prev.filter(v => v.visitId !== visitId));
+            fetchStats();
+          }
+          break;
+        }
+        case "enquiry.created": {
+          const newE = event.payload;
+          if (newE && newE.id) {
+            setEnquiries(prev => {
+              if (prev.some(e => e.id === newE.id)) return prev;
+              return [newE, ...prev];
+            });
+            fetchStats();
+          }
+          break;
+        }
+        case "enquiry.updated": {
+          const updatedE = event.payload;
+          if (updatedE && updatedE.id) {
+            setEnquiries(prev => prev.map(e => e.id === updatedE.id ? { ...e, ...updatedE } : e));
+            fetchStats();
+          }
+          break;
+        }
+        case "enquiry.deleted": {
+          const { id } = event.payload || {};
+          if (id) {
+            setEnquiries(prev => prev.filter(e => String(e.id) !== String(id)));
+            fetchStats();
+          }
+          break;
+        }
+        case "cloud.restored":
+        case "cloud.synced": {
+          fetchStats();
+          fetchPatients();
+          fetchTodayVisits();
+          fetchEnquiries();
+          break;
+        }
+        default:
+          break;
+      }
+    };
+
+    const unsubscribe = subscribeRealtimeEvent(handleRealtimeEvent);
+
+    // Auto-resync when user switches back to tab or device wakes up
+    const handleVisibilitySync = () => {
+      if (document.visibilityState === "visible") {
+        fetchStats();
+        fetchPatients();
+        fetchTodayVisits();
+        fetchEnquiries();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilitySync);
+    window.addEventListener("focus", handleVisibilitySync);
+
+    return () => {
+      unsubscribe();
+      document.removeEventListener("visibilitychange", handleVisibilitySync);
+      window.removeEventListener("focus", handleVisibilitySync);
+    };
+  }, [token, selectedPatient]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

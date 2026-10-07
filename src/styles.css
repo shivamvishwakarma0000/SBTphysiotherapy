@@ -3482,6 +3482,8 @@ textarea:focus {
 .add-visit-card,
 .inner-modal-card {
   width: min(680px, 100%);
+  max-height: 90vh !important;
+  overflow-y: auto !important;
   background: #ffffff !important;
   color: #0f172a !important;
   border: 1.5px solid #cbd5e1 !important;
@@ -3507,6 +3509,7 @@ textarea:focus {
 .inner-modal-card label {
   margin-bottom: 6px;
   color: #0f172a !important;
+  font-weight: 700 !important;
 }
 
 .add-visit-card input,
@@ -4174,9 +4177,11 @@ textarea:focus {
   .receipt-modal-card,
   .add-visit-card {
     width: 100% !important;
-    max-height: 92vh !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
     border-radius: 16px 16px 0 0 !important;
     margin: 0 !important;
+    background: #ffffff !important;
   }
 
   .profile-header {
@@ -8881,7 +8886,6 @@ textarea:focus {
 [data-theme="dark"] .dashboard-view,
 [data-theme="dark"] .enroll-form-card,
 [data-theme="dark"] .settings-card,
-[data-theme="dark"] .add-visit-card,
 [data-theme="dark"] .consult-form {
   color: #f8fafc !important;
 }
@@ -8899,8 +8903,7 @@ textarea:focus {
 [data-theme="dark"] .section-title-box h3,
 [data-theme="dark"] .section-title-box h4,
 [data-theme="dark"] .settings-card h3,
-[data-theme="dark"] .enroll-form-card h3,
-[data-theme="dark"] .add-visit-card h3 {
+[data-theme="dark"] .enroll-form-card h3 {
   color: #ffffff !important;
 }
 
@@ -8909,10 +8912,48 @@ textarea:focus {
 [data-theme="dark"] .section-title-box p,
 [data-theme="dark"] .settings-card p,
 [data-theme="dark"] .enroll-form-card p,
-[data-theme="dark"] .add-visit-card p,
 [data-theme="dark"] .enroll-view p,
 [data-theme="dark"] .settings-view p {
   color: #cbd5e1 !important;
+}
+
+/* Add Visit Form Explicit White Theme Continuity */
+.add-visit-card,
+[data-theme="dark"] .add-visit-card,
+[data-theme="light"] .add-visit-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+
+.add-visit-card h3,
+[data-theme="dark"] .add-visit-card h3,
+[data-theme="light"] .add-visit-card h3 {
+  color: #0f172a !important;
+}
+
+.add-visit-card p,
+[data-theme="dark"] .add-visit-card p,
+[data-theme="light"] .add-visit-card p {
+  color: #475569 !important;
+}
+
+.add-visit-card label,
+[data-theme="dark"] .add-visit-card label,
+[data-theme="light"] .add-visit-card label {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.add-visit-card input,
+.add-visit-card select,
+.add-visit-card textarea,
+[data-theme="dark"] .add-visit-card input,
+[data-theme="dark"] .add-visit-card select,
+[data-theme="dark"] .add-visit-card textarea {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
 }
 
 /* Patient Portal Appointments View - Explicit Black Text (Image 2) */
@@ -8938,7 +8979,6 @@ textarea:focus {
 [data-theme="dark"] label,
 [data-theme="dark"] .enroll-form-card label,
 [data-theme="dark"] .settings-card label,
-[data-theme="dark"] .add-visit-card label,
 [data-theme="dark"] .consult-form label,
 [data-theme="dark"] .demographics-grid label,
 [data-theme="dark"] .inner-modal-card label,

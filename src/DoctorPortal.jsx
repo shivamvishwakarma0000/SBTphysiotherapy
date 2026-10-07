@@ -2488,14 +2488,14 @@ _(Saved in patient clinic records)_`;
         {/* ================= 3. PATIENTS DIRECTORY ================= */}
         {activeTab === "patients" && (
           <div className="patients-directory-view">
-            <div className="section-header-row patient-directory-header-banner" style={{
+            <div className="patient-directory-master-banner" style={{
               background: "linear-gradient(135deg, #071927, #0B2A3D)",
               borderRadius: "14px",
               padding: "18px 20px",
               color: "#ffffff",
               marginBottom: "16px",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              boxShadow: "0 6px 20px rgba(7, 25, 39, 0.2)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              boxShadow: "0 6px 20px rgba(7, 25, 39, 0.25)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -2503,10 +2503,10 @@ _(Saved in patient clinic records)_`;
               gap: "12px"
             }}>
               <div style={{ flex: "1 1 240px", minWidth: 0 }}>
-                <h2 style={{ color: "#ffffff", margin: "0 0 4px 0", fontSize: "20px", fontWeight: "800", letterSpacing: "-0.3px" }}>
+                <h2 className="directory-banner-title" style={{ color: "#ffffff", margin: "0 0 4px 0", fontSize: "20px", fontWeight: "800", letterSpacing: "-0.3px", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
                   Patient Directory & Clinical Profiles
                 </h2>
-                <p style={{ color: "#94a3b8", margin: 0, fontSize: "13px" }}>
+                <p className="directory-banner-subtitle" style={{ color: "#93c5fd", margin: 0, fontSize: "13px", fontWeight: "600", textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>
                   Search by Patient ID (VPR-XXXX), Patient Name, or Phone Number.
                 </p>
               </div>

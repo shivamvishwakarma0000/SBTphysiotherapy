@@ -145,15 +145,15 @@ export async function restoreFromGoogleSheets() {
     }
 
     if (data && (data.patients || data.visits || data.enquiries)) {
-      // Clear soft delete flags for any items existing on sheet
-      localStorage.removeItem(KEYS.DELETED_PATIENT_IDS);
-      localStorage.removeItem(KEYS.DELETED_VISIT_IDS);
-      localStorage.removeItem(KEYS.DELETED_ENQUIRY_IDS);
+      const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
+      const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+      const deletedEnquiryIds = new Set(getLocal(KEYS.DELETED_ENQUIRY_IDS, []));
 
       const pMap = new Map();
       (data.patients || []).forEach(rp => {
         if (rp && rp.patientId) {
           const cleanId = String(rp.patientId).trim();
+          if (deletedPatientIds.has(cleanId)) return;
           pMap.set(cleanId, {
             ...rp,
             patientId: cleanId,
@@ -174,7 +174,7 @@ export async function restoreFromGoogleSheets() {
       // Retain newly added local patients that might not have pushed to sheet yet
       const localPatients = getLocal(KEYS.PATIENTS, []);
       localPatients.forEach(lp => {
-        if (lp && lp.patientId && !pMap.has(lp.patientId)) {
+        if (lp && lp.patientId && !deletedPatientIds.has(lp.patientId) && !pMap.has(lp.patientId)) {
           pMap.set(lp.patientId, lp);
         }
       });
@@ -184,12 +184,16 @@ export async function restoreFromGoogleSheets() {
       const vMap = new Map();
       (data.visits || []).forEach(rv => {
         if (rv && rv.visitId) {
-          vMap.set(String(rv.visitId).trim(), rv);
+          const cleanVId = String(rv.visitId).trim();
+          if (deletedVisitIds.has(cleanVId)) return;
+          if (rv.patientId && deletedPatientIds.has(String(rv.patientId).trim())) return;
+          vMap.set(cleanVId, rv);
         }
       });
       const localVisits = getLocal(KEYS.VISITS, []);
       localVisits.forEach(lv => {
-        if (lv && lv.visitId && !vMap.has(String(lv.visitId).trim())) {
+        if (lv && lv.visitId && !deletedVisitIds.has(String(lv.visitId).trim()) && !vMap.has(String(lv.visitId).trim())) {
+          if (lv.patientId && deletedPatientIds.has(String(lv.patientId).trim())) return;
           vMap.set(String(lv.visitId).trim(), lv);
         }
       });

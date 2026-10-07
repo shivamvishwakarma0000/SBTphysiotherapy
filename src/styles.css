@@ -3477,40 +3477,41 @@ textarea:focus {
 /* Add Visit Card */
 .add-visit-card,
 .inner-modal-card {
-  width: min(540px, 100%);
-  background: var(--bg-card);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 28px;
-  box-shadow: var(--shadow-lg);
+  width: min(680px, 100%);
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 18px !important;
+  padding: 24px 26px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
 }
 
 .add-visit-card h3,
 .inner-modal-card h3 {
   margin: 0 0 4px;
-  color: var(--heading);
+  color: #0f172a !important;
 }
 
 .add-visit-card p,
 .inner-modal-card p {
-  color: var(--muted);
+  color: #475569 !important;
   font-size: 13px;
-  margin: 0 0 18px;
+  margin: 0 0 14px;
 }
 
 .add-visit-card label,
 .inner-modal-card label {
-  margin-bottom: 12px;
-  color: var(--heading);
+  margin-bottom: 6px;
+  color: #0f172a !important;
 }
 
 .add-visit-card input,
 .add-visit-card select,
 .add-visit-card textarea,
 .inner-modal-card input {
-  background: var(--input-bg);
-  border: 1px solid var(--input-border);
-  color: var(--heading);
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
 }
 
 /* ================= PREMIUM OFFICIAL RECEIPT & SLIP ================= */

@@ -226,46 +226,7 @@ export const generateDailyPhysioProtocol = (diagnosisOrConcern, visitNumber = 1)
 // =============================================================================
 // REUSABLE TOUCH-FRIENDLY TIME PICKER SELECTOR COMPONENT
 // =============================================================================
-export function TimePickerSelector({ value, onChange, label, sublabel, allowLive = true }) {
-  const [mode, setMode] = useState("auto"); // "auto" | "slots" | "custom"
-  const [hour, setHour] = useState("10");
-  const [minute, setMinute] = useState("30");
-  const [period, setPeriod] = useState("AM");
-
-  useEffect(() => {
-    if (value) {
-      const match = String(value).match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-      if (match) {
-        setHour(match[1].padStart(2, "0"));
-        setMinute(match[2]);
-        setPeriod((match[3] || "AM").toUpperCase());
-      }
-    }
-  }, [value]);
-
-  const presetSlots = [
-    "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-    "12:00 PM", "12:30 PM", "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM",
-    "06:00 PM", "06:30 PM", "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM"
-  ];
-
-  const handleSetLiveNow = () => {
-    const nowStr = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-    onChange(nowStr);
-    setMode("auto");
-  };
-
-  const handleCustomChange = (newH, newM, newP) => {
-    const h = newH !== undefined ? newH : hour;
-    const m = newM !== undefined ? newM : minute;
-    const p = newP !== undefined ? newP : period;
-    setHour(h);
-    setMinute(m);
-    setPeriod(p);
-    onChange();
-    setMode("custom");
-  };
-
+export function TimePickerSelector({ value, onChange, label, sublabel }) {
   const handleNativeTimeChange = (e) => {
     const val = e.target.value; // e.g. "14:30"
     if (!val) return;
@@ -273,12 +234,9 @@ export function TimePickerSelector({ value, onChange, label, sublabel, allowLive
     let hNum = parseInt(h24, 10);
     const p = hNum >= 12 ? "PM" : "AM";
     hNum = hNum % 12 || 12;
-    const hStr = String(hNum).padStart(2, "0");
-    setHour(hStr);
-    setMinute(m);
-    setPeriod(p);
-    onChange();
-    setMode("custom");
+    const hStr = String(hNum);
+    const formatted = `${hStr}:${m} ${p}`;
+    onChange(formatted);
   };
 
   const get24HrTime = () => {
@@ -290,73 +248,17 @@ export function TimePickerSelector({ value, onChange, label, sublabel, allowLive
     const isPM = (match[3] || "AM").toUpperCase() === "PM";
     if (isPM && h < 12) h += 12;
     if (!isPM && h === 12) h = 0;
-    return ;
+    return `${String(h).padStart(2, "0")}:${m}`;
   };
 
   return (
     <div className="time-picker-selector-wrap" style={{ marginTop: "6px", marginBottom: "6px" }}>
       {label && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
-          <label style={{ margin: 0, fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px" }}>
+          <label style={{ margin: 0, fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
             {label}
             {sublabel && <small style={{ color: "#0284c7", fontWeight: "600", marginLeft: "6px" }}>{sublabel}</small>}
           </label>
-          <div style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>
-            {allowLive && (
-              <button
-                type="button"
-                onClick={handleSetLiveNow}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: "11px",
-                  fontWeight: "700",
-                  borderRadius: "6px",
-                  border: "1px solid #0284c7",
-                  background: mode === "auto" ? "linear-gradient(135deg, #0284c7, #0369a1)" : "rgba(2, 132, 199, 0.1)",
-                  color: mode === "auto" ? "#ffffff" : "#0284c7",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px"
-                }}
-                title="Auto-match to current live clock time"
-              >
-                ⚡ Live Clock
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setMode(mode === "slots" ? "auto" : "slots")}
-              style={{
-                padding: "4px 8px",
-                fontSize: "11px",
-                fontWeight: "700",
-                borderRadius: "6px",
-                border: "1px solid #059669",
-                background: mode === "slots" ? "linear-gradient(135deg, #059669, #047857)" : "rgba(5, 150, 105, 0.1)",
-                color: mode === "slots" ? "#ffffff" : "#059669",
-                cursor: "pointer"
-              }}
-            >
-              🕒 Choose Slot
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode(mode === "custom" ? "auto" : "custom")}
-              style={{
-                padding: "4px 8px",
-                fontSize: "11px",
-                fontWeight: "700",
-                borderRadius: "6px",
-                border: "1px solid #d97706",
-                background: mode === "custom" ? "linear-gradient(135deg, #d97706, #b45309)" : "rgba(217, 119, 6, 0.1)",
-                color: mode === "custom" ? "#ffffff" : "#d97706",
-                cursor: "pointer"
-              }}
-            >
-              ⚙️ Hour/Min
-            </button>
-          </div>
         </div>
       )}
 
@@ -364,22 +266,24 @@ export function TimePickerSelector({ value, onChange, label, sublabel, allowLive
       <div style={{
         display: "flex",
         alignItems: "center",
-        gap: "8px",
+        justifyContent: "space-between",
+        gap: "10px",
         background: "rgba(2, 132, 199, 0.06)",
-        padding: "8px 12px",
-        borderRadius: "8px",
-        border: "1.5px solid #38bdf8"
+        padding: "10px 14px",
+        borderRadius: "10px",
+        border: "1.5px solid #38bdf8",
+        boxSizing: "border-box"
       }}>
-        <span style={{ fontSize: "18px" }}>🕒</span>
-        <div style={{ flex: 1 }}>
-          <span style={{ fontSize: "14px", fontWeight: "800", color: "var(--heading, #0f172a)", letterSpacing: "0.5px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "18px" }}>🕒</span>
+          <span style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", letterSpacing: "0.5px" }}>
             {value || "10:30 AM"}
           </span>
-          <span style={{ fontSize: "11px", color: "#64748b", marginLeft: "8px" }}>
-            {mode === "auto" ? "(⚡ Live Auto)" : mode === "slots" ? "(🕒 Slot)" : "(⚙️ Custom)"}
+          <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700" }}>
+            (⚡ Live Auto)
           </span>
         </div>
-        <label style={{ margin: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", background: "#0284c7", color: "#ffffff", padding: "5px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: "700", position: "relative" }}>
+        <label style={{ margin: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "5px", background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#ffffff", padding: "7px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: "800", position: "relative", boxShadow: "0 2px 6px rgba(2, 132, 199, 0.3)" }}>
           <span>Choose Time ⌚</span>
           <input
             type="time"
@@ -397,91 +301,6 @@ export function TimePickerSelector({ value, onChange, label, sublabel, allowLive
           />
         </label>
       </div>
-
-      {/* Quick 1-Tap Preset Slots Tray */}
-      {mode === "slots" && (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(82px, 1fr))",
-          gap: "6px",
-          marginTop: "8px",
-          padding: "10px",
-          background: "rgba(2, 132, 199, 0.08)",
-          borderRadius: "8px",
-          border: "1px solid rgba(2, 132, 199, 0.25)"
-        }}>
-          {presetSlots.map(slot => (
-            <button
-              key={slot}
-              type="button"
-              onClick={() => { onChange(slot); setMode("slots"); }}
-              style={{
-                padding: "6px 2px",
-                fontSize: "11.5px",
-                fontWeight: value === slot ? "800" : "600",
-                borderRadius: "6px",
-                border: value === slot ? "1.5px solid #0284c7" : "1px solid #cbd5e1",
-                background: value === slot ? "#0284c7" : "#ffffff",
-                color: value === slot ? "#ffffff" : "#0f172a",
-                cursor: "pointer",
-                textAlign: "center"
-              }}
-            >
-              {slot}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Custom Dropdowns (Hour, Minute, Period) */}
-      {mode === "custom" && (
-        <div style={{
-          display: "flex",
-          gap: "8px",
-          alignItems: "center",
-          marginTop: "8px",
-          padding: "10px",
-          background: "rgba(217, 119, 6, 0.08)",
-          borderRadius: "8px",
-          border: "1px solid rgba(217, 119, 6, 0.25)"
-        }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "2px" }}>Hour</label>
-            <select
-              value={hour}
-              onChange={(e) => handleCustomChange(e.target.value, undefined, undefined)}
-              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "700" }}
-            >
-              {["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map(h => (
-                <option key={h} value={h}>{h}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "2px" }}>Minute</label>
-            <select
-              value={minute}
-              onChange={(e) => handleCustomChange(undefined, e.target.value, undefined)}
-              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "700" }}
-            >
-              {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "2px" }}>AM / PM</label>
-            <select
-              value={period}
-              onChange={(e) => handleCustomChange(undefined, undefined, e.target.value)}
-              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "700" }}
-            >
-              <option value="AM">AM</option>
-              <option value="PM">PM</option>
-            </select>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -4272,20 +4091,20 @@ _(Saved in patient clinic records)_`;
 
         return (
           <div className="add-visit-modal-overlay">
-            <div className="add-visit-card" style={{ maxWidth: "660px", width: "100%" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+            <div className="add-visit-card" style={{ maxWidth: "680px", width: "100%", background: "#ffffff", borderRadius: "18px", border: "1.5px solid #cbd5e1", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)", padding: "24px 26px", boxSizing: "border-box", color: "#0f172a" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", paddingBottom: "12px", borderBottom: "1.5px solid #f1f5f9" }}>
                 <div>
                   <span className="status-pill success" style={{ marginBottom: "6px", display: "inline-block", background: "#dcfce7", color: "#15803d", border: "1px solid #86efac", fontWeight: "800" }}>
                     ⚡ Daily Physiotherapy Session Entry
                   </span>
-                  <h3 style={{ margin: "2px 0 4px 0", color: "var(--heading, #0f172a)", fontSize: "19px", fontWeight: "800" }}>
+                  <h3 style={{ margin: "2px 0 4px 0", color: "#0f172a", fontSize: "19px", fontWeight: "800" }}>
                     Record Follow-Up Visit for {selectedPatient.name}
                   </h3>
-                  <p style={{ margin: 0, color: "var(--text-muted, #64748b)", fontSize: "13px" }}>
+                  <p style={{ margin: 0, color: "#475569", fontSize: "13px" }}>
                     Patient ID: <strong style={{ color: "#0284c7" }}>{selectedPatient.patientId}</strong> | Allocating: <strong style={{ color: "#16a34a" }}>Visit #{nextVisitNum} (Day {nextVisitNum})</strong>
                   </p>
                 </div>
-                <button className="secondary-btn close-btn" onClick={() => setShowAddVisitModal(false)}>✕</button>
+                <button className="secondary-btn close-btn" onClick={() => setShowAddVisitModal(false)} style={{ fontSize: "16px", padding: "6px 12px", borderRadius: "8px", background: "#f1f5f9", color: "#475569", border: "1px solid #cbd5e1", cursor: "pointer" }}>✕</button>
               </div>
 
               {/* 1-Tap Pre-Filled Protocol Banner */}
@@ -4343,7 +4162,7 @@ _(Saved in patient clinic records)_`;
                 {/* Date & Date Quick Presets */}
                 <div className="form-row-1" style={{ marginBottom: "12px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
-                    <label style={{ margin: 0, fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px" }}>
+                    <label style={{ margin: 0, fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
                       Visit Date *
                     </label>
                     <div style={{ display: "inline-flex", gap: "4px" }}>
@@ -4390,7 +4209,7 @@ _(Saved in patient clinic records)_`;
                     required
                     value={newVisitForm.visitDate}
                     onChange={(e) => setNewVisitForm({ ...newVisitForm, visitDate: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)" }}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", background: "#ffffff", color: "#0f172a", boxSizing: "border-box" }}
                   />
                 </div>
 
@@ -4400,18 +4219,17 @@ _(Saved in patient clinic records)_`;
                   onChange={(val) => setNewVisitForm({ ...newVisitForm, visitTime: val })}
                   label="Visit Time *"
                   sublabel="(1-tap select or live time)"
-                  allowLive={true}
                 />
 
                 {/* Therapy / Visit Focus */}
                 <div className="form-row-1" style={{ marginTop: "12px" }}>
-                  <label style={{ fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px", display: "block", marginBottom: "4px" }}>
                     Therapy / Visit Focus *
                   </label>
                   <select
                     value={newVisitForm.reasonForVisit}
                     onChange={(e) => setNewVisitForm({ ...newVisitForm, reasonForVisit: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)", fontSize: "13.5px" }}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", background: "#ffffff", color: "#0f172a", fontSize: "13.5px", boxSizing: "border-box" }}
                   >
                     <option value="Daily Physiotherapy Session">⚡ Daily Physiotherapy Session</option>
                     <option value="Follow-up Rehabilitation">Follow-up Rehabilitation</option>
@@ -4429,7 +4247,7 @@ _(Saved in patient clinic records)_`;
                 {/* Clinical Diagnosis */}
                 <div className="form-row-1" style={{ marginTop: "12px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", flexWrap: "wrap", gap: "6px" }}>
-                    <label style={{ margin: 0, fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px" }}>
+                    <label style={{ margin: 0, fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
                       Clinical Diagnosis / Findings
                     </label>
                     <button
@@ -4458,13 +4276,13 @@ _(Saved in patient clinic records)_`;
                     value={newVisitForm.diagnosis}
                     onChange={(e) => setNewVisitForm({ ...newVisitForm, diagnosis: e.target.value })}
                     placeholder="e.g. Lumbar Spondylosis, Cervical Radiculopathy, Knee OA..."
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)" }}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", background: "#ffffff", color: "#0f172a", boxSizing: "border-box" }}
                   />
                 </div>
 
                 {/* Therapy Administered & Exercises (Pre-filled by AI) */}
                 <div className="form-row-1" style={{ marginTop: "12px" }}>
-                  <label style={{ fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px", display: "block", marginBottom: "4px" }}>
                     Therapy Administered Today & Protocol Notes
                   </label>
                   <textarea
@@ -4472,7 +4290,7 @@ _(Saved in patient clinic records)_`;
                     value={newVisitForm.treatmentNotes}
                     onChange={(e) => setNewVisitForm({ ...newVisitForm, treatmentNotes: e.target.value })}
                     placeholder="e.g. IFT 15 mins + Lumbar decompression + core isometric exercises."
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)", fontSize: "13px", lineHeight: "1.4" }}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", background: "#ffffff", color: "#0f172a", fontSize: "13px", lineHeight: "1.4", boxSizing: "border-box" }}
                   />
                 </div>
 
@@ -4513,8 +4331,8 @@ _(Saved in patient clinic records)_`;
                       </button>
                     ))}
                   </div>
-                  <div className="phone-prefix-input" style={{ maxWidth: "180px" }}>
-                    <span>₹</span>
+                  <div className="phone-prefix-input" style={{ maxWidth: "180px", background: "#ffffff", border: "1.5px solid #cbd5e1", borderRadius: "8px" }}>
+                    <span style={{ color: "#0f172a", fontWeight: "700" }}>₹</span>
                     <input
                       type="number"
                       required
@@ -4523,6 +4341,7 @@ _(Saved in patient clinic records)_`;
                       value={newVisitForm.fee || "500"}
                       onChange={(e) => setNewVisitForm({ ...newVisitForm, fee: e.target.value })}
                       placeholder="500"
+                      style={{ background: "#ffffff", color: "#0f172a", border: "none", width: "100%" }}
                     />
                   </div>
                 </div>
@@ -4530,7 +4349,7 @@ _(Saved in patient clinic records)_`;
                 {/* Next Follow-Up Date & Quick Chips */}
                 <div className="form-row-1" style={{ marginTop: "14px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
-                    <label style={{ margin: 0, fontWeight: "700", color: "var(--heading, #0f172a)", fontSize: "13px" }}>
+                    <label style={{ margin: 0, fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
                       Next Follow-Up / Session
                     </label>
                     <div style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>
@@ -4596,7 +4415,7 @@ _(Saved in patient clinic records)_`;
                     type="date"
                     value={newVisitForm.followUpDate}
                     onChange={(e) => setNewVisitForm({ ...newVisitForm, followUpDate: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid var(--border-color, #cbd5e1)" }}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", background: "#ffffff", color: "#0f172a", boxSizing: "border-box" }}
                   />
                 </div>
 

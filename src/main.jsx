@@ -302,14 +302,16 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
               ))}
             </div>
             <div className="mobile-drawer-actions">
-              {showDownloadBtn && (
-                <button
-                  className="mobile-drawer-btn download-btn"
-                  onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
-                >
-                  <span>📲</span> Download Clinic App
-                </button>
-              )}
+              <button
+                className="mobile-drawer-btn download-btn android-download-btn"
+                onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
+                title="Download & Install Vindhy Physio App on Android"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style={{ marginRight: '4px' }}>
+                  <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4114 13.8533 8.081 12 8.081s-3.5902.3304-5.1367.8687L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
+                </svg>
+                Download Android App
+              </button>
               <button
                 className="mobile-drawer-btn patient-btn"
                 onClick={() => { setMobileMenuOpen(false); onOpenPatientPortal(); }}
@@ -1163,10 +1165,11 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
   if (!isOpen) return null;
 
   const handleDownload = async () => {
-    if (deferredPrompt) {
+    const promptToUse = deferredPrompt || window.deferredPWAInstallPrompt;
+    if (promptToUse) {
       try {
-        deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
+        promptToUse.prompt();
+        const choice = await promptToUse.userChoice;
         if (choice && choice.outcome === 'accepted') {
           sessionStorage.setItem('vindhy_download_prompt_dismissed', 'true');
           localStorage.setItem('vindhy_app_installed', 'true');
@@ -1183,7 +1186,7 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
     } else {
       localStorage.setItem('vindhy_app_installed', 'true');
       if (onInstalled) onInstalled();
-      alert("To install the official app, tap your browser's menu (⋮ or Share icon) and select 'Install app' or 'Add to Home Screen'.");
+      alert("📲 To install Vindhy Physio App on Android:\n1. Tap the three dots (⋮) in Chrome (top right)\n2. Select 'Install app' or 'Add to Home screen'\n3. Tap 'Install'");
       onClose();
     }
   };
@@ -1206,15 +1209,15 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
             className="app-download-logo"
           />
           <div className="app-download-meta">
-            <h3>Get the Vindhy App 📱</h3>
-            <span className="app-download-badge">Official Clinic App</span>
+            <h3>Download Vindhy App 📱</h3>
+            <span className="app-download-badge">Official Android & iOS App</span>
           </div>
         </div>
 
         <ul className="app-download-benefits">
-          <li>✓ Fast consultation booking & appointment tracking</li>
-          <li>✓ View visits, receipts & doctor notes in Patient Portal</li>
-          <li>✓ Access guided home exercises & recovery plans</li>
+          <li>✓ 1-Tap access to Patient Portal, Visits & PDF Receipts</li>
+          <li>✓ Fast consultation booking & recovery tracking</li>
+          <li>✓ Works smoothly offline on all Android phones</li>
         </ul>
 
         {isIOS ? (
@@ -1232,18 +1235,18 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
             </div>
           </div>
         ) : (
-          <div className="download-modal-actions">
-            <button className="primary-btn download-btn" onClick={handleDownload}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Install App
-            </button>
-            <button className="secondary-btn later-btn" onClick={onClose}>
-              Maybe Later
-            </button>
+          <div className="android-install-flow">
+            <div className="download-modal-actions" style={{ marginBottom: "12px" }}>
+              <button className="primary-btn download-btn" onClick={handleDownload} style={{ width: "100%", justifyContent: "center" }}>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style={{ marginRight: "6px" }}>
+                  <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4114 13.8533 8.081 12 8.081s-3.5902.3304-5.1367.8687L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
+                </svg>
+                Install Android App Now
+              </button>
+            </div>
+            <div style={{ fontSize: "12px", color: "#64748b", background: "#f1f5f9", padding: "10px 12px", borderRadius: "10px", textAlign: "left", lineHeight: "1.4" }}>
+              <strong>💡 Quick Android Tip:</strong> If automatic install doesn't pop up, tap your Chrome menu <strong>(⋮ top right)</strong> and select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.
+            </div>
           </div>
         )}
       </div>
@@ -1749,7 +1752,7 @@ function App() {
       />
 
       <AppDownloadModal
-        isOpen={showDownloadModal && canShowDownloadBtn && !showDoctorPortal && !showPatientPortal}
+        isOpen={showDownloadModal && !showDoctorPortal && !showPatientPortal}
         onClose={handleDismissDownload}
         deferredPrompt={deferredPrompt}
         onInstalled={() => setIsAppInstalled(true)}

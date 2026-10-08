@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { patientApi } from "./apiService";
 import { downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
 import { CLINIC_LOGO_B64 } from "./pdfAssets";
-import { PatientAvatar } from "./DoctorPortal";
+import { PatientAvatar } from "./PatientAvatar";
+import ErrorBoundary from "./ErrorBoundary";
 
 export default function PatientPortal({ onClose, themeProps }) {
   const handleToggleTheme = () => {
@@ -504,7 +505,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         >
           <span className="tab-icon">📅</span>
           <span className="tab-label">Appointments</span>
-          {recordsData?.appointments?.length > 0 && (
+          {(recordsData?.appointments?.length || 0) > 0 && (
             <span className="tab-bubble">{recordsData.appointments.length}</span>
           )}
         </button>
@@ -586,15 +587,15 @@ export default function PatientPortal({ onClose, themeProps }) {
 
             {/* 2. Desktop Only: Status / Next Appointment Highlight */}
             <div className="app-status-highlight-card desktop-only-widget">
-              {recordsData?.appointments?.length > 0 ? (
+              {(recordsData?.appointments?.length || 0) > 0 ? (
                 <div className="status-highlight-body">
                   <div className="status-badge-row">
                     <span className="status-indicator-dot green"></span>
                     <span className="status-tag-text">NEXT APPOINTMENT</span>
                   </div>
                   <div className="status-highlight-content">
-                    <h4>{cleanDateOnly(recordsData.appointments[0].date)} • {cleanTimeOnly(recordsData.appointments[0].time)}</h4>
-                    <p>{recordsData.appointments[0].reason || "Physiotherapy & Rehabilitation Session"}</p>
+                    <h4>{cleanDateOnly(recordsData?.appointments?.[0]?.date)} • {cleanTimeOnly(recordsData?.appointments?.[0]?.time)}</h4>
+                    <p>{recordsData?.appointments?.[0]?.reason || "Physiotherapy & Rehabilitation Session"}</p>
                   </div>
                   <button className="status-action-btn" onClick={() => selectTab("appointments")}>
                     View Appointment →
@@ -640,7 +641,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </div>
                 <strong className="card-title">My Appointments</strong>
                 <span className="card-caption">
-                  {recordsData?.appointments?.length > 0
+                  {(recordsData?.appointments?.length || 0) > 0
                     ? `${recordsData.appointments.length} Scheduled`
                     : "View & manage"}
                 </span>
@@ -652,7 +653,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </div>
                 <strong className="card-title">My Visits</strong>
                 <span className="card-caption">
-                  {recordsData?.visits?.length > 0
+                  {(recordsData?.visits?.length || 0) > 0
                     ? `${recordsData.visits.length} Completed`
                     : "Visit history"}
                 </span>
@@ -696,18 +697,18 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="section-header-flex">
                 <h3>Recent Visit History</h3>
                 <button className="view-all-link" onClick={() => setActiveTab("visits")}>
-                  View All ({recordsData.visits.length}) →
+                  View All ({recordsData?.visits?.length || 0}) →
                 </button>
               </div>
 
-              {recordsData.visits.length === 0 ? (
+              {(recordsData?.visits?.length || 0) === 0 ? (
                 <div className="empty-state-box">
                   <span>🩺</span>
                   <p>Your visit history will appear here following your clinic consultation.</p>
                 </div>
               ) : (
                 <div className="timeline-cards-list">
-                  {recordsData.visits.slice(0, 2).map((v) => {
+                  {(recordsData?.visits || []).slice(0, 2).map((v) => {
                     const receiptObj = makeReceiptObj(v);
                     return (
                       <div className="patient-visit-card" key={v.visitId}>
@@ -839,11 +840,11 @@ export default function PatientPortal({ onClose, themeProps }) {
               );
             })()}
 
-            {recordsData.appointments.length > 0 && (
+            {(recordsData?.appointments?.length || 0) > 0 && (
               <div className="appointments-list-container">
-                <h3 className="appointments-history-title" style={{ color: "#0f172a" }}>Appointment History & Booking Enquiries ({recordsData.appointments.length})</h3>
+                <h3 className="appointments-history-title" style={{ color: "#0f172a" }}>Appointment History & Booking Enquiries ({recordsData?.appointments?.length || 0})</h3>
                 <div className="appointments-grid">
-                  {recordsData.appointments.map((appt) => (
+                  {(recordsData?.appointments || []).map((appt) => (
                     <div className="appointment-card" key={appt.id}>
                       <div className="appt-head">
                         <span className="appt-id">{appt.id}</span>
@@ -871,11 +872,11 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "visits" && (
           <div className="tab-pane visits-pane">
             <div className="section-title-box">
-              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Chronological Visit History ({recordsData.visits.length})</h2>
+              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Chronological Visit History ({recordsData?.visits?.length || 0})</h2>
               <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Complete record of your physical therapy sessions, clinical evaluations, and doctor recommendations.</p>
             </div>
 
-            {recordsData.visits.length === 0 ? (
+            {(recordsData?.visits?.length || 0) === 0 ? (
               <div className="empty-state-box">
                 <span>🩺</span>
                 <p>No clinic visits logged yet. Records are added in real-time during your consultation with Dr. Satyam Vishwakarma.</p>
@@ -1450,7 +1451,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </div>
                 <div className="grid-box">
                   <label>Initial Assessment Date</label>
-                  <h4>{cleanDateOnly(recordsData.stats.firstVisitDate || patientProfile.registrationDate)}</h4>
+                  <h4>{cleanDateOnly(recordsData?.stats?.firstVisitDate || patientProfile?.registrationDate)}</h4>
                 </div>
                 <div className="grid-box">
                   <label>Total Sessions Attended</label>
@@ -1942,7 +1943,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         >
           <span className="nav-icon-4">📅</span>
           <span className="nav-label-4">Appointments</span>
-          {recordsData?.appointments?.length > 0 && (
+          {(recordsData?.appointments?.length || 0) > 0 && (
             <span className="bottom-nav-badge">{recordsData.appointments.length}</span>
           )}
         </button>
@@ -1953,7 +1954,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         >
           <span className="nav-icon-4">🩺</span>
           <span className="nav-label-4">Visits</span>
-          {recordsData?.visits?.length > 0 && (
+          {(recordsData?.visits?.length || 0) > 0 && (
             <span className="bottom-nav-badge">{recordsData.visits.length}</span>
           )}
         </button>

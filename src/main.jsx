@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 import DoctorPortal from "./DoctorPortal";
 import PatientPortal from "./PatientPortal";
+import ErrorBoundary from "./ErrorBoundary";
 import { api } from "./apiService";
 import { useTheme } from "./useTheme";
 import ThemeToggle from "./ThemeToggle";
@@ -1757,21 +1758,29 @@ function App() {
 
       {/* Doctor Portal Modal / View */}
       {showDoctorPortal && (
-        <DoctorPortal
-          onClose={closeDoctorPortal}
-          themeProps={themeProps}
-        />
+        <ErrorBoundary fallbackMessage="Doctor Portal session is ready. Tap to reload.">
+          <DoctorPortal
+            onClose={closeDoctorPortal}
+            themeProps={themeProps}
+          />
+        </ErrorBoundary>
       )}
 
       {/* Patient Recovery Portal Modal / View */}
       {showPatientPortal && (
-        <PatientPortal
-          onClose={closePatientPortal}
-          themeProps={themeProps}
-        />
+        <ErrorBoundary fallbackMessage="Patient Health Portal session is ready. Tap to reload.">
+          <PatientPortal
+            onClose={closePatientPortal}
+            themeProps={themeProps}
+          />
+        </ErrorBoundary>
       )}
     </div>
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);

@@ -77,6 +77,52 @@ export default function PatientPortal({ onClose, themeProps }) {
     setExpandedVisitIds((prev) => ({ ...prev, [vId]: !prev[vId] }));
   };
 
+  // Pull-to-refresh state & touch handlers
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = React.useRef(0);
+  const portalRootRef = React.useRef(null);
+
+  const handleTouchStart = (e) => {
+    if (!portalRootRef.current) return;
+    if (portalRootRef.current.scrollTop <= 5) {
+      touchStartY.current = e.touches[0].clientY;
+      setIsPulling(true);
+    } else {
+      touchStartY.current = 0;
+      setIsPulling(false);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isPulling || touchStartY.current === 0) return;
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchStartY.current;
+    if (diff > 0 && portalRootRef.current && portalRootRef.current.scrollTop <= 5) {
+      const damped = Math.min(diff * 0.45, 80);
+      setPullDistance(damped);
+    } else {
+      setPullDistance(0);
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistance > 40) {
+      setIsRefreshing(true);
+      setPullDistance(0);
+      try {
+        await loadPatientData();
+      } finally {
+        setTimeout(() => setIsRefreshing(false), 500);
+      }
+    } else {
+      setPullDistance(0);
+    }
+    setIsPulling(false);
+    touchStartY.current = 0;
+  };
+
   // Lock background document scroll while PatientPortal is open to prevent unwanted body scrolling
   useEffect(() => {
     const origBodyOverflow = document.body.style.overflow;
@@ -189,21 +235,21 @@ export default function PatientPortal({ onClose, themeProps }) {
   const loadPatientData = async () => {
     try {
       const [profileRes, recordsRes] = await Promise.all([
-        patientApi.getProfile(),
-        patientApi.getRecords()
+        patientApi.getProfile().catch(() => ({ ok: false })),
+        patientApi.getRecords().catch(() => ({ ok: false }))
       ]);
 
-      if (profileRes.ok && profileRes.patient) {
+      if (profileRes && profileRes.ok && profileRes.patient) {
         setPatientProfile(profileRes.patient);
       }
-      if (recordsRes.ok) {
+      if (recordsRes && recordsRes.ok) {
         setRecordsData({
           visits: recordsRes.visits || [],
           appointments: recordsRes.appointments || [],
           stats: recordsRes.stats || {
-            totalVisits: recordsRes.visits?.length || 1,
-            firstVisitDate: profileRes?.patient?.registrationDate || recordsRes.patient?.registrationDate,
-            lastVisitDate: recordsRes.visits?.[0]?.date || profileRes?.patient?.registrationDate,
+            totalVisits: (recordsRes.visits || []).length || 1,
+            firstVisitDate: profileRes?.patient?.registrationDate || recordsRes.patient?.registrationDate || "",
+            lastVisitDate: recordsRes.visits?.[0]?.date || profileRes?.patient?.registrationDate || "",
             daysInRecovery: 1,
             activeCondition: recordsRes.visits?.[0]?.diagnosis || profileRes?.patient?.firstVisitReason || "Under Evaluation",
             nextFollowUp: recordsRes.visits?.[0]?.followUpDate || null
@@ -214,6 +260,7 @@ export default function PatientPortal({ onClose, themeProps }) {
       console.error("Error loading patient records:", err);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -223,9 +270,36 @@ export default function PatientPortal({ onClose, themeProps }) {
     setLoading(true);
     try {
       const res = await patientApi.login(loginForm.identifier, loginForm.password);
-      if (res.ok) {
-        setPatientToken(res.token);
+      if (res.ok && res.patient) {
+        // Pre-fetch records immediately to ensure instant rendering without white screen
+        let initialRecords = {
+          visits: [],
+          appointments: [],
+          stats: {
+            totalVisits: 1,
+            firstVisitDate: res.patient.registrationDate || "",
+            lastVisitDate: res.patient.registrationDate || "",
+            daysInRecovery: 1,
+            activeCondition: res.patient.firstVisitReason || "Under Evaluation",
+            nextFollowUp: null
+          }
+        };
+        try {
+          const recRes = await patientApi.getRecords();
+          if (recRes && recRes.ok) {
+            initialRecords = {
+              visits: recRes.visits || [],
+              appointments: recRes.appointments || [],
+              stats: recRes.stats || initialRecords.stats
+            };
+          }
+        } catch (rErr) {
+          console.error("Immediate record fetch error:", rErr);
+        }
+
+        setRecordsData(initialRecords);
         setPatientProfile(res.patient);
+        setPatientToken(res.token);
         setLoginForm({ identifier: "", password: "" });
       } else {
         setLoginError(res.error || "Login failed. Please check your Patient ID or Registered Mobile number.");
@@ -262,9 +336,33 @@ export default function PatientPortal({ onClose, themeProps }) {
         ...registerForm,
         phone: cleanPhone
       });
-      if (res.ok) {
-        setPatientToken(res.token);
+      if (res.ok && res.patient) {
+        let initialRecords = {
+          visits: [],
+          appointments: [],
+          stats: {
+            totalVisits: 1,
+            firstVisitDate: res.patient.registrationDate || "",
+            lastVisitDate: res.patient.registrationDate || "",
+            daysInRecovery: 1,
+            activeCondition: res.patient.firstVisitReason || "Under Evaluation",
+            nextFollowUp: null
+          }
+        };
+        try {
+          const recRes = await patientApi.getRecords();
+          if (recRes && recRes.ok) {
+            initialRecords = {
+              visits: recRes.visits || [],
+              appointments: recRes.appointments || [],
+              stats: recRes.stats || initialRecords.stats
+            };
+          }
+        } catch (rErr) {}
+
+        setRecordsData(initialRecords);
         setPatientProfile(res.patient);
+        setPatientToken(res.token);
         setRegisterSuccess("Registration successful! Entering your recovery portal...");
       } else {
         setRegisterError(res.error || "Registration failed. Please check your details.");
@@ -450,7 +548,13 @@ export default function PatientPortal({ onClose, themeProps }) {
   const latestVisit = sortedVisits[0] || null;
 
   return (
-    <div className="patient-portal-root">
+    <div
+      className="patient-portal-root"
+      ref={portalRootRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Top Clinic Header */}
       <header className="patient-header">
         <div className="header-left">
@@ -476,6 +580,22 @@ export default function PatientPortal({ onClose, themeProps }) {
             </div>
           </div>
 
+          <button
+            className="portal-refresh-btn"
+            onClick={async () => {
+              setIsRefreshing(true);
+              try {
+                await loadPatientData();
+              } finally {
+                setTimeout(() => setIsRefreshing(false), 500);
+              }
+            }}
+            title="Refresh clinical records & appointments"
+          >
+            <span className={isRefreshing ? "pull-refresh-spin" : ""}>🔄</span>
+            <span className="btn-label">Refresh</span>
+          </button>
+
           <button className="portal-exit-btn" onClick={handleLogout} title="Sign Out">
             <span className="btn-icon">🚪</span>
             <span className="btn-label">Sign Out</span>
@@ -485,6 +605,34 @@ export default function PatientPortal({ onClose, themeProps }) {
           </button>
         </div>
       </header>
+
+      {/* Pull To Refresh Dynamic Indicator */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div
+          className="pull-to-refresh-container"
+          style={{
+            transform: `translateY(${Math.min(pullDistance, 24)}px)`,
+            opacity: isRefreshing ? 1 : Math.min(pullDistance / 24, 1)
+          }}
+        >
+          {isRefreshing ? (
+            <>
+              <span className="pull-refresh-spin">🔄</span>
+              <span>Refreshing clinical records...</span>
+            </>
+          ) : pullDistance > 40 ? (
+            <>
+              <span>⚡</span>
+              <span>Release to refresh data</span>
+            </>
+          ) : (
+            <>
+              <span>↓</span>
+              <span>Pull down to refresh</span>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Navigation Bar (Desktop Top Tabs & Mobile Sticky Bottom Bar) */}
       <nav className="patient-navbar">
@@ -765,7 +913,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
               <div className="booking-actions">
                 <a
-                  href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile.name)}%20(ID:%20${patientProfile.patientId}).%20I%20would%20like%20to%20schedule%20my%20next%20physiotherapy%20visit.`}
+                  href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile?.name || 'Patient')}%20(ID:%20${patientProfile?.patientId || ''}).%20I%20would%20like%20to%20schedule%20my%20next%20physiotherapy%20visit.`}
                   target="_blank"
                   rel="noreferrer"
                   className="patient-primary-btn"
@@ -1440,7 +1588,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="overview-grid">
                 <div className="grid-box">
                   <label>Primary Diagnosis</label>
-                  <h4>{latestVisit?.diagnosis || patientProfile.firstVisitReason || "Under Comprehensive Evaluation"}</h4>
+                  <h4>{latestVisit?.diagnosis || patientProfile?.firstVisitReason || "Under Comprehensive Evaluation"}</h4>
                 </div>
                 <div className="grid-box">
                   <label>Consulting Physiotherapist</label>
@@ -1448,7 +1596,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </div>
                 <div className="grid-box">
                   <label>Initial Assessment Date</label>
-                  <h4>{cleanDateOnly(recordsData.stats.firstVisitDate || patientProfile.registrationDate)}</h4>
+                  <h4>{cleanDateOnly(recordsData?.stats?.firstVisitDate || patientProfile?.registrationDate || "N/A")}</h4>
                 </div>
                 <div className="grid-box">
                   <label>Total Sessions Attended</label>

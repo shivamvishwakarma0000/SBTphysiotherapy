@@ -2689,13 +2689,6 @@ _(Saved in patient clinic records)_`;
         {/* ================= 5. ONLINE BOOKINGS & ENQUIRIES ================= */}
         {activeTab === "enquiries" && (
           <div className="enquiries-view">
-            {leadActionToast && (
-              <div className="doctor-toast-alert" style={{ background: "#0878C9", color: "#ffffff", padding: "12px 18px", borderRadius: "10px", marginBottom: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 14px rgba(8,120,201,0.3)" }}>
-                <span>{leadActionToast}</span>
-                <button onClick={() => setLeadActionToast("")} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "16px" }}>✕</button>
-              </div>
-            )}
-
             <div className="section-header-row">
               <div>
                 <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Website Consultation Leads ({enquiries.length})</h2>
@@ -2707,6 +2700,13 @@ _(Saved in patient clinic records)_`;
                 </button>
               </div>
             </div>
+
+            {leadActionToast && (
+              <div className="doctor-toast-alert" style={{ background: "#0878C9", color: "#ffffff", padding: "12px 18px", borderRadius: "10px", marginBottom: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 14px rgba(8,120,201,0.3)" }}>
+                <span>{leadActionToast}</span>
+                <button onClick={() => setLeadActionToast("")} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "16px" }}>✕</button>
+              </div>
+            )}
 
             {/* Segmented Leads Navigation Sub-Tabs */}
             <div className="enquiry-subtabs-bar" style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px", background: "var(--card-bg, #ffffff)", padding: "6px", borderRadius: "12px", border: "1px solid var(--border-color, #e2e8f0)" }}>

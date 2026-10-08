@@ -2628,7 +2628,7 @@ textarea:focus {
 
 .doctor-main-content {
   flex: 1;
-  padding: 24px clamp(16px, 4vw, 48px);
+  padding: 0 0 40px 0;
   max-width: 1360px;
   width: 100%;
   margin: 0 auto;
@@ -4110,7 +4110,7 @@ textarea:focus {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    padding: 12px 8px !important;
+    padding: 0 !important;
   }
 
   .dashboard-view,
@@ -5994,7 +5994,7 @@ textarea:focus {
   max-width: 1140px;
   width: 100%;
   margin: 0 auto;
-  padding: 16px 16px 40px;
+  padding: 0 0 40px 0;
 }
 
 .welcome-banner {
@@ -6428,18 +6428,19 @@ textarea:focus {
   color: #0f172a;
 }
 
-/* SECTION TITLES (Edge-to-Edge Full Width Top Header Banner with Pure White Text) */
+/* SECTION TITLES (Edge-to-Edge Full Width Top Header Banner with Pure White Text & Zero Gaps) */
 .section-title-box,
 .section-header-row,
 .doctor-section-banner,
 .patient-directory-master-banner {
-  width: calc(100% + 32px) !important;
-  margin: -16px -16px 20px -16px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 0 18px 0 !important;
   background: linear-gradient(135deg, #071927 0%, #0F2E46 100%) !important;
   border: none !important;
   border-bottom: 2px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 0 0 16px 16px !important;
-  padding: 18px 20px 20px 20px !important;
+  padding: 20px 16px 20px 16px !important;
   box-shadow: 0 6px 20px rgba(7, 25, 39, 0.28) !important;
   box-sizing: border-box !important;
   display: flex !important;
@@ -6490,6 +6491,34 @@ textarea:focus {
   margin: 0 !important;
   font-weight: 500 !important;
   opacity: 0.95 !important;
+}
+
+/* Content spacing beneath edge-to-edge top headers */
+.enroll-view > *:not(.section-header-row),
+.waiting-queue-view > *:not(.section-header-row),
+.patients-directory-view > *:not(.section-header-row),
+.today-visits-view > *:not(.section-header-row),
+.enquiries-view > *:not(.section-header-row),
+.settings-view > *:not(.section-header-row),
+.tab-pane > *:not(.section-title-box) {
+  margin-left: 12px !important;
+  margin-right: 12px !important;
+  width: calc(100% - 24px) !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 769px) {
+  .enroll-view > *:not(.section-header-row),
+  .waiting-queue-view > *:not(.section-header-row),
+  .patients-directory-view > *:not(.section-header-row),
+  .today-visits-view > *:not(.section-header-row),
+  .enquiries-view > *:not(.section-header-row),
+  .settings-view > *:not(.section-header-row),
+  .tab-pane > *:not(.section-title-box) {
+    margin-left: 20px !important;
+    margin-right: 20px !important;
+    width: calc(100% - 40px) !important;
+  }
 }
 
 /* APPOINTMENTS */
@@ -8276,14 +8305,15 @@ textarea:focus {
     box-sizing: border-box !important;
   }
 
-  .tab-pane:not(.dashboard-pane) {
-    padding: 16px 16px calc(76px + env(safe-area-inset-bottom, 20px) + 24px) 16px !important;
-    box-sizing: border-box !important;
-  }
-
+  .tab-pane:not(.dashboard-pane),
   .doctor-main-content > div:not(.dashboard-view) {
-    padding: 16px 16px calc(76px + env(safe-area-inset-bottom, 20px) + 24px) 16px !important;
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 20px) + 24px) !important;
     box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .dashboard-pane,
@@ -10636,7 +10666,6 @@ html, body {
 
   /* 8. Fullscreen Overlays & Modals iOS/Android Polish */
   .patient-portal-overlay,
-  .doctor-portal-fullscreen,
   .auto-enquiry-overlay,
   .app-download-overlay {
     padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;

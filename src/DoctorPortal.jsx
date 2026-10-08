@@ -469,24 +469,9 @@ export default function DoctorPortal({ onClose, themeProps }) {
 
   const getNowTimeStr = () => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 
-  const cleanDateOnly = (d) => {
-    if (!d) return new Date().toISOString().slice(0, 10);
-    const s = String(d).trim();
-    if (s.includes("GMT") || s.includes("T") || s.length > 10) {
-      const parsed = new Date(s);
-      if (!isNaN(parsed.getTime())) {
-        const year = parsed.getFullYear();
-        const month = String(parsed.getMonth() + 1).padStart(2, '0');
-        const day = String(parsed.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      }
-    }
-    return s.slice(0, 10);
-  };
-
   const filteredPatients = useMemo(() => {
     let list = [...patients];
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = cleanDateOnly(new Date());
     if (patientFilter === "today") {
       list = list.filter(p => cleanDateOnly(p.lastVisitDate || p.registrationDate) === todayStr);
     } else if (patientFilter === "active") {

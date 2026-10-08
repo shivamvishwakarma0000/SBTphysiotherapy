@@ -417,7 +417,18 @@ export default function PatientPortal({ onClose, themeProps }) {
   const patientDisplayName = patientProfile?.name || patientProfile?.patientName || "Patient";
   const patientFirstName = patientDisplayName.split(" ")[0];
   const totalVisitsCount = recordsData?.stats?.totalVisits || recordsData?.visits?.length || 1;
-  const latestVisit = recordsData?.visits?.[0] || null;
+
+  const sortedVisits = useMemo(() => {
+    const list = [...(recordsData?.visits || [])];
+    return list.sort((a, b) => {
+      const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      const numB = parseInt(String(b.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      if (numA !== numB) return numB - numA;
+      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    });
+  }, [recordsData?.visits]);
+
+  const latestVisit = sortedVisits[0] || null;
 
   return (
     <div className="patient-portal-root">
@@ -748,85 +759,65 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
             </div>
 
-            {/* DOCTOR PRESCRIBED NEXT FOLLOW-UP SCHEDULE */}
+            {/* DOCTOR PRESCRIBED NEXT FOLLOW-UP SCHEDULE (From Latest Active Visit) */}
             {(() => {
-              const followUpVisits = recordsData.visits.filter(v => v.followUpDate && v.followUpDate !== "None" && v.followUpDate !== "SOS" && v.followUpDate !== "As advised");
-              const upcomingFollowUp = followUpVisits.length > 0 ? followUpVisits[0] : (latestVisit?.followUpDate && latestVisit.followUpDate !== "None" && latestVisit.followUpDate !== "SOS" ? latestVisit : null);
+              const followUpStr = latestVisit?.followUpDate ? String(latestVisit.followUpDate).trim() : "";
+              const isInvalid = !followUpStr || 
+                followUpStr.toLowerCase() === "none" || 
+                followUpStr.toLowerCase() === "sos" || 
+                followUpStr.toLowerCase().includes("as advised") || 
+                followUpStr.toLowerCase().includes("completed");
 
-              if (upcomingFollowUp && upcomingFollowUp.followUpDate) {
-                return (
-                  <div className="followup-schedule-box" style={{
-                    background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
-                    border: "2px solid #16a34a",
-                    borderRadius: "14px",
-                    padding: "16px 18px",
-                    marginBottom: "16px",
-                    boxShadow: "0 4px 12px rgba(22, 163, 74, 0.12)"
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
-                      <span style={{ background: "#16a34a", color: "#ffffff", padding: "4px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: "800", textTransform: "uppercase" }}>
-                        📅 Scheduled Doctor Follow-Up
-                      </span>
-                      <span style={{ fontSize: "12.5px", fontWeight: "700", color: "#15803d" }}>
-                        From Visit #{upcomingFollowUp.visitNumber || 1}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "16px", fontWeight: "800", color: "#14532d", marginBottom: "4px" }}>
-                      Follow-Up Date: {cleanDateOnly(upcomingFollowUp.followUpDate)} {upcomingFollowUp.followUpTime ? `• 🕒 ${upcomingFollowUp.followUpTime}` : ""}
-                    </div>
-                    <div style={{ fontSize: "13px", color: "#166534", marginBottom: "12px" }}>
-                      <strong>Clinical Purpose:</strong> {upcomingFollowUp.diagnosis || upcomingFollowUp.reason || "Rehabilitation Progress & Pain Assessment"} with Dr. Satyam Vishwakarma (D.P.T., B.P.T.)
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      <a
-                        href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20confirming%20my%20scheduled%20follow-up%20on%20${encodeURIComponent(upcomingFollowUp.followUpDate)}%20for%20${encodeURIComponent(patientProfile.name)}%20(ID:%20${patientProfile.patientId}).`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="patient-primary-btn"
-                        style={{ flex: 1, minHeight: "38px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 14px", fontSize: "12.5px", fontWeight: "700", borderRadius: "8px", background: "#16a34a", color: "#ffffff", textDecoration: "none", border: "none" }}
-                      >
-                        💬 Confirm on WhatsApp
-                      </a>
-                      <a
-                        href="tel:+919793093316"
-                        className="patient-secondary-btn"
-                        style={{ flex: 1, minHeight: "38px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 14px", fontSize: "12.5px", fontWeight: "700", borderRadius: "8px", background: "#0f172a", color: "#ffffff", textDecoration: "none", border: "1px solid #1e293b" }}
-                      >
-                        📞 Call Clinic
-                      </a>
-                    </div>
-                  </div>
-                );
-              }
+              if (isInvalid) return null;
 
               return (
                 <div className="followup-schedule-box" style={{
-                  background: "#ffffff",
-                  border: "1.5px solid #94a3b8",
-                  borderRadius: "14px",
-                  padding: "14px 16px",
+                  background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+                  border: "2px solid #16a34a",
+                  borderRadius: "16px",
+                  padding: "16px 18px",
                   marginBottom: "16px",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.03)"
+                  boxShadow: "0 4px 14px rgba(22, 163, 74, 0.12)"
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "15px" }}>🩺</span>
-                    <strong style={{ fontSize: "13.5px", color: "#0f172a" }}>Prescribed Doctor Follow-Ups</strong>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
+                    <span style={{ background: "#16a34a", color: "#ffffff", padding: "4px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: "800", textTransform: "uppercase" }}>
+                      📅 Scheduled Doctor Follow-Up
+                    </span>
+                    <span style={{ fontSize: "12.5px", fontWeight: "700", color: "#15803d" }}>
+                      From Visit #{latestVisit.visitNumber || 1}
+                    </span>
                   </div>
-                  <p style={{ margin: 0, fontSize: "12.5px", color: "#64748b" }}>
-                    Doctor follow-up dates and therapy appointments are logged automatically when your clinical receipt is generated.
-                  </p>
+                  <div style={{ fontSize: "16px", fontWeight: "800", color: "#14532d", marginBottom: "4px" }}>
+                    Follow-Up Date: {cleanDateOnly(followUpStr)} {latestVisit.followUpTime ? `• 🕒 ${latestVisit.followUpTime}` : ""}
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#166534", marginBottom: "12px" }}>
+                    <strong>Clinical Purpose:</strong> {latestVisit.diagnosis || latestVisit.reason || "Rehabilitation Progress & Pain Assessment"} with Dr. Satyam Vishwakarma (D.P.T., B.P.T.)
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <a
+                      href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20confirming%20my%20scheduled%20follow-up%20on%20${encodeURIComponent(cleanDateOnly(followUpStr))}%20for%20${encodeURIComponent(patientProfile.name)}%20(ID:%20${patientProfile.patientId}).`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="patient-primary-btn"
+                      style={{ flex: 1, minHeight: "38px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 14px", fontSize: "12.5px", fontWeight: "700", borderRadius: "8px", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "#ffffff", textDecoration: "none", border: "none" }}
+                    >
+                      💬 Confirm on WhatsApp
+                    </a>
+                    <a
+                      href="tel:+919793093316"
+                      className="patient-secondary-btn"
+                      style={{ flex: 1, minHeight: "38px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 14px", fontSize: "12.5px", fontWeight: "700", borderRadius: "8px", background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#ffffff", textDecoration: "none", border: "none" }}
+                    >
+                      📞 Call Clinic
+                    </a>
+                  </div>
                 </div>
               );
             })()}
 
-            <div className="appointments-list-container">
-              <h3 className="appointments-history-title" style={{ color: "#0f172a" }}>Appointment History & Booking Enquiries ({recordsData.appointments.length})</h3>
-              {recordsData.appointments.length === 0 ? (
-                <div className="empty-state-box">
-                  <span>📅</span>
-                  <p>No prior online booking requests on file. Your direct clinic visits are recorded under <strong>My Visits</strong>.</p>
-                </div>
-              ) : (
+            {recordsData.appointments.length > 0 && (
+              <div className="appointments-list-container">
+                <h3 className="appointments-history-title" style={{ color: "#0f172a" }}>Appointment History & Booking Enquiries ({recordsData.appointments.length})</h3>
                 <div className="appointments-grid">
                   {recordsData.appointments.map((appt) => (
                     <div className="appointment-card" key={appt.id}>
@@ -845,8 +836,8 @@ export default function PatientPortal({ onClose, themeProps }) {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -948,10 +939,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                           fontSize: "13px",
                           fontWeight: "700",
                           borderRadius: "8px",
-                          background: "#0f172a",
+                          background: "linear-gradient(135deg, #0284c7, #0369a1)",
                           color: "#ffffff",
-                          border: "1px solid #1e293b",
-                          cursor: "pointer"
+                          border: "none",
+                          cursor: "pointer",
+                          boxShadow: "0 2px 6px rgba(2, 132, 199, 0.25)"
                         }}
                         onClick={() => setPreviewReceipt(makeReceiptObj(latestVisit))}
                       >
@@ -970,11 +962,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                           fontSize: "13px",
                           fontWeight: "700",
                           borderRadius: "8px",
-                          background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                          background: "linear-gradient(135deg, #059669, #10b981)",
                           color: "#ffffff",
                           border: "none",
                           cursor: "pointer",
-                          boxShadow: "0 2px 6px rgba(2, 132, 199, 0.3)"
+                          boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)"
                         }}
                         onClick={() => downloadReceiptPDF(makeReceiptObj(latestVisit))}
                       >
@@ -984,7 +976,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   </div>
                 )}
 
-                {/* 1. Quick Select Visit Boxes (Visit 1, 2, 3...) */}
+                {/* 1. Quick Select Visit Boxes (Sorted Newest to Oldest) */}
                 <div style={{
                   display: "flex",
                   gap: "8px",
@@ -993,7 +985,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   marginBottom: "14px",
                   WebkitOverflowScrolling: "touch"
                 }}>
-                  {recordsData.visits.map((v) => {
+                  {sortedVisits.map((v) => {
                     const isExp = !!expandedVisitIds[v.visitId];
                     return (
                       <button
@@ -1004,21 +996,21 @@ export default function PatientPortal({ onClose, themeProps }) {
                           flex: "0 0 auto",
                           padding: "8px 14px",
                           borderRadius: "10px",
-                          border: isExp ? "2px solid #0284c7" : "1.5px solid #94a3b8",
-                          background: isExp ? "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)" : "#ffffff",
-                          color: isExp ? "#0369a1" : "#334155",
+                          border: isExp ? "2px solid #0284c7" : "1.5px solid #38bdf8",
+                          background: isExp ? "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)" : "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+                          color: isExp ? "#ffffff" : "#0369a1",
                           fontWeight: "800",
                           fontSize: "13px",
                           cursor: "pointer",
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "flex-start",
-                          boxShadow: isExp ? "0 4px 10px rgba(2, 132, 199, 0.15)" : "0 1px 3px rgba(0,0,0,0.04)",
+                          boxShadow: isExp ? "0 4px 10px rgba(2, 132, 199, 0.25)" : "0 1px 3px rgba(2, 132, 199, 0.08)",
                           transition: "all 0.2s ease"
                         }}
                       >
-                        <span style={{ color: isExp ? "#0284c7" : "#0f172a" }}>Visit #{v.visitNumber || 1}</span>
-                        <span style={{ fontSize: "11px", fontWeight: "600", color: isExp ? "#0369a1" : "#64748b" }}>
+                        <span style={{ color: isExp ? "#ffffff" : "#0284c7" }}>Visit #{v.visitNumber || 1}</span>
+                        <span style={{ fontSize: "11px", fontWeight: "600", color: isExp ? "#e0f2fe" : "#0369a1" }}>
                           {cleanDateOnly(v.date)}
                         </span>
                       </button>
@@ -1026,9 +1018,9 @@ export default function PatientPortal({ onClose, themeProps }) {
                   })}
                 </div>
 
-                {/* 2. Compact Expandable Visit Cards */}
-                <div className="visits-full-list" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  {recordsData.visits.map((v) => {
+                {/* 2. Compact Expandable Visit Cards (With Unified Gradient Box Styling) */}
+                <div className="visits-full-list" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {sortedVisits.map((v) => {
                     const receiptObj = makeReceiptObj(v);
                     const isExpanded = !!expandedVisitIds[v.visitId];
                     return (
@@ -1036,11 +1028,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                         className="visit-detailed-card"
                         key={v.visitId}
                         style={{
-                          background: "#ffffff",
-                          border: isExpanded ? "2px solid #0284c7" : "1.5px solid #94a3b8",
-                          borderRadius: "14px",
+                          background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+                          border: isExpanded ? "2px solid #0284c7" : "1.5px solid #38bdf8",
+                          borderRadius: "16px",
                           padding: "16px 18px",
-                          boxShadow: isExpanded ? "0 4px 14px rgba(2, 132, 199, 0.12)" : "0 2px 6px rgba(0,0,0,0.04)",
+                          boxShadow: isExpanded ? "0 4px 16px rgba(2, 132, 199, 0.16)" : "0 2px 8px rgba(2, 132, 199, 0.08)",
                           transition: "all 0.2s ease"
                         }}
                       >
@@ -1052,7 +1044,8 @@ export default function PatientPortal({ onClose, themeProps }) {
                             justifyContent: "space-between",
                             alignItems: "center",
                             gap: "10px",
-                            cursor: "pointer"
+                            cursor: "pointer",
+                            marginBottom: "10px"
                           }}
                           onClick={() => toggleVisitExpand(v.visitId)}
                           title="Click to expand/collapse clinical details"
@@ -1078,8 +1071,9 @@ export default function PatientPortal({ onClose, themeProps }) {
                             gap: "4px",
                             padding: "4px 10px",
                             borderRadius: "6px",
-                            background: isExpanded ? "rgba(2, 132, 199, 0.1)" : "#f1f5f9",
-                            color: isExpanded ? "#0284c7" : "#475569",
+                            background: isExpanded ? "#0284c7" : "#ffffff",
+                            color: isExpanded ? "#ffffff" : "#0284c7",
+                            border: "1px solid #bae6fd",
                             fontSize: "12px",
                             fontWeight: "700",
                             flexShrink: 0
@@ -1090,19 +1084,33 @@ export default function PatientPortal({ onClose, themeProps }) {
 
                         {/* 2. Patient Condition & Problem Heading */}
                         <div style={{
-                          margin: "12px 0 14px 0",
-                          padding: "10px 14px",
-                          background: "#f8fafc",
+                          background: "#ffffff",
                           borderRadius: "10px",
-                          borderLeft: "4px solid #0284c7"
+                          padding: "12px 14px",
+                          border: "1.5px solid #bae6fd",
+                          marginBottom: "12px",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
                         }}>
-                          <div style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a", display: "flex", alignItems: "center", gap: "6px" }}>
+                          <div style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", display: "flex", alignItems: "center", gap: "6px" }}>
                             <span>🩺</span>
                             <span>{v.diagnosis || v.reason || patientProfile?.firstVisitReason || "Physiotherapy Rehabilitation"}</span>
                           </div>
                           <div style={{ fontSize: "12.5px", color: "#64748b", marginTop: "3px" }}>
                             Condition / Focus: <strong style={{ color: "#334155" }}>{v.reason || v.diagnosis || "Clinical Session"}</strong>
                             {patientProfile?.age ? ` • Patient: ${patientProfile.name} (${patientProfile.age}y)` : ""}
+                          </div>
+
+                          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "10px", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", fontSize: "12.5px" }}>
+                            <div>
+                              <span style={{ color: "#64748b" }}>Fee & Payment: </span>
+                              <strong style={{ color: "#16a34a" }}>{String(v.fee || 300).startsWith("₹") ? v.fee : `₹${v.fee || 300}`} (Paid)</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: "#64748b" }}>Next Follow-Up: </span>
+                              <strong style={{ color: v.followUpDate ? "#0284c7" : "#64748b" }}>
+                                {v.followUpDate ? cleanDateOnly(v.followUpDate) : "As advised / SOS"}
+                              </strong>
+                            </div>
                           </div>
                         </div>
 
@@ -1129,10 +1137,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                               fontSize: "13px",
                               fontWeight: "700",
                               borderRadius: "8px",
-                              background: "#0f172a",
+                              background: "linear-gradient(135deg, #0284c7, #0369a1)",
                               color: "#ffffff",
-                              border: "1px solid #1e293b",
-                              cursor: "pointer"
+                              border: "none",
+                              cursor: "pointer",
+                              boxShadow: "0 2px 6px rgba(2, 132, 199, 0.25)"
                             }}
                             onClick={() => setPreviewReceipt(receiptObj)}
                           >
@@ -1152,11 +1161,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                               fontSize: "13px",
                               fontWeight: "700",
                               borderRadius: "8px",
-                              background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                              background: "linear-gradient(135deg, #059669, #10b981)",
                               color: "#ffffff",
                               border: "none",
                               cursor: "pointer",
-                              boxShadow: "0 2px 6px rgba(2, 132, 199, 0.3)"
+                              boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)"
                             }}
                             onClick={() => downloadReceiptPDF(receiptObj)}
                             title="Download PDF"
@@ -1213,11 +1222,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                             <div className="info-row-split" style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "4px" }}>
                               <div className="split-item">
                                 <span style={{ fontSize: "11.5px", color: "#64748b" }}>Consulting Doctor: </span>
-                                <strong>{v.doctor || "Dr. Satyam Vishwakarma"}</strong>
+                                <strong>{v.doctor || "Dr. Satyam Vishwakarma (D.P.T., B.P.T.)"}</strong>
                               </div>
                               <div className="split-item">
                                 <span style={{ fontSize: "11.5px", color: "#64748b" }}>Next Follow-Up: </span>
-                                <strong style={{ color: "#16a34a" }}>{cleanDateOnly(v.followUpDate) || v.followUpDate || "As needed / SOS"}</strong>
+                                <strong style={{ color: "#16a34a" }}>{v.followUpDate ? cleanDateOnly(v.followUpDate) : "As needed / SOS"}</strong>
                               </div>
                             </div>
                           </div>
@@ -1241,23 +1250,44 @@ export default function PatientPortal({ onClose, themeProps }) {
               <p>Download and print clinic-authenticated receipts featuring official registration, clinic header, and Dr. Satyam Vishwakarma's signature.</p>
             </div>
 
-            {recordsData.visits.length === 0 ? (
+            {sortedVisits.length === 0 ? (
               <div className="empty-state-box">
                 <span>🧾</span>
                 <p>No receipts available yet. When a visit is recorded, your official slip will be available here immediately.</p>
               </div>
             ) : (
               <div className="receipts-grid">
-                {recordsData.visits.map((v) => {
+                {sortedVisits.map((v) => {
                   const receiptObj = makeReceiptObj(v);
                   return (
-                    <div className="receipt-summary-card" key={v.visitId}>
+                    <div
+                      className="receipt-summary-card"
+                      key={v.visitId}
+                      style={{
+                        background: "linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)",
+                        border: "2px solid #10b981",
+                        borderRadius: "16px",
+                        padding: "20px",
+                        boxShadow: "0 4px 16px rgba(16, 185, 129, 0.1)"
+                      }}
+                    >
                       <div className="receipt-card-top">
                         <span className="receipt-badge">OFFICIAL CLINIC SLIP</span>
-                        <span className="receipt-no">{receiptObj.receiptNumber}</span>
+                        <span className="receipt-no" style={{ fontWeight: "800", color: "#0f172a" }}>{receiptObj.receiptNumber}</span>
                       </div>
 
-                      <div className="receipt-card-center">
+                      <div
+                        className="receipt-card-center"
+                        style={{
+                          background: "#ffffff",
+                          border: "1.5px solid #a7f3d0",
+                          borderRadius: "12px",
+                          padding: "14px",
+                          textAlign: "center",
+                          marginBottom: "14px",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
+                        }}
+                      >
                         <div className="amount-display">
                           <span className="currency">₹</span>
                           <strong className="amount">{receiptObj.fee || 300}</strong>
@@ -1290,15 +1320,49 @@ export default function PatientPortal({ onClose, themeProps }) {
                         </div>
                       </div>
 
-                      <div className="receipt-card-actions">
+                      <div className="receipt-card-actions" style={{ display: "flex", gap: "8px", width: "100%" }}>
                         <button
                           className="patient-primary-btn"
+                          style={{
+                            flex: 1,
+                            minHeight: "42px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            padding: "8px 14px",
+                            fontSize: "13px",
+                            fontWeight: "700",
+                            borderRadius: "8px",
+                            background: "linear-gradient(135deg, #059669, #10b981)",
+                            color: "#ffffff",
+                            border: "none",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)"
+                          }}
                           onClick={() => downloadReceiptPDF(receiptObj)}
                         >
                           📥 Download PDF
                         </button>
                         <button
                           className="patient-secondary-btn"
+                          style={{
+                            flex: 1,
+                            minHeight: "42px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            padding: "8px 14px",
+                            fontSize: "13px",
+                            fontWeight: "700",
+                            borderRadius: "8px",
+                            background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                            color: "#ffffff",
+                            border: "none",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 6px rgba(2, 132, 199, 0.25)"
+                          }}
                           onClick={() => setPreviewReceipt(receiptObj)}
                         >
                           👁️ View Slip
@@ -1714,7 +1778,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </div>
                 <div className="slip-doctor-right">
                   <strong>DR. SATYAM VISHWAKARMA</strong>
-                  <p>Consultant Physiotherapist (B.P.T.)</p>
+                  <p>Consultant Physiotherapist (D.P.T., B.P.T.)</p>
                   <small>Reg. No: PT-2024-VPRC</small>
                 </div>
               </div>
@@ -1743,7 +1807,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <p><strong>Diagnosis:</strong> {previewReceipt.visit?.diagnosis || "Under Evaluation"}</p>
                 <p><strong>Complaint:</strong> {previewReceipt.visit?.complaint || "None logged"}</p>
                 <p><strong>Treatment Done:</strong> {previewReceipt.visit?.treatmentNotes || "Physical assessment & therapy"}</p>
-                <p><strong>Next Follow-Up:</strong> {previewReceipt.visit?.followUpDate || "As advised"}</p>
+                <p><strong>Next Follow-Up:</strong> {previewReceipt.visit?.followUpDate ? cleanDateOnly(previewReceipt.visit.followUpDate) : "As advised / SOS"}</p>
               </div>
 
               <div className="slip-fee-box">
@@ -1756,23 +1820,57 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <div className="slip-doc-sign">
                   <div className="sign-line"></div>
                   <strong>Authorized Signatory</strong>
-                  <span>Dr. Satyam Vishwakarma</span>
+                  <span>Dr. Satyam Vishwakarma (D.P.T., B.P.T.)</span>
                 </div>
               </div>
             </div>
 
-            <div className="preview-dialog-actions">
+            <div className="preview-dialog-actions" style={{ display: "flex", gap: "10px", width: "100%", marginTop: "16px" }}>
               <button
                 className="patient-primary-btn"
+                style={{
+                  flex: 1,
+                  minHeight: "44px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px 16px",
+                  fontSize: "13.5px",
+                  fontWeight: "700",
+                  borderRadius: "8px",
+                  background: "linear-gradient(135deg, #059669, #10b981)",
+                  color: "#ffffff",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)"
+                }}
                 onClick={() => downloadReceiptPDF(previewReceipt)}
               >
                 📥 Download Official PDF File
               </button>
               <button
                 className="patient-secondary-btn"
+                style={{
+                  flex: 1,
+                  minHeight: "44px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px 16px",
+                  fontSize: "13.5px",
+                  fontWeight: "700",
+                  borderRadius: "8px",
+                  background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                  color: "#ffffff",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 6px rgba(2, 132, 199, 0.25)"
+                }}
                 onClick={() => setPreviewReceipt(null)}
               >
-                Close Preview
+                ✕ Close Preview
               </button>
             </div>
           </div>

@@ -1,18 +1,41 @@
 import { jsPDF } from "jspdf";
 import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets.js";
 
+export const getTodayISTString = () => {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + istOffset);
+  const y = istDate.getFullYear();
+  const m = String(istDate.getMonth() + 1).padStart(2, '0');
+  const d = String(istDate.getDate()).padStart(2, '0');
+  return `${d}/${m}/${y}`;
+};
+
 export const cleanDateOnly = (d) => {
-  if (!d) return new Date().toISOString().slice(0, 10);
+  if (!d) return getTodayISTString();
   const s = String(d).trim();
   
   // If string contains 1899 (Google Sheets time-only epoch artifact), return today's clean date
   if (s.includes("1899")) {
-    return new Date().toISOString().slice(0, 10);
+    return getTodayISTString();
   }
 
-  // Already clean YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    return s;
+  // Already clean DD/MM/YYYY or DD-MM-YYYY
+  const dmyMatch = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (dmyMatch) {
+    const day = String(dmyMatch[1]).padStart(2, '0');
+    const month = String(dmyMatch[2]).padStart(2, '0');
+    const year = dmyMatch[3];
+    return `${day}/${month}/${year}`;
+  }
+
+  // YYYY-MM-DD or YYYY/MM/DD
+  const ymdMatch = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (ymdMatch) {
+    const year = ymdMatch[1];
+    const month = String(ymdMatch[2]).padStart(2, '0');
+    const day = String(ymdMatch[3]).padStart(2, '0');
+    return `${day}/${month}/${year}`;
   }
 
   if (s.includes("GMT") || s.includes("T") || s.length > 10) {
@@ -21,7 +44,7 @@ export const cleanDateOnly = (d) => {
       const year = parsed.getFullYear();
       const month = String(parsed.getMonth() + 1).padStart(2, '0');
       const day = String(parsed.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      return `${day}/${month}/${year}`;
     }
   }
   return s.length > 10 ? s.slice(0, 10) : s;

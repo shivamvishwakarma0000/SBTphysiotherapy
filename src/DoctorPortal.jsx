@@ -3982,16 +3982,17 @@ _(Saved in patient clinic records)_`;
                       key={v.visitId}
                       style={{
                         background: "#ffffff",
-                        border: isExpanded ? "1.5px solid #0284c7" : "1.5px solid #e2e8f0",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        marginBottom: "10px",
-                        boxShadow: isExpanded ? "0 4px 12px rgba(2, 132, 199, 0.08)" : "0 1px 3px rgba(0,0,0,0.02)",
-                        transition: "all 0.2s ease"
+                        border: isExpanded ? "2px solid #0284c7" : "1.5px solid #0284c7",
+                        borderRadius: "14px",
+                        padding: "14px 16px",
+                        marginBottom: "12px",
+                        boxShadow: isExpanded ? "0 4px 14px rgba(2, 132, 199, 0.12)" : "0 2px 6px rgba(2, 132, 199, 0.05)",
+                        transition: "all 0.2s ease",
+                        position: "relative"
                       }}
                     >
-                      {/* Row 1: Visit Badge, Clean Date & Time, Fee & Small Delete Button */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                      {/* Row 1: Visit Badge, Clean Date & Time, Fee, and Compact Top-Right Dustbin Icon Button */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                           <span className="visit-num-badge" style={{ background: "#0284c7", color: "#ffffff", fontWeight: "800", padding: "3px 8px", borderRadius: "6px", fontSize: "12px" }}>
                             Visit #{v.visitNumber}
@@ -3999,39 +4000,42 @@ _(Saved in patient clinic records)_`;
                           <span className="visit-date" style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
                             📅 {cleanDateOnly(v.date)} {cleanTimeOnly(v.time) ? `(${cleanTimeOnly(v.time)})` : ""}
                           </span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                           {v.fee && (
                             <span style={{ fontWeight: "800", color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: "6px", fontSize: "12px" }}>
                               {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
                             </span>
                           )}
-                          <button
-                            type="button"
-                            className="delete-visit-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteVisit(v);
-                            }}
-                            style={{
-                              background: "#fee2e2",
-                              color: "#b91c1c",
-                              border: "1px solid #fca5a5",
-                              borderRadius: "6px",
-                              padding: "2px 8px",
-                              fontSize: "11px",
-                              fontWeight: "700",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "3px",
-                              transition: "all 0.15s ease"
-                            }}
-                            title="Delete this visit / receipt"
-                          >
-                            🗑️ Delete
-                          </button>
                         </div>
+
+                        {/* Dustbin Icon Only on Top-Right */}
+                        <button
+                          type="button"
+                          className="delete-visit-btn-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteVisit(v);
+                          }}
+                          style={{
+                            background: "#fee2e2",
+                            color: "#dc2626",
+                            border: "1px solid #fca5a5",
+                            borderRadius: "6px",
+                            width: "30px",
+                            height: "30px",
+                            minWidth: "30px",
+                            padding: 0,
+                            fontSize: "14px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            flexShrink: 0,
+                            transition: "all 0.15s ease"
+                          }}
+                          title="Delete this visit / receipt"
+                        >
+                          🗑️
+                        </button>
                       </div>
 
                       {/* Row 2: Slip & WhatsApp PDF + Download in the SAME ROW side by side */}

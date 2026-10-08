@@ -399,6 +399,12 @@ export const api = {
     const patient = patients.find(p => p.patientId === patientId);
     if (!patient) throw new Error("Patient not found");
     const pVisits = visits.filter(v => v.patientId === patientId);
+    pVisits.sort((a, b) => {
+      const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      const numB = parseInt(String(b.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      if (numA !== numB) return numB - numA;
+      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    });
     return { ok: true, patient, visits: pVisits };
   },
 
@@ -547,8 +553,33 @@ export const api = {
     }
 
     const visits = getLocal(KEYS.VISITS, []);
+    const deletedVisit = visits.find(v => v.visitId === visitId);
     const updatedVisits = visits.filter(v => v.visitId !== visitId);
     setLocal(KEYS.VISITS, updatedVisits);
+
+    // Update patient totalVisits & lastVisitDate if patient exists
+    if (deletedVisit && deletedVisit.patientId) {
+      const patients = getLocal(KEYS.PATIENTS, []);
+      const patient = patients.find(p => p.patientId === deletedVisit.patientId);
+      if (patient) {
+        const remainingForPatient = updatedVisits.filter(v => v.patientId === deletedVisit.patientId);
+        patient.totalVisits = remainingForPatient.length;
+        if (remainingForPatient.length > 0) {
+          remainingForPatient.sort((a, b) => {
+            const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+            const numB = parseInt(String(b.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+            if (numA !== numB) return numB - numA;
+            return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+          });
+          patient.lastVisitDate = remainingForPatient[0].date || patient.registrationDate;
+          patient.lastDiagnosis = remainingForPatient[0].diagnosis || patient.firstVisitReason;
+          patient.lastFee = remainingForPatient[0].fee || patient.lastFee;
+        } else {
+          patient.lastVisitDate = patient.registrationDate;
+        }
+        setLocal(KEYS.PATIENTS, patients);
+      }
+    }
 
     syncToGoogleSheets("delete_visit", { visitId });
     return { ok: true, message: `Visit ${visitId} deleted.` };
@@ -1070,6 +1101,12 @@ export const patientApi = {
     const p = this.getStoredPatient();
     if (!p) return { ok: false, error: "No patient session found." };
     const visits = getLocal(KEYS.VISITS, []).filter(v => v.patientId === p.patientId);
+    visits.sort((a, b) => {
+      const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      const numB = parseInt(String(b.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      if (numA !== numB) return numB - numA;
+      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    });
     const enquiries = getLocal(KEYS.ENQUIRIES, []).filter(e => {
       const pPhone = String(p.phone || "").replace(/\D/g, "").slice(-10);
       const ePhone = String(e.phone || "").replace(/\D/g, "").slice(-10);

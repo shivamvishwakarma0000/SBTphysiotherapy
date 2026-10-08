@@ -863,15 +863,15 @@ export default function PatientPortal({ onClose, themeProps }) {
                   <div
                     className="recent-visit-highlight-card"
                     style={{
-                      background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+                      background: "#ffffff",
                       border: "2px solid #0284c7",
-                      borderRadius: "16px",
+                      borderRadius: "18px",
                       padding: "16px 18px",
                       marginBottom: "16px",
-                      boxShadow: "0 4px 16px rgba(2, 132, 199, 0.15)"
+                      boxShadow: "0 4px 16px rgba(2, 132, 199, 0.08)"
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <span style={{
                           background: "#0284c7",
@@ -894,24 +894,36 @@ export default function PatientPortal({ onClose, themeProps }) {
                       </span>
                     </div>
 
+                    {/* Inside box: Light background color with clean medical border */}
                     <div style={{
-                      background: "#ffffff",
-                      borderRadius: "10px",
-                      padding: "12px 14px",
-                      border: "1.5px solid #94a3b8",
+                      background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+                      borderRadius: "12px",
+                      padding: "14px 16px",
+                      border: "1.5px solid #38bdf8",
                       marginBottom: "12px",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+                      boxShadow: "0 1px 4px rgba(2, 132, 199, 0.06)"
                     }}>
                       <div style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", display: "flex", alignItems: "center", gap: "6px" }}>
                         <span>🩺</span>
                         <span>{latestVisit.diagnosis || latestVisit.reason || patientProfile?.firstVisitReason || "Active Physiotherapy Rehabilitation"}</span>
                       </div>
-                      <div style={{ fontSize: "12.5px", color: "#64748b", marginTop: "3px" }}>
-                        Condition / Focus: <strong style={{ color: "#334155" }}>{latestVisit.reason || latestVisit.diagnosis || "Clinical Session"}</strong>
+                      <div style={{ fontSize: "12.5px", color: "#475569", marginTop: "4px" }}>
+                        Condition / Focus: <strong style={{ color: "#0f172a" }}>{latestVisit.reason || latestVisit.diagnosis || "Clinical Session"}</strong>
                         {patientProfile?.age ? ` • Patient: ${patientProfile.name} (${patientProfile.age}y)` : ""}
                       </div>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "10px", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", fontSize: "12.5px" }}>
+                      <div style={{
+                        background: "#ffffff",
+                        border: "1px solid #bae6fd",
+                        borderRadius: "8px",
+                        padding: "8px 12px",
+                        marginTop: "10px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: "10px",
+                        fontSize: "12.5px"
+                      }}>
                         <div>
                           <span style={{ color: "#64748b" }}>Fee & Payment: </span>
                           <strong style={{ color: "#16a34a" }}>{String(latestVisit.fee || 300).startsWith("₹") ? latestVisit.fee : `₹${latestVisit.fee || 300}`} (Paid)</strong>
@@ -1028,11 +1040,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                         className="visit-detailed-card"
                         key={v.visitId}
                         style={{
-                          background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
-                          border: isExpanded ? "2px solid #0284c7" : "1.5px solid #38bdf8",
-                          borderRadius: "16px",
+                          background: "#ffffff",
+                          border: isExpanded ? "2px solid #0284c7" : "2px solid #0284c7",
+                          borderRadius: "18px",
                           padding: "16px 18px",
-                          boxShadow: isExpanded ? "0 4px 16px rgba(2, 132, 199, 0.16)" : "0 2px 8px rgba(2, 132, 199, 0.08)",
+                          boxShadow: isExpanded ? "0 6px 20px rgba(2, 132, 199, 0.12)" : "0 3px 12px rgba(2, 132, 199, 0.06)",
                           transition: "all 0.2s ease"
                         }}
                       >
@@ -1045,7 +1057,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                             alignItems: "center",
                             gap: "10px",
                             cursor: "pointer",
-                            marginBottom: "10px"
+                            marginBottom: "12px"
                           }}
                           onClick={() => toggleVisitExpand(v.visitId)}
                           title="Click to expand/collapse clinical details"
@@ -1071,7 +1083,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                             gap: "4px",
                             padding: "4px 10px",
                             borderRadius: "6px",
-                            background: isExpanded ? "#0284c7" : "#ffffff",
+                            background: isExpanded ? "#0284c7" : "#f0f9ff",
                             color: isExpanded ? "#ffffff" : "#0284c7",
                             border: "1px solid #bae6fd",
                             fontSize: "12px",
@@ -1082,25 +1094,36 @@ export default function PatientPortal({ onClose, themeProps }) {
                           </div>
                         </div>
 
-                        {/* 2. Patient Condition & Problem Heading */}
+                        {/* 2. Patient Condition & Problem Heading with Light Background & Border */}
                         <div style={{
-                          background: "#ffffff",
-                          borderRadius: "10px",
-                          padding: "12px 14px",
-                          border: "1.5px solid #bae6fd",
+                          background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+                          borderRadius: "12px",
+                          padding: "14px 16px",
+                          border: "1.5px solid #38bdf8",
                           marginBottom: "12px",
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
+                          boxShadow: "0 1px 4px rgba(2, 132, 199, 0.06)"
                         }}>
                           <div style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", display: "flex", alignItems: "center", gap: "6px" }}>
                             <span>🩺</span>
                             <span>{v.diagnosis || v.reason || patientProfile?.firstVisitReason || "Physiotherapy Rehabilitation"}</span>
                           </div>
-                          <div style={{ fontSize: "12.5px", color: "#64748b", marginTop: "3px" }}>
-                            Condition / Focus: <strong style={{ color: "#334155" }}>{v.reason || v.diagnosis || "Clinical Session"}</strong>
+                          <div style={{ fontSize: "12.5px", color: "#475569", marginTop: "4px" }}>
+                            Condition / Focus: <strong style={{ color: "#0f172a" }}>{v.reason || v.diagnosis || "Clinical Session"}</strong>
                             {patientProfile?.age ? ` • Patient: ${patientProfile.name} (${patientProfile.age}y)` : ""}
                           </div>
 
-                          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "10px", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", fontSize: "12.5px" }}>
+                          <div style={{
+                            background: "#ffffff",
+                            border: "1px solid #bae6fd",
+                            borderRadius: "8px",
+                            padding: "8px 12px",
+                            marginTop: "10px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            flexWrap: "wrap",
+                            gap: "10px",
+                            fontSize: "12.5px"
+                          }}>
                             <div>
                               <span style={{ color: "#64748b" }}>Fee & Payment: </span>
                               <strong style={{ color: "#16a34a" }}>{String(v.fee || 300).startsWith("₹") ? v.fee : `₹${v.fee || 300}`} (Paid)</strong>

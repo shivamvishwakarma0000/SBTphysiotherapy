@@ -1301,6 +1301,29 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
+  const handleDeleteVisit = async (visit) => {
+    if (!visit || !visit.visitId) return;
+    const visitNumStr = visit.visitNumber ? `Visit #${visit.visitNumber}` : "this visit";
+    const confirmMsg = `Are you sure you want to delete ${visitNumStr}? This will permanently remove this visit record and its receipt slip.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const res = await api.deleteVisit(visit.visitId);
+      if (res && res.ok) {
+        if (selectedPatient) {
+          await openPatientProfile(selectedPatient.patientId);
+        }
+        await fetchStats();
+        await fetchPatients();
+        await fetchTodayVisits();
+      } else {
+        alert(res?.error || "Failed to delete visit.");
+      }
+    } catch (err) {
+      alert("Error deleting visit: " + err.message);
+    }
+  };
+
   const handleFinalizeAndIssueReceipt = (patient, visit) => {
     setActiveReceipt({ patient, visit });
   };
@@ -3963,7 +3986,7 @@ _(Saved in patient clinic records)_`;
                         transition: "all 0.2s ease"
                       }}
                     >
-                      {/* Row 1: Visit Badge, Clean Date & Time, Fee */}
+                      {/* Row 1: Visit Badge, Clean Date & Time, Fee & Small Delete Button */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                           <span className="visit-num-badge" style={{ background: "#0284c7", color: "#ffffff", fontWeight: "800", padding: "3px 8px", borderRadius: "6px", fontSize: "12px" }}>
@@ -3973,11 +3996,38 @@ _(Saved in patient clinic records)_`;
                             📅 {cleanDateOnly(v.date)} {cleanTimeOnly(v.time) ? `(${cleanTimeOnly(v.time)})` : ""}
                           </span>
                         </div>
-                        {v.fee && (
-                          <span style={{ fontWeight: "800", color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: "6px", fontSize: "12px" }}>
-                            {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
-                          </span>
-                        )}
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          {v.fee && (
+                            <span style={{ fontWeight: "800", color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: "6px", fontSize: "12px" }}>
+                              {String(v.fee).startsWith("₹") ? v.fee : `₹${v.fee}`}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="delete-visit-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteVisit(v);
+                            }}
+                            style={{
+                              background: "#fee2e2",
+                              color: "#b91c1c",
+                              border: "1px solid #fca5a5",
+                              borderRadius: "6px",
+                              padding: "2px 8px",
+                              fontSize: "11px",
+                              fontWeight: "700",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              transition: "all 0.15s ease"
+                            }}
+                            title="Delete this visit / receipt"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
                       </div>
 
                       {/* Row 2: Slip & WhatsApp PDF + Download in the SAME ROW side by side */}

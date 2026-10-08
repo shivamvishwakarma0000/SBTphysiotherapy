@@ -471,22 +471,43 @@ export const api = {
       treatmentNotes: consultData.treatmentNotes || "Spinal mobilization, targeted stretches, and rehabilitation therapy.",
       fee: consultData.fee ? (String(consultData.fee).startsWith("₹") ? String(consultData.fee) : `₹${String(consultData.fee).replace(/[^0-9]/g, "")}`) : "₹500",
       followUpDate: consultData.followUpDate || "",
+      followUpTime: consultData.followUpTime || "",
       status: "Completed",
       doctor: "Dr. Satyam Vishwakarma"
     };
 
+    // Remove any stale deletion tombstone
+    const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+    if (deletedVisitIds.has(newVisit.visitId)) {
+      deletedVisitIds.delete(newVisit.visitId);
+      setLocal(KEYS.DELETED_VISIT_IDS, Array.from(deletedVisitIds));
+    }
+
     // Update patient status to Active (Consultation complete)
     patient.status = "Active";
-    patient.totalVisits = visitNum;
+    patient.totalVisits = Math.max(visitNum, existingVisits.length + 1);
     patient.lastVisitDate = todayStr;
     patient.lastDiagnosis = newVisit.diagnosis;
     patient.lastFee = newVisit.fee;
+    if (newVisit.followUpDate) {
+      patient.followUpDate = newVisit.followUpDate;
+      patient.followUpTime = newVisit.followUpTime;
+    }
 
     patients[pIndex] = patient;
-    visits.unshift(newVisit);
+    const updatedVisits = visits.filter(v => v.visitId !== newVisit.visitId);
+    updatedVisits.unshift(newVisit);
 
     setLocal(KEYS.PATIENTS, patients);
-    setLocal(KEYS.VISITS, visits);
+    setLocal(KEYS.VISITS, updatedVisits);
+
+    // Update PATIENT_PROFILE_KEY cache if logged into patient portal
+    try {
+      const storedPatient = JSON.parse(localStorage.getItem(PATIENT_PROFILE_KEY) || "null");
+      if (storedPatient && (storedPatient.patientId === patientId || storedPatient.phone === patient.phone)) {
+        localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...storedPatient, ...patient }));
+      }
+    } catch (e) {}
 
     // Sync to Google Sheets
     syncToGoogleSheets("sync_patient", patient);
@@ -618,14 +639,36 @@ export const api = {
       doctor: "Dr. Satyam Vishwakarma"
     };
 
-    visits.unshift(newVisit);
-    patient.totalVisits = visitNumber;
+    // 1. Remove any old deletion tombstone for this visitId
+    const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+    if (deletedVisitIds.has(newVisit.visitId)) {
+      deletedVisitIds.delete(newVisit.visitId);
+      setLocal(KEYS.DELETED_VISIT_IDS, Array.from(deletedVisitIds));
+    }
+
+    // 2. Add or replace visit
+    const updatedVisits = visits.filter(v => v.visitId !== newVisit.visitId);
+    updatedVisits.unshift(newVisit);
+
+    patient.totalVisits = Math.max(visitNumber, updatedVisits.filter(v => v.patientId === patientId).length);
     patient.lastVisitDate = todayStr;
     patient.lastDiagnosis = newVisit.diagnosis;
     patient.lastFee = feeStr;
+    if (newVisit.followUpDate) {
+      patient.followUpDate = newVisit.followUpDate;
+      patient.followUpTime = newVisit.followUpTime;
+    }
 
-    setLocal(KEYS.VISITS, visits);
+    setLocal(KEYS.VISITS, updatedVisits);
     setLocal(KEYS.PATIENTS, patients);
+
+    // Update PATIENT_PROFILE_KEY cache if logged into patient portal
+    try {
+      const storedPatient = JSON.parse(localStorage.getItem(PATIENT_PROFILE_KEY) || "null");
+      if (storedPatient && (storedPatient.patientId === patientId || storedPatient.phone === patient.phone)) {
+        localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...storedPatient, ...patient }));
+      }
+    } catch (e) {}
 
     // Push to Google Sheets
     syncToGoogleSheets("sync_visit", newVisit);
@@ -1081,7 +1124,17 @@ export const patientApi = {
         return data;
       }
     } catch (e) {}
-    const p = this.getStoredPatient();
+
+    const storedPatient = this.getStoredPatient();
+    if (!storedPatient) return { ok: false, error: "No patient session found." };
+
+    const patients = getLocal(KEYS.PATIENTS, []);
+    const p = patients.find(patient => 
+      patient.patientId === storedPatient.patientId || 
+      (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
+    ) || storedPatient;
+
+    localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
     return { ok: true, patient: p };
   },
 
@@ -1098,19 +1151,39 @@ export const patientApi = {
       }
     } catch (e) {}
 
-    const p = this.getStoredPatient();
-    if (!p) return { ok: false, error: "No patient session found." };
-    const visits = getLocal(KEYS.VISITS, []).filter(v => v.patientId === p.patientId);
+    const storedPatient = this.getStoredPatient();
+    if (!storedPatient) return { ok: false, error: "No patient session found." };
+
+    const patients = getLocal(KEYS.PATIENTS, []);
+    const p = patients.find(patient => 
+      patient.patientId === storedPatient.patientId || 
+      (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
+    ) || storedPatient;
+
+    localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
+
+    const allVisits = getLocal(KEYS.VISITS, []);
+    const visits = allVisits.filter(v => 
+      v.patientId === p.patientId || 
+      (v.phone && p.phone && String(v.phone).replace(/\D/g, "").slice(-10) === String(p.phone).replace(/\D/g, "").slice(-10))
+    );
+
     visits.sort((a, b) => {
       const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);
       const numB = parseInt(String(b.visitNumber || 0).replace(/\D/g, "") || 0, 10);
       if (numA !== numB) return numB - numA;
       return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
     });
+
     const enquiries = getLocal(KEYS.ENQUIRIES, []).filter(e => {
       const pPhone = String(p.phone || "").replace(/\D/g, "").slice(-10);
       const ePhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
       return (pPhone.length === 10 && ePhone === pPhone) || e.linkedPatientId === p.patientId;
+    });
+
+    const latestFollowUp = visits.find(v => {
+      const s = v?.followUpDate ? String(v.followUpDate).trim() : "";
+      return s && s.toLowerCase() !== "none" && s.toLowerCase() !== "sos" && !s.toLowerCase().includes("as advised");
     });
 
     return {
@@ -1122,7 +1195,8 @@ export const patientApi = {
         lastVisitDate: visits[0]?.date || p.lastVisitDate || p.registrationDate,
         daysInRecovery: 1,
         activeCondition: visits[0]?.diagnosis || p.firstVisitReason || "Under Evaluation",
-        nextFollowUp: visits[0]?.followUpDate || null
+        nextFollowUp: latestFollowUp ? latestFollowUp.followUpDate : (visits[0]?.followUpDate || p.followUpDate || null),
+        nextFollowUpTime: latestFollowUp ? latestFollowUp.followUpTime : (visits[0]?.followUpTime || p.followUpTime || null)
       },
       visits,
       appointments: enquiries

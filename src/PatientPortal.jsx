@@ -164,10 +164,31 @@ export default function PatientPortal({ onClose, themeProps }) {
     if (patientToken) {
       loadPatientData();
     }
+  }, [patientToken, activeTab]);
+
+  useEffect(() => {
+    if (!patientToken) return;
+    const handleLiveSync = () => {
+      loadPatientData();
+    };
+
+    window.addEventListener("focus", handleLiveSync);
+    window.addEventListener("storage", handleLiveSync);
+    window.addEventListener("online", handleLiveSync);
+    document.addEventListener("visibilitychange", handleLiveSync);
+
+    const syncTimer = setInterval(handleLiveSync, 4000);
+
+    return () => {
+      window.removeEventListener("focus", handleLiveSync);
+      window.removeEventListener("storage", handleLiveSync);
+      window.removeEventListener("online", handleLiveSync);
+      document.removeEventListener("visibilitychange", handleLiveSync);
+      clearInterval(syncTimer);
+    };
   }, [patientToken]);
 
   const loadPatientData = async () => {
-    setLoading(true);
     try {
       const [profileRes, recordsRes] = await Promise.all([
         patientApi.getProfile(),
@@ -761,14 +782,17 @@ export default function PatientPortal({ onClose, themeProps }) {
 
             {/* DOCTOR PRESCRIBED NEXT FOLLOW-UP SCHEDULE (From Latest Active Visit) */}
             {(() => {
-              const followUpStr = latestVisit?.followUpDate ? String(latestVisit.followUpDate).trim() : "";
-              const isInvalid = !followUpStr || 
-                followUpStr.toLowerCase() === "none" || 
-                followUpStr.toLowerCase() === "sos" || 
-                followUpStr.toLowerCase().includes("as advised") || 
-                followUpStr.toLowerCase().includes("completed");
+              const visitWithFollowUp = sortedVisits.find(v => {
+                const s = v?.followUpDate ? String(v.followUpDate).trim() : "";
+                return s && 
+                  s.toLowerCase() !== "none" && 
+                  s.toLowerCase() !== "sos" && 
+                  !s.toLowerCase().includes("as advised") && 
+                  !s.toLowerCase().includes("completed");
+              });
 
-              if (isInvalid) return null;
+              if (!visitWithFollowUp) return null;
+              const followUpStr = String(visitWithFollowUp.followUpDate).trim();
 
               return (
                 <div className="followup-schedule-box" style={{
@@ -784,18 +808,18 @@ export default function PatientPortal({ onClose, themeProps }) {
                       📅 Scheduled Doctor Follow-Up
                     </span>
                     <span style={{ fontSize: "12.5px", fontWeight: "700", color: "#15803d" }}>
-                      From Visit #{latestVisit.visitNumber || 1}
+                      From Visit #{visitWithFollowUp.visitNumber || 1}
                     </span>
                   </div>
                   <div style={{ fontSize: "16px", fontWeight: "800", color: "#14532d", marginBottom: "4px" }}>
-                    Follow-Up Date: {cleanDateOnly(followUpStr)} {latestVisit.followUpTime ? `• 🕒 ${latestVisit.followUpTime}` : ""}
+                    Follow-Up Date: {cleanDateOnly(followUpStr)} {visitWithFollowUp.followUpTime ? `• 🕒 ${visitWithFollowUp.followUpTime}` : ""}
                   </div>
                   <div style={{ fontSize: "13px", color: "#166534", marginBottom: "12px" }}>
-                    <strong>Clinical Purpose:</strong> {latestVisit.diagnosis || latestVisit.reason || "Rehabilitation Progress & Pain Assessment"} with Dr. Satyam Vishwakarma (D.P.T., B.P.T.)
+                    <strong>Clinical Purpose:</strong> {visitWithFollowUp.diagnosis || visitWithFollowUp.reason || "Rehabilitation Progress & Pain Assessment"} with Dr. Satyam Vishwakarma (D.P.T., B.P.T.)
                   </div>
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                     <a
-                      href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20confirming%20my%20scheduled%20follow-up%20on%20${encodeURIComponent(cleanDateOnly(followUpStr))}%20for%20${encodeURIComponent(patientProfile.name)}%20(ID:%20${patientProfile.patientId}).`}
+                      href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20confirming%20my%20scheduled%20follow-up%20on%20${encodeURIComponent(cleanDateOnly(followUpStr))}%20for%20${encodeURIComponent(patientProfile?.name || 'Patient')}%20(ID:%20${patientProfile?.patientId || ''}).`}
                       target="_blank"
                       rel="noreferrer"
                       className="patient-primary-btn"

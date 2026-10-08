@@ -3337,8 +3337,12 @@ _(Saved in patient clinic records)_`;
         {/* ================= 6. SETTINGS & SYNC ================= */}
         {activeTab === "settings" && (
           <div className="settings-view">
-            <h2>Settings & Cloud Synchronization</h2>
-            <p>Manage doctor security credentials, real-time Google Sheets sync, and database backups.</p>
+            <div className="section-header-row">
+              <div>
+                <h2>Settings & Cloud Synchronization</h2>
+                <p>Manage doctor security credentials, real-time Google Sheets sync, and database backups.</p>
+              </div>
+            </div>
 
             <div className="settings-grid">
               <div className="settings-card">

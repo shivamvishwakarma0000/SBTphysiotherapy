@@ -3095,12 +3095,17 @@ textarea:focus {
 }
 
 .form-section-title {
-  margin: 0 0 16px;
-  font-size: 15px;
-  color: var(--emerald);
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 8px;
-  font-weight: 800;
+  background: linear-gradient(135deg, #071927 0%, #0F2E46 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  padding: 10px 16px !important;
+  margin: 22px 0 16px 0 !important;
+  font-size: 14.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px !important;
+  display: block !important;
+  box-shadow: 0 2px 8px rgba(7, 25, 39, 0.2) !important;
 }
 
 .form-row-3 {
@@ -6420,21 +6425,60 @@ textarea:focus {
   color: #0f172a;
 }
 
-/* SECTION TITLES */
-.section-title-box {
-  margin-bottom: 22px;
+/* SECTION TITLES (Full-Width Sleek Dark Header Banner with Pure White Text) */
+.section-title-box,
+.section-header-row,
+.doctor-section-banner {
+  width: 100% !important;
+  background: linear-gradient(135deg, #071927 0%, #0F2E46 100%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  padding: 16px 20px !important;
+  margin-bottom: 20px !important;
+  box-shadow: 0 4px 18px rgba(7, 25, 39, 0.28) !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
 }
 
-.section-title-box h2 {
-  font-size: 22px;
-  font-weight: 800;
-  margin: 0 0 6px;
+.section-header-row {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
 }
 
-.section-title-box p {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
+.section-title-box h1,
+.section-title-box h2,
+.section-title-box h3,
+.section-title-box h4,
+.section-header-row h1,
+.section-header-row h2,
+.section-header-row h3,
+.section-header-row h4,
+.doctor-section-banner h1,
+.doctor-section-banner h2,
+.doctor-section-banner h3,
+.doctor-section-banner h4 {
+  color: #ffffff !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  margin: 0 0 6px 0 !important;
+  letter-spacing: -0.3px !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+.section-title-box p,
+.section-header-row p,
+.doctor-section-banner p {
+  color: #cbd5e1 !important;
+  font-size: 13.5px !important;
+  line-height: 1.45 !important;
+  margin: 0 !important;
+  font-weight: 500 !important;
 }
 
 /* APPOINTMENTS */
@@ -8851,16 +8895,36 @@ textarea:focus {
 [data-theme="light"] .patient-main-container h1:not(.greeting-headline),
 [data-theme="light"] .patient-main-container h2:not(.greeting-headline),
 [data-theme="light"] .patient-main-container h3,
-[data-theme="light"] .patient-main-container h4,
-[data-theme="light"] .section-header-row h1,
-[data-theme="light"] .section-header-row h2,
-[data-theme="light"] .section-header-row h3,
-[data-theme="light"] .section-header-row h4,
+[data-theme="light"] .patient-main-container h4 {
+  color: #0f172a !important;
+}
+
+/* Master Dark Headers always retain crisp white text */
+.section-title-box h1,
+.section-title-box h2,
+.section-title-box h3,
+.section-title-box h4,
+.section-header-row h1,
+.section-header-row h2,
+.section-header-row h3,
+.section-header-row h4,
 [data-theme="light"] .section-title-box h1,
 [data-theme="light"] .section-title-box h2,
 [data-theme="light"] .section-title-box h3,
-[data-theme="light"] .section-title-box h4 {
-  color: #0f172a !important;
+[data-theme="light"] .section-title-box h4,
+[data-theme="light"] .section-header-row h1,
+[data-theme="light"] .section-header-row h2,
+[data-theme="light"] .section-header-row h3,
+[data-theme="light"] .section-header-row h4 {
+  color: #ffffff !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+.section-title-box p,
+.section-header-row p,
+[data-theme="light"] .section-title-box p,
+[data-theme="light"] .section-header-row p {
+  color: #cbd5e1 !important;
 }
 
 /* Master Dark Headers always retain crisp white text */
@@ -10287,14 +10351,14 @@ textarea:focus {
 .section-header-row h2,
 .section-header-row h3,
 .section-header-row h4,
-.visits-pane h2,
-.appointments-pane h2,
-.receipts-pane h2,
-.exercises-pane h2,
-.profile-pane h2,
-.patients-directory-view h2,
-.today-visits-view h2,
-.enquiries-view h2,
+.patient-directory-master-banner h1,
+.patient-directory-master-banner h2,
+.patient-directory-master-banner h3,
+.patient-directory-master-banner h4,
+.doctor-section-banner h1,
+.doctor-section-banner h2,
+.doctor-section-banner h3,
+.doctor-section-banner h4,
 [data-theme="dark"] .section-title-box h1,
 [data-theme="dark"] .section-title-box h2,
 [data-theme="dark"] .section-title-box h3,
@@ -10302,30 +10366,18 @@ textarea:focus {
 [data-theme="dark"] .section-header-row h1,
 [data-theme="dark"] .section-header-row h2,
 [data-theme="dark"] .section-header-row h3,
-[data-theme="dark"] .section-header-row h4,
-[data-theme="dark"] .visits-pane h2,
-[data-theme="dark"] .appointments-pane h2,
-[data-theme="dark"] .receipts-pane h2,
-[data-theme="dark"] .exercises-pane h2,
-[data-theme="dark"] .profile-pane h2 {
-  color: #0B1F2A !important;
+[data-theme="dark"] .section-header-row h4 {
+  color: #ffffff !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
 }
 
 .section-title-box p,
 .section-header-row p,
-.visits-pane p,
-.appointments-pane p,
-.receipts-pane p,
-.exercises-pane p,
-.profile-pane p,
+.patient-directory-master-banner p,
+.doctor-section-banner p,
 [data-theme="dark"] .section-title-box p,
-[data-theme="dark"] .section-header-row p,
-[data-theme="dark"] .visits-pane p,
-[data-theme="dark"] .appointments-pane p,
-[data-theme="dark"] .receipts-pane p,
-[data-theme="dark"] .exercises-pane p,
-[data-theme="dark"] .profile-pane p {
-  color: #475569 !important;
+[data-theme="dark"] .section-header-row p {
+  color: #cbd5e1 !important;
 }
 
 /* Card titles and labels on white mobile app cards MUST remain dark navy */

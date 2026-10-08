@@ -801,14 +801,32 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
+  const handleRefresh = async () => {
+    try {
+      await Promise.all([
+        fetchStats(),
+        fetchPatients(),
+        fetchTodayVisits(),
+        fetchEnquiries()
+      ]);
+      const webhookUrl = getWebhookUrl();
+      if (webhookUrl) {
+        patients.forEach(p => syncToGoogleSheets("sync_patient", p));
+        todayVisits.forEach(v => syncToGoogleSheets("sync_visit", v));
+      }
+    } catch (err) {
+      console.error("Doctor portal refresh error:", err);
+    }
+  };
+
   const handleTouchEnd = async () => {
     if (pullDistance > 40) {
       setIsRefreshing(true);
       setPullDistance(0);
       try {
-        await handleManualSync();
+        await handleRefresh();
       } finally {
-        setTimeout(() => setIsRefreshing(false), 600);
+        setTimeout(() => setIsRefreshing(false), 500);
       }
     } else {
       setPullDistance(0);
@@ -1415,19 +1433,18 @@ export default function DoctorPortal({ onClose, themeProps }) {
     setSyncLoading(true);
     try {
       const webhookUrl = getWebhookUrl();
-      if (!webhookUrl) {
-        alert("Please configure your Google Sheets Webhook URL below in settings first.");
-        return;
+      if (webhookUrl) {
+        patients.forEach(p => syncToGoogleSheets("sync_patient", p));
+        todayVisits.forEach(v => syncToGoogleSheets("sync_visit", v));
       }
-      // Trigger sync for all current patients and visits
-      patients.forEach(p => syncToGoogleSheets("sync_patient", p));
-      todayVisits.forEach(v => syncToGoogleSheets("sync_visit", v));
-      alert("All records sent to Google Sheets!");
-      fetchStats();
-      fetchPatients();
-      fetchEnquiries();
+      await Promise.all([
+        fetchStats(),
+        fetchPatients(),
+        fetchTodayVisits(),
+        fetchEnquiries()
+      ]);
     } catch (err) {
-      alert("Sync failed. Check network or webhook settings.");
+      console.error("Manual sync failed:", err);
     } finally {
       setSyncLoading(false);
     }

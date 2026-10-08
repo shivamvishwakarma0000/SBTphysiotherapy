@@ -6527,12 +6527,13 @@ textarea:focus {
 
 /* Content spacing beneath edge-to-edge top headers */
 .enroll-view > *:not(.section-header-row),
-.waiting-queue-view > *:not(.section-header-row),
+.waiting-queue-view > *:not(.section-header-row):not(.mobile-app-greeting-card):not(.mobile-app-grid-6),
 .patients-directory-view > *:not(.section-header-row),
 .today-visits-view > *:not(.section-header-row),
 .enquiries-view > *:not(.section-header-row),
 .settings-view > *:not(.section-header-row),
-.tab-pane > *:not(.section-title-box) {
+.tab-pane:not(.dashboard-pane) > *:not(.section-title-box),
+.tab-pane.dashboard-pane > *:not(.section-title-box):not(.mobile-app-greeting-card):not(.mobile-app-grid-6) {
   margin-left: 12px !important;
   margin-right: 12px !important;
   width: calc(100% - 24px) !important;
@@ -6541,12 +6542,13 @@ textarea:focus {
 
 @media (min-width: 769px) {
   .enroll-view > *:not(.section-header-row),
-  .waiting-queue-view > *:not(.section-header-row),
+  .waiting-queue-view > *:not(.section-header-row):not(.mobile-app-greeting-card):not(.mobile-app-grid-6),
   .patients-directory-view > *:not(.section-header-row),
   .today-visits-view > *:not(.section-header-row),
   .enquiries-view > *:not(.section-header-row),
   .settings-view > *:not(.section-header-row),
-  .tab-pane > *:not(.section-title-box) {
+  .tab-pane:not(.dashboard-pane) > *:not(.section-title-box),
+  .tab-pane.dashboard-pane > *:not(.section-title-box):not(.mobile-app-greeting-card):not(.mobile-app-grid-6) {
     margin-left: 20px !important;
     margin-right: 20px !important;
     width: calc(100% - 40px) !important;
@@ -8597,6 +8599,10 @@ textarea:focus {
 
 /* 1. App Greeting Hero Card (Desktop & Base) */
 .mobile-app-greeting-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
   background: linear-gradient(180deg, #051829 0%, #082946 70%, #0d385e 100%) !important;
   border: none !important;
   border-top-left-radius: 0 !important;

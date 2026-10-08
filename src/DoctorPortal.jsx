@@ -771,6 +771,52 @@ export default function DoctorPortal({ onClose, themeProps }) {
     };
   }, []);
 
+  // Pull-to-refresh state & touch handlers for Doctor Portal
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = React.useRef(0);
+  const doctorRootRef = React.useRef(null);
+
+  const handleTouchStart = (e) => {
+    if (!doctorRootRef.current) return;
+    if (doctorRootRef.current.scrollTop <= 5) {
+      touchStartY.current = e.touches[0].clientY;
+      setIsPulling(true);
+    } else {
+      touchStartY.current = 0;
+      setIsPulling(false);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isPulling || touchStartY.current === 0) return;
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchStartY.current;
+    if (diff > 0 && doctorRootRef.current && doctorRootRef.current.scrollTop <= 5) {
+      const damped = Math.min(diff * 0.45, 80);
+      setPullDistance(damped);
+    } else {
+      setPullDistance(0);
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistance > 40) {
+      setIsRefreshing(true);
+      setPullDistance(0);
+      try {
+        await handleManualSync();
+      } finally {
+        setTimeout(() => setIsRefreshing(false), 600);
+      }
+    } else {
+      setPullDistance(0);
+    }
+    setIsPulling(false);
+    touchStartY.current = 0;
+  };
+
   const selectDoctorTab = (tab) => {
     if (tab !== activeTab) {
       window.history.pushState({ portal: "doctor", tab }, "");
@@ -1670,7 +1716,13 @@ _(Saved in patient clinic records)_`;
   // RENDER: DOCTOR DASHBOARD & CLINIC MANAGEMENT
   // ==========================================
   return (
-    <div className="doctor-portal-fullscreen">
+    <div
+      className="doctor-portal-fullscreen"
+      ref={doctorRootRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <header className="doctor-navbar">
         <div className="doctor-nav-top-row">
           <div className="doctor-nav-brand">
@@ -1765,6 +1817,34 @@ _(Saved in patient clinic records)_`;
           </button>
         </nav>
       </header>
+
+      {/* Pull To Refresh Dynamic Indicator for Doctor Portal */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div
+          className="pull-to-refresh-container"
+          style={{
+            transform: `translateY(${Math.min(pullDistance, 24)}px)`,
+            opacity: isRefreshing ? 1 : Math.min(pullDistance / 24, 1)
+          }}
+        >
+          {isRefreshing ? (
+            <>
+              <span className="pull-refresh-spin">🔄</span>
+              <span>Syncing with Cloud & Google Sheets...</span>
+            </>
+          ) : pullDistance > 40 ? (
+            <>
+              <span>⚡</span>
+              <span>Release to sync clinical data</span>
+            </>
+          ) : (
+            <>
+              <span>↓</span>
+              <span>Pull down to sync data</span>
+            </>
+          )}
+        </div>
+      )}
 
       {doctorInfo?.isTemporaryPassword && (
         <div className="temp-password-banner">

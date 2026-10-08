@@ -77,52 +77,6 @@ export default function PatientPortal({ onClose, themeProps }) {
     setExpandedVisitIds((prev) => ({ ...prev, [vId]: !prev[vId] }));
   };
 
-  // Pull-to-refresh state & touch handlers
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isPulling, setIsPulling] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const touchStartY = React.useRef(0);
-  const portalRootRef = React.useRef(null);
-
-  const handleTouchStart = (e) => {
-    if (!portalRootRef.current) return;
-    if (portalRootRef.current.scrollTop <= 5) {
-      touchStartY.current = e.touches[0].clientY;
-      setIsPulling(true);
-    } else {
-      touchStartY.current = 0;
-      setIsPulling(false);
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isPulling || touchStartY.current === 0) return;
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - touchStartY.current;
-    if (diff > 0 && portalRootRef.current && portalRootRef.current.scrollTop <= 5) {
-      const damped = Math.min(diff * 0.45, 80);
-      setPullDistance(damped);
-    } else {
-      setPullDistance(0);
-    }
-  };
-
-  const handleTouchEnd = async () => {
-    if (pullDistance > 40) {
-      setIsRefreshing(true);
-      setPullDistance(0);
-      try {
-        await loadPatientData();
-      } finally {
-        setTimeout(() => setIsRefreshing(false), 500);
-      }
-    } else {
-      setPullDistance(0);
-    }
-    setIsPulling(false);
-    touchStartY.current = 0;
-  };
-
   // Lock background document scroll while PatientPortal is open to prevent unwanted body scrolling
   useEffect(() => {
     const origBodyOverflow = document.body.style.overflow;
@@ -139,12 +93,11 @@ export default function PatientPortal({ onClose, themeProps }) {
 
   // Phone hardware/browser back button navigation handling
   useEffect(() => {
-    // Initial history anchor for patient portal
     if (!window.history.state || window.history.state.portal !== "patient") {
       window.history.replaceState({ portal: "patient", tab: "dashboard" }, "");
     }
 
-    const handlePopState = (event) => {
+    const handlePopState = () => {
       // 1. If receipt preview modal is open, close it
       if (previewReceipt) {
         setPreviewReceipt(null);
@@ -165,15 +118,11 @@ export default function PatientPortal({ onClose, themeProps }) {
         setActiveTab("dashboard");
         return;
       }
-      // 5. If already on dashboard and onClose is passed, exit to site
-      if (onClose) {
-        onClose();
-      }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [previewReceipt, showContactModal, showMoreSheet, activeTab, onClose]);
+  }, [previewReceipt, showContactModal, showMoreSheet, activeTab]);
 
   // Tab navigation with history push
   const selectTab = (tab) => {
@@ -260,7 +209,6 @@ export default function PatientPortal({ onClose, themeProps }) {
       console.error("Error loading patient records:", err);
     } finally {
       setLoading(false);
-      setIsRefreshing(false);
     }
   };
 
@@ -548,13 +496,7 @@ export default function PatientPortal({ onClose, themeProps }) {
   const latestVisit = sortedVisits[0] || null;
 
   return (
-    <div
-      className="patient-portal-root"
-      ref={portalRootRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="patient-portal-root">
       {/* Top Clinic Header */}
       <header className="patient-header">
         <div className="header-left">
@@ -582,17 +524,10 @@ export default function PatientPortal({ onClose, themeProps }) {
 
           <button
             className="portal-refresh-btn"
-            onClick={async () => {
-              setIsRefreshing(true);
-              try {
-                await loadPatientData();
-              } finally {
-                setTimeout(() => setIsRefreshing(false), 500);
-              }
-            }}
+            onClick={() => loadPatientData()}
             title="Refresh clinical records & appointments"
           >
-            <span className={isRefreshing ? "pull-refresh-spin" : ""}>🔄</span>
+            <span>🔄</span>
             <span className="btn-label">Refresh</span>
           </button>
 
@@ -605,34 +540,6 @@ export default function PatientPortal({ onClose, themeProps }) {
           </button>
         </div>
       </header>
-
-      {/* Pull To Refresh Dynamic Indicator */}
-      {(pullDistance > 0 || isRefreshing) && (
-        <div
-          className="pull-to-refresh-container"
-          style={{
-            transform: `translateY(${Math.min(pullDistance, 24)}px)`,
-            opacity: isRefreshing ? 1 : Math.min(pullDistance / 24, 1)
-          }}
-        >
-          {isRefreshing ? (
-            <>
-              <span className="pull-refresh-spin">🔄</span>
-              <span>Refreshing clinical records...</span>
-            </>
-          ) : pullDistance > 40 ? (
-            <>
-              <span>⚡</span>
-              <span>Release to refresh data</span>
-            </>
-          ) : (
-            <>
-              <span>↓</span>
-              <span>Pull down to refresh</span>
-            </>
-          )}
-        </div>
-      )}
 
       {/* Navigation Bar (Desktop Top Tabs & Mobile Sticky Bottom Bar) */}
       <nav className="patient-navbar">

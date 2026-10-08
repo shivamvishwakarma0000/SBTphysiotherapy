@@ -2010,7 +2010,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   if (onClose) onClose();
                 }}
               >
-                <span className="more-item-icon cyan">🚪</span>
+                <span className="more-item-icon indigo">🌐</span>
                 <div className="more-item-text">
                   <strong>Exit to Clinic Website</strong>
                   <span>Return to public clinic home page</span>

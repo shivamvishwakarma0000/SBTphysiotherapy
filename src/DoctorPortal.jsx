@@ -2303,11 +2303,11 @@ _(Saved in patient clinic records)_`;
                       </button>
                       <button
                         className="secondary-btn delete-action"
-                        style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5" }}
+                        style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#f87171", fontSize: "13px", fontWeight: "800", padding: "4px 8px" }}
                         onClick={() => handleDeletePatient(p.patientId, p.name)}
                         title="Delete Patient"
                       >
-                        🗑️
+                        ✕
                       </button>
                     </div>
                   </div>
@@ -2535,7 +2535,7 @@ _(Saved in patient clinic records)_`;
                             onClick={() => handleDeletePatient(p.patientId, p.name)}
                             title="Permanently delete patient record"
                           >
-                            🗑️ Delete
+                            ✕ Delete
                           </button>
                         </div>
                       </td>
@@ -3081,7 +3081,7 @@ _(Saved in patient clinic records)_`;
                             }}
                             title="Permanently delete lead so it never shows again"
                           >
-                            🗑️ Delete
+                            ✕ Delete
                           </button>
                         </div>
                       </div>
@@ -3759,15 +3759,15 @@ _(Saved in patient clinic records)_`;
                   💬 Chat
                 </a>
 
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  style={{ minHeight: "44px", background: "rgba(239, 68, 68, 0.2)", color: "#f87171", borderColor: "#ef4444", fontWeight: "700", padding: "0 12px" }}
-                  onClick={() => handleDeletePatient(selectedPatient.patientId, selectedPatient.name)}
-                  title="Permanently Delete Patient Record"
-                >
-                  🗑️
-                </button>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    style={{ minHeight: "44px", background: "rgba(239, 68, 68, 0.15)", color: "#ef4444", borderColor: "#ef4444", fontWeight: "800", padding: "0 14px", fontSize: "13px" }}
+                    onClick={() => handleDeletePatient(selectedPatient.patientId, selectedPatient.name)}
+                    title="Permanently Delete Patient Record"
+                  >
+                    ✕ Delete
+                  </button>
               </div>
             </div>
 
@@ -4005,23 +4005,25 @@ _(Saved in patient clinic records)_`;
                           style={{
                             background: "#fee2e2",
                             color: "#dc2626",
-                            border: "1px solid #fca5a5",
-                            borderRadius: "6px",
+                            border: "1.5px solid #f87171",
+                            borderRadius: "7px",
                             width: "30px",
                             height: "30px",
                             minWidth: "30px",
                             padding: 0,
-                            fontSize: "14px",
+                            fontSize: "13px",
+                            fontWeight: "800",
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
                             cursor: "pointer",
                             flexShrink: 0,
+                            boxShadow: "0 1px 4px rgba(220, 38, 38, 0.15)",
                             transition: "all 0.15s ease"
                           }}
                           title="Delete this visit / receipt"
                         >
-                          🗑️
+                          ✕
                         </button>
                       </div>
 
@@ -4398,64 +4400,78 @@ _(Saved in patient clinic records)_`;
                     <label style={{ margin: 0, fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
                       Next Follow-Up / Session
                     </label>
-                    <div style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const tom = new Date();
-                          tom.setDate(tom.getDate() + 1);
-                          setNewVisitForm({ ...newVisitForm, followUpDate: tom.toISOString().slice(0, 10) });
-                        }}
-                        style={{
-                          padding: "4px 8px",
-                          fontSize: "11px",
-                          fontWeight: "700",
-                          borderRadius: "6px",
-                          border: "1px solid #10b981",
-                          background: "#ecfdf5",
-                          color: "#059669",
-                          cursor: "pointer"
-                        }}
-                      >
-                        ⚡ Tomorrow (Daily)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const in2 = new Date();
-                          in2.setDate(in2.getDate() + 2);
-                          setNewVisitForm({ ...newVisitForm, followUpDate: in2.toISOString().slice(0, 10) });
-                        }}
-                        style={{
-                          padding: "4px 8px",
-                          fontSize: "11px",
-                          fontWeight: "700",
-                          borderRadius: "6px",
-                          border: "1px solid #cbd5e1",
-                          background: "#f8fafc",
-                          color: "#475569",
-                          cursor: "pointer"
-                        }}
-                      >
-                        In 2 Days
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setNewVisitForm({ ...newVisitForm, followUpDate: "" })}
-                        style={{
-                          padding: "4px 8px",
-                          fontSize: "11px",
-                          fontWeight: "600",
-                          borderRadius: "6px",
-                          border: "1px solid #cbd5e1",
-                          background: "#f8fafc",
-                          color: "#64748b",
-                          cursor: "pointer"
-                        }}
-                      >
-                        Clear
-                      </button>
-                    </div>
+                    {(() => {
+                      const tomStr = (() => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + 1);
+                        return d.toISOString().slice(0, 10);
+                      })();
+                      const in2Str = (() => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + 2);
+                        return d.toISOString().slice(0, 10);
+                      })();
+                      const isTom = newVisitForm.followUpDate === tomStr;
+                      const isIn2 = newVisitForm.followUpDate === in2Str;
+
+                      return (
+                        <div style={{ display: "inline-flex", gap: "6px", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => setNewVisitForm({ ...newVisitForm, followUpDate: tomStr })}
+                            style={{
+                              padding: "4px 10px",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                              borderRadius: "6px",
+                              border: isTom ? "1.5px solid #10b981" : "1.5px solid #cbd5e1",
+                              background: isTom ? "#ecfdf5" : "#f8fafc",
+                              color: isTom ? "#059669" : "#475569",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease"
+                            }}
+                          >
+                            ⚡ Tomorrow (Daily)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNewVisitForm({ ...newVisitForm, followUpDate: in2Str })}
+                            style={{
+                              padding: "4px 10px",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                              borderRadius: "6px",
+                              border: isIn2 ? "1.5px solid #10b981" : "1.5px solid #cbd5e1",
+                              background: isIn2 ? "#ecfdf5" : "#f8fafc",
+                              color: isIn2 ? "#059669" : "#475569",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease"
+                            }}
+                          >
+                            In 2 Days
+                          </button>
+                          {newVisitForm.followUpDate && (
+                            <button
+                              type="button"
+                              onClick={() => setNewVisitForm({ ...newVisitForm, followUpDate: "" })}
+                              style={{
+                                padding: "4px 10px",
+                                fontSize: "12px",
+                                fontWeight: "600",
+                                borderRadius: "6px",
+                                border: "1.5px solid #cbd5e1",
+                                background: "#f8fafc",
+                                color: "#64748b",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease"
+                              }}
+                            >
+                              ✕ Clear
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <input
                     type="date"
@@ -4917,66 +4933,82 @@ _(Saved in patient clinic records)_`;
                   <label style={{ margin: 0, color: "#0f172a", fontWeight: "800", fontSize: "13px" }}>
                     🗓️ Next Follow-Up Session <span style={{ color: "#64748b", fontSize: "12px", fontWeight: "600" }}>(Optional)</span>
                   </label>
-                  <div style={{ display: "inline-flex", gap: "6px", flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const tom = new Date();
-                        tom.setDate(tom.getDate() + 1);
-                        setConsultForm({ ...consultForm, followUpDate: tom.toISOString().slice(0, 10), followUpTime: consultForm.followUpTime || "10:30 AM" });
-                      }}
-                      style={{
-                        padding: "5px 10px",
-                        fontSize: "12px",
-                        fontWeight: "800",
-                        borderRadius: "6px",
-                        border: "1.5px solid #10b981",
-                        background: "#ecfdf5",
-                        color: "#065f46",
-                        cursor: "pointer"
-                      }}
-                    >
-                      ⚡ Tomorrow (Daily)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const in2 = new Date();
-                        in2.setDate(in2.getDate() + 2);
-                        setConsultForm({ ...consultForm, followUpDate: in2.toISOString().slice(0, 10), followUpTime: consultForm.followUpTime || "10:30 AM" });
-                      }}
-                      style={{
-                        padding: "5px 10px",
-                        fontSize: "12px",
-                        fontWeight: "800",
-                        borderRadius: "6px",
-                        border: "1.5px solid #94a3b8",
-                        background: "#ffffff",
-                        color: "#0f172a",
-                        cursor: "pointer"
-                      }}
-                    >
-                      In 2 Days
-                    </button>
-                    {consultForm.followUpDate && (
-                      <button
-                        type="button"
-                        onClick={() => setConsultForm({ ...consultForm, followUpDate: "", followUpTime: "" })}
-                        style={{
-                          padding: "5px 10px",
-                          fontSize: "12px",
-                          fontWeight: "800",
-                          borderRadius: "6px",
-                          border: "1.5px solid #fca5a5",
-                          background: "#fef2f2",
-                          color: "#dc2626",
-                          cursor: "pointer"
-                        }}
-                      >
-                        ✕ Clear
-                      </button>
-                    )}
-                  </div>
+                  {(() => {
+                    const tomStr = (() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 1);
+                      return d.toISOString().slice(0, 10);
+                    })();
+                    const in2Str = (() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 2);
+                      return d.toISOString().slice(0, 10);
+                    })();
+                    const isTom = consultForm.followUpDate === tomStr;
+                    const isIn2 = consultForm.followUpDate === in2Str;
+
+                    return (
+                      <div style={{ display: "inline-flex", gap: "6px", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConsultForm({ ...consultForm, followUpDate: tomStr, followUpTime: consultForm.followUpTime || "10:30 AM" });
+                          }}
+                          style={{
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            borderRadius: "6px",
+                            border: isTom ? "1.5px solid #10b981" : "1.5px solid #94a3b8",
+                            background: isTom ? "#ecfdf5" : "#ffffff",
+                            color: isTom ? "#065f46" : "#0f172a",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          ⚡ Tomorrow (Daily)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConsultForm({ ...consultForm, followUpDate: in2Str, followUpTime: consultForm.followUpTime || "10:30 AM" });
+                          }}
+                          style={{
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            borderRadius: "6px",
+                            border: isIn2 ? "1.5px solid #10b981" : "1.5px solid #94a3b8",
+                            background: isIn2 ? "#ecfdf5" : "#ffffff",
+                            color: isIn2 ? "#065f46" : "#0f172a",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          In 2 Days
+                        </button>
+                        {consultForm.followUpDate && (
+                          <button
+                            type="button"
+                            onClick={() => setConsultForm({ ...consultForm, followUpDate: "", followUpTime: "" })}
+                            style={{
+                              padding: "5px 10px",
+                              fontSize: "12px",
+                              fontWeight: "800",
+                              borderRadius: "6px",
+                              border: "1.5px solid #fca5a5",
+                              background: "#fef2f2",
+                              color: "#dc2626",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease"
+                            }}
+                          >
+                            ✕ Clear
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="form-row-2">
                   <label style={{ margin: 0, fontWeight: "700", color: "#334155", fontSize: "12.5px", display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -5142,7 +5174,7 @@ _(Saved in patient clinic records)_`;
                   if (onClose) onClose();
                 }}
               >
-                <span className="sheet-icon cyan">🚪</span>
+                <span className="sheet-icon indigo">🌐</span>
                 <div className="sheet-info">
                   <strong>Exit to Clinic Website</strong>
                   <span>Return to public clinic page</span>

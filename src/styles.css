@@ -2405,8 +2405,6 @@ textarea:focus {
   background: var(--doctor-bg);
   color: var(--text);
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
 }
@@ -5830,8 +5828,6 @@ textarea:focus {
   background: var(--bg-surface, #F4F8FA);
   color: var(--text-primary, #17232B);
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
 }
@@ -5956,54 +5952,6 @@ textarea:focus {
 .portal-exit-btn:hover {
   background: #ef4444;
   color: #ffffff;
-}
-
-.portal-refresh-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(8, 120, 201, 0.25);
-  border: 1px solid rgba(8, 120, 201, 0.5);
-  color: #38bdf8;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 150ms ease;
-}
-
-.portal-refresh-btn:hover {
-  background: #0878c9;
-  color: #ffffff;
-}
-
-.pull-to-refresh-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #0878c9, #0662a4);
-  color: #ffffff;
-  font-size: 12.5px;
-  font-weight: 700;
-  padding: 8px 18px;
-  border-radius: 24px;
-  margin: 8px auto;
-  width: fit-content;
-  box-shadow: 0 4px 16px rgba(8, 120, 201, 0.35);
-  transition: transform 0.15s ease, opacity 0.2s ease;
-  z-index: 99;
-}
-
-.pull-refresh-spin {
-  display: inline-block;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 .portal-close-btn {
@@ -6584,7 +6532,7 @@ textarea:focus {
 .today-visits-view > *:not(.section-header-row),
 .enquiries-view > *:not(.section-header-row),
 .settings-view > *:not(.section-header-row),
-.tab-pane > *:not(.section-title-box):not(.mobile-app-greeting-card):not(.mobile-app-grid-6) {
+.tab-pane > *:not(.section-title-box) {
   margin-left: 12px !important;
   margin-right: 12px !important;
   width: calc(100% - 24px) !important;
@@ -6598,7 +6546,7 @@ textarea:focus {
   .today-visits-view > *:not(.section-header-row),
   .enquiries-view > *:not(.section-header-row),
   .settings-view > *:not(.section-header-row),
-  .tab-pane > *:not(.section-title-box):not(.mobile-app-greeting-card):not(.mobile-app-grid-6) {
+  .tab-pane > *:not(.section-title-box) {
     margin-left: 20px !important;
     margin-right: 20px !important;
     width: calc(100% - 40px) !important;
@@ -8365,14 +8313,10 @@ textarea:focus {
 @media (max-width: 768px) {
   .patient-portal-root,
   .doctor-portal-fullscreen {
-    height: 100% !important;
-    min-height: 100% !important;
+    min-height: 100vh !important;
     display: flex !important;
     flex-direction: column !important;
     background: #f0f4f8 !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    overscroll-behavior-y: contain !important;
   }
 
   .patient-main-container,
@@ -8388,7 +8332,8 @@ textarea:focus {
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    overflow-y: visible !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     box-sizing: border-box !important;
   }
 

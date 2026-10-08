@@ -757,83 +757,23 @@ export default function DoctorPortal({ onClose, themeProps }) {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [showDoctorMore, showAddVisitModal, activeReceipt, selectedPatient, activeTab, onClose]);
 
-  // Lock background document scroll while DoctorPortal is open to prevent unwanted body scrolling
+  // Lock background body scroll when any modal or sheet is open
   useEffect(() => {
-    const origBodyOverflow = document.body.style.overflow;
-    const origHtmlOverflow = document.documentElement.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-
+    const isModalActive = Boolean(
+      selectedPatient || showAddVisitModal || activeReceipt || activeConsultPatient || convertingLead || linkingEnquiry || showDoctorMore
+    );
+    if (isModalActive) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
     return () => {
-      document.body.style.overflow = origBodyOverflow || "";
-      document.documentElement.style.overflow = origHtmlOverflow || "";
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     };
-  }, []);
-
-  // Pull-to-refresh state & touch handlers for Doctor Portal
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isPulling, setIsPulling] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const touchStartY = React.useRef(0);
-  const doctorRootRef = React.useRef(null);
-
-  const handleTouchStart = (e) => {
-    if (!doctorRootRef.current) return;
-    if (doctorRootRef.current.scrollTop <= 5) {
-      touchStartY.current = e.touches[0].clientY;
-      setIsPulling(true);
-    } else {
-      touchStartY.current = 0;
-      setIsPulling(false);
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isPulling || touchStartY.current === 0) return;
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - touchStartY.current;
-    if (diff > 0 && doctorRootRef.current && doctorRootRef.current.scrollTop <= 5) {
-      const damped = Math.min(diff * 0.45, 80);
-      setPullDistance(damped);
-    } else {
-      setPullDistance(0);
-    }
-  };
-
-  const handleRefresh = async () => {
-    try {
-      await Promise.all([
-        fetchStats(),
-        fetchPatients(),
-        fetchTodayVisits(),
-        fetchEnquiries()
-      ]);
-      const webhookUrl = getWebhookUrl();
-      if (webhookUrl) {
-        patients.forEach(p => syncToGoogleSheets("sync_patient", p));
-        todayVisits.forEach(v => syncToGoogleSheets("sync_visit", v));
-      }
-    } catch (err) {
-      console.error("Doctor portal refresh error:", err);
-    }
-  };
-
-  const handleTouchEnd = async () => {
-    if (pullDistance > 40) {
-      setIsRefreshing(true);
-      setPullDistance(0);
-      try {
-        await handleRefresh();
-      } finally {
-        setTimeout(() => setIsRefreshing(false), 500);
-      }
-    } else {
-      setPullDistance(0);
-    }
-    setIsPulling(false);
-    touchStartY.current = 0;
-  };
+  }, [selectedPatient, showAddVisitModal, activeReceipt, activeConsultPatient, convertingLead, linkingEnquiry, showDoctorMore]);
 
   const selectDoctorTab = (tab) => {
     if (tab !== activeTab) {
@@ -1433,18 +1373,19 @@ export default function DoctorPortal({ onClose, themeProps }) {
     setSyncLoading(true);
     try {
       const webhookUrl = getWebhookUrl();
-      if (webhookUrl) {
-        patients.forEach(p => syncToGoogleSheets("sync_patient", p));
-        todayVisits.forEach(v => syncToGoogleSheets("sync_visit", v));
+      if (!webhookUrl) {
+        alert("Please configure your Google Sheets Webhook URL below in settings first.");
+        return;
       }
-      await Promise.all([
-        fetchStats(),
-        fetchPatients(),
-        fetchTodayVisits(),
-        fetchEnquiries()
-      ]);
+      // Trigger sync for all current patients and visits
+      patients.forEach(p => syncToGoogleSheets("sync_patient", p));
+      todayVisits.forEach(v => syncToGoogleSheets("sync_visit", v));
+      alert("All records sent to Google Sheets!");
+      fetchStats();
+      fetchPatients();
+      fetchEnquiries();
     } catch (err) {
-      console.error("Manual sync failed:", err);
+      alert("Sync failed. Check network or webhook settings.");
     } finally {
       setSyncLoading(false);
     }
@@ -1733,13 +1674,7 @@ _(Saved in patient clinic records)_`;
   // RENDER: DOCTOR DASHBOARD & CLINIC MANAGEMENT
   // ==========================================
   return (
-    <div
-      className="doctor-portal-fullscreen"
-      ref={doctorRootRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="doctor-portal-fullscreen">
       <header className="doctor-navbar">
         <div className="doctor-nav-top-row">
           <div className="doctor-nav-brand">
@@ -1834,34 +1769,6 @@ _(Saved in patient clinic records)_`;
           </button>
         </nav>
       </header>
-
-      {/* Pull To Refresh Dynamic Indicator for Doctor Portal */}
-      {(pullDistance > 0 || isRefreshing) && (
-        <div
-          className="pull-to-refresh-container"
-          style={{
-            transform: `translateY(${Math.min(pullDistance, 24)}px)`,
-            opacity: isRefreshing ? 1 : Math.min(pullDistance / 24, 1)
-          }}
-        >
-          {isRefreshing ? (
-            <>
-              <span className="pull-refresh-spin">🔄</span>
-              <span>Syncing with Cloud & Google Sheets...</span>
-            </>
-          ) : pullDistance > 40 ? (
-            <>
-              <span>⚡</span>
-              <span>Release to sync clinical data</span>
-            </>
-          ) : (
-            <>
-              <span>↓</span>
-              <span>Pull down to sync data</span>
-            </>
-          )}
-        </div>
-      )}
 
       {doctorInfo?.isTemporaryPassword && (
         <div className="temp-password-banner">

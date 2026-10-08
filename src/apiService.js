@@ -958,25 +958,15 @@ const PATIENT_PROFILE_KEY = "vindhy_patient_profile";
 
 export const patientApi = {
   getStoredToken() {
-    try {
-      return localStorage.getItem(PATIENT_TOKEN_KEY) || "";
-    } catch (e) {
-      return "";
-    }
+    return localStorage.getItem(PATIENT_TOKEN_KEY);
   },
   getStoredPatient() {
-    try {
-      const raw = localStorage.getItem(PATIENT_PROFILE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
+    const raw = localStorage.getItem(PATIENT_PROFILE_KEY);
+    return raw ? JSON.parse(raw) : null;
   },
   logout() {
-    try {
-      localStorage.removeItem(PATIENT_TOKEN_KEY);
-      localStorage.removeItem(PATIENT_PROFILE_KEY);
-    } catch (e) {}
+    localStorage.removeItem(PATIENT_TOKEN_KEY);
+    localStorage.removeItem(PATIENT_PROFILE_KEY);
   },
   async register(payload) {
     const cleanPhone = String(payload.phone || "").replace(/\D/g, "").slice(-10);
@@ -987,110 +977,154 @@ export const patientApi = {
     const cleanReason = String(payload.reasonForVisit || payload.complaint || "Initial Assessment").trim();
     const cleanPass = String(payload.password || "vindhy").trim();
 
-    const patients = getLocal(KEYS.PATIENTS, []);
-    const newId = `VPR-2026-${1000 + patients.length + 1}`;
-    const todayStr = new Date().toISOString().split("T")[0];
-
-    let existing = patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone);
-    let patientToUse = existing;
-
-    if (!patientToUse) {
-      patientToUse = {
-        patientId: newId,
-        name: cleanName,
-        age: Number(cleanAge) || 30,
-        gender: cleanGender,
-        phone: cleanPhone,
-        altPhone: "",
-        address: cleanAddress,
-        firstVisitReason: cleanReason,
-        registrationDate: todayStr,
-        status: "Active",
-        totalVisits: 1,
-        lastVisitDate: todayStr
-      };
-      patients.unshift(patientToUse);
-      setLocal(KEYS.PATIENTS, patients);
-
-      // Also add initial visit
-      const visits = getLocal(KEYS.VISITS, []);
-      visits.unshift({
-        visitId: `VIS-${patientToUse.patientId}-01`,
-        patientId: patientToUse.patientId,
-        patientName: patientToUse.name,
-        phone: patientToUse.phone,
-        visitNumber: 1,
-        date: todayStr,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        reason: cleanReason,
-        diagnosis: "Registered via Online Portal",
-        treatmentNotes: "Patient self-registered online.",
-        doctor: "Dr. Satyam Vishwakarma",
-        status: "Active"
-      });
-      setLocal(KEYS.VISITS, visits);
-    }
-
-    if (cleanPass) {
-      try {
-        localStorage.setItem("patient_custom_pass_" + patientToUse.patientId, cleanPass);
-      } catch (e) {}
-    }
-
-    const dummyToken = "local_patient_token_" + patientToUse.patientId;
     try {
+      const res = await fetch("/api/patient/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: cleanName,
+          age: cleanAge,
+          gender: cleanGender,
+          phone: cleanPhone,
+          address: cleanAddress,
+          reasonForVisit: cleanReason,
+          complaint: cleanReason,
+          password: cleanPass
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        localStorage.setItem(PATIENT_TOKEN_KEY, data.token);
+        localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(data.patient));
+        return data;
+      }
+      if (!res.ok) {
+        return { ok: false, error: data.error || "Registration failed" };
+      }
+    } catch (err) {
+      // Offline fallback: Create patient record locally
+      const patients = getLocal(KEYS.PATIENTS, []);
+      const newId = `VPR-2026-${1000 + patients.length + 1}`;
+      const todayStr = new Date().toISOString().split("T")[0];
+
+      let existing = patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPhone);
+      let patientToUse = existing;
+
+      if (!patientToUse) {
+        patientToUse = {
+          patientId: newId,
+          name: cleanName,
+          age: Number(cleanAge) || 30,
+          gender: cleanGender,
+          phone: cleanPhone,
+          altPhone: "",
+          address: cleanAddress,
+          firstVisitReason: cleanReason,
+          registrationDate: todayStr,
+          status: "Active",
+          totalVisits: 1,
+          lastVisitDate: todayStr
+        };
+        patients.unshift(patientToUse);
+        setLocal(KEYS.PATIENTS, patients);
+
+        // Also add initial visit
+        const visits = getLocal(KEYS.VISITS, []);
+        visits.unshift({
+          visitId: `VIS-${patientToUse.patientId}-01`,
+          patientId: patientToUse.patientId,
+          patientName: patientToUse.name,
+          phone: patientToUse.phone,
+          visitNumber: 1,
+          date: todayStr,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          reason: cleanReason,
+          diagnosis: "Registered via Online Portal",
+          treatmentNotes: "Patient self-registered online.",
+          doctor: "Dr. Satyam Vishwakarma",
+          status: "Active"
+        });
+        setLocal(KEYS.VISITS, visits);
+
+        // Save custom password locally
+        localStorage.setItem("patient_custom_pass_" + patientToUse.patientId, cleanPass);
+      }
+
+      const dummyToken = "local_patient_token_" + patientToUse.patientId;
       localStorage.setItem(PATIENT_TOKEN_KEY, dummyToken);
       localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...patientToUse, defaultPassword: "vindhy" }));
-    } catch (e) {}
-
-    return { ok: true, token: dummyToken, patient: patientToUse, message: "Registered and signed in successfully!" };
+      return { ok: true, token: dummyToken, patient: patientToUse, message: "Registered and signed in successfully!" };
+    }
   },
 
   async login(identifier, password) {
     const cleanIdentifier = String(identifier || "").trim();
     const cleanPassword = String(password || "").trim();
 
-    const patients = getLocal(KEYS.PATIENTS, []);
-    const cleanId = cleanIdentifier.toUpperCase();
-    const cleanDigits = cleanIdentifier.replace(/\D/g, "").slice(-10);
-
-    const p = patients.find(pt => {
-      const pId = String(pt.patientId || "").trim().toUpperCase();
-      const pPhone = String(pt.phone || "").replace(/\D/g, "").slice(-10);
-      return pId === cleanId || (cleanDigits.length === 10 && pPhone === cleanDigits);
-    });
-
-    if (!p) {
-      return {
-        ok: false,
-        error: "No registered patient account found with this phone number or ID. Please check your details or contact Dr. Satyam Vishwakarma."
-      };
-    }
-
-    const inputPass = cleanPassword;
-    let customPass = null;
     try {
-      customPass = localStorage.getItem("patient_custom_pass_" + p.patientId);
-    } catch (e) {}
-    const isCorrect = customPass ? (inputPass === customPass) : (inputPass.toLowerCase() === "vindhy");
+      const res = await fetch("/api/patient/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: cleanIdentifier, password: cleanPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        localStorage.setItem(PATIENT_TOKEN_KEY, data.token);
+        localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(data.patient));
+        return data;
+      }
+      if (!res.ok) {
+        return { ok: false, error: data.error || "Login failed" };
+      }
+    } catch (err) {
+      // Offline / Static fallback: Check against locally stored patients
+      const patients = getLocal(KEYS.PATIENTS, []);
+      const cleanId = cleanIdentifier.toUpperCase();
+      const cleanDigits = cleanIdentifier.replace(/\D/g, "").slice(-10);
+      const p = patients.find(pt => {
+        const pId = String(pt.patientId || "").trim().toUpperCase();
+        const pPhone = String(pt.phone || "").replace(/\D/g, "").slice(-10);
+        return pId === cleanId || (cleanDigits.length === 10 && pPhone === cleanDigits);
+      });
+      if (!p) {
+        return {
+          ok: false,
+          error: "No registered patient account found with this phone number or ID. Please register first or contact Dr. Satyam Vishwakarma."
+        };
+      }
 
-    if (!isCorrect) {
-      return {
-        ok: false,
-        error: "Incorrect password. The default clinic password is 'vindhy'. If you customized it, please enter your new password."
-      };
-    }
+      const inputPass = cleanPassword;
+      const customPass = localStorage.getItem("patient_custom_pass_" + p.patientId);
+      const isCorrect = customPass ? (inputPass === customPass) : (inputPass.toLowerCase() === "vindhy");
 
-    const dummyToken = "local_patient_token_" + p.patientId;
-    try {
+      if (!isCorrect) {
+        return {
+          ok: false,
+          error: "Incorrect password. The default clinic password is 'vindhy'. If you customized it, please enter your new password."
+        };
+      }
+
+      const dummyToken = "local_patient_token_" + p.patientId;
       localStorage.setItem(PATIENT_TOKEN_KEY, dummyToken);
       localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...p, defaultPassword: "vindhy" }));
-    } catch (e) {}
-
-    return { ok: true, token: dummyToken, patient: p };
+      return { ok: true, token: dummyToken, patient: p };
+    }
   },
 
   async getProfile() {
+    const token = this.getStoredToken();
+    if (!token) return { ok: false, error: "Not logged in" };
+    try {
+      const res = await fetch("/api/patient/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(data.patient));
+        return data;
+      }
+    } catch (e) {}
+
     const storedPatient = this.getStoredPatient();
     if (!storedPatient) return { ok: false, error: "No patient session found." };
 
@@ -1100,13 +1134,23 @@ export const patientApi = {
       (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
     ) || storedPatient;
 
-    try {
-      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
-    } catch (e) {}
+    localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
     return { ok: true, patient: p };
   },
 
   async getRecords() {
+    const token = this.getStoredToken();
+    if (!token) return { ok: false, error: "Not logged in" };
+    try {
+      const res = await fetch("/api/patient/records", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        return data;
+      }
+    } catch (e) {}
+
     const storedPatient = this.getStoredPatient();
     if (!storedPatient) return { ok: false, error: "No patient session found." };
 
@@ -1116,9 +1160,7 @@ export const patientApi = {
       (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
     ) || storedPatient;
 
-    try {
-      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
-    } catch (e) {}
+    localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
 
     const allVisits = getLocal(KEYS.VISITS, []);
     const visits = allVisits.filter(v => 
@@ -1162,17 +1204,38 @@ export const patientApi = {
   },
 
   async changePassword(currentPassword, newPassword) {
-    const p = this.getStoredPatient();
-    if (!p) {
-      return { ok: false, error: "No active patient session found." };
+    const token = this.getStoredToken();
+    if (!token) return { ok: false, error: "Not logged in" };
+    try {
+      const res = await fetch("/api/patient/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        const p = this.getStoredPatient();
+        if (p) localStorage.setItem("patient_custom_pass_" + p.patientId, newPassword);
+        return data;
+      }
+      return { ok: false, error: data.error || "Password change failed" };
+    } catch (e) {
+      // Offline fallback: update local storage custom password
+      const p = this.getStoredPatient();
+      if (p) {
+        const existingCustom = localStorage.getItem("patient_custom_pass_" + p.patientId);
+        const cur = String(currentPassword).trim();
+        const validCur = existingCustom ? (cur === existingCustom) : (cur.toLowerCase() === "vindhy");
+        if (!validCur) {
+          return { ok: false, error: "Current password is incorrect. (Initial default is 'vindhy')." };
+        }
+        localStorage.setItem("patient_custom_pass_" + p.patientId, newPassword);
+        return { ok: true, message: "Password updated successfully!" };
+      }
+      return { ok: false, error: e.message || "Network error" };
     }
-    const existingCustom = localStorage.getItem("patient_custom_pass_" + p.patientId);
-    const cur = String(currentPassword).trim();
-    const validCur = existingCustom ? (cur === existingCustom) : (cur.toLowerCase() === "vindhy");
-    if (!validCur) {
-      return { ok: false, error: "Current password is incorrect. (Initial default is 'vindhy')." };
-    }
-    localStorage.setItem("patient_custom_pass_" + p.patientId, newPassword);
-    return { ok: true, message: "Password updated successfully!" };
   }
 };

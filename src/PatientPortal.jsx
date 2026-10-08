@@ -77,27 +77,30 @@ export default function PatientPortal({ onClose, themeProps }) {
     setExpandedVisitIds((prev) => ({ ...prev, [vId]: !prev[vId] }));
   };
 
-  // Lock background document scroll while PatientPortal is open to prevent unwanted body scrolling
+  // Lock background body scroll when any modal or sheet is open
   useEffect(() => {
-    const origBodyOverflow = document.body.style.overflow;
-    const origHtmlOverflow = document.documentElement.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-
+    const isModalActive = Boolean(previewReceipt || showContactModal || showMoreSheet);
+    if (isModalActive) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
     return () => {
-      document.body.style.overflow = origBodyOverflow || "";
-      document.documentElement.style.overflow = origHtmlOverflow || "";
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     };
-  }, []);
+  }, [previewReceipt, showContactModal, showMoreSheet]);
 
   // Phone hardware/browser back button navigation handling
   useEffect(() => {
+    // Initial history anchor for patient portal
     if (!window.history.state || window.history.state.portal !== "patient") {
       window.history.replaceState({ portal: "patient", tab: "dashboard" }, "");
     }
 
-    const handlePopState = () => {
+    const handlePopState = (event) => {
       // 1. If receipt preview modal is open, close it
       if (previewReceipt) {
         setPreviewReceipt(null);
@@ -118,11 +121,15 @@ export default function PatientPortal({ onClose, themeProps }) {
         setActiveTab("dashboard");
         return;
       }
+      // 5. If already on dashboard and onClose is passed, exit to site
+      if (onClose) {
+        onClose();
+      }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [previewReceipt, showContactModal, showMoreSheet, activeTab]);
+  }, [previewReceipt, showContactModal, showMoreSheet, activeTab, onClose]);
 
   // Tab navigation with history push
   const selectTab = (tab) => {
@@ -184,21 +191,21 @@ export default function PatientPortal({ onClose, themeProps }) {
   const loadPatientData = async () => {
     try {
       const [profileRes, recordsRes] = await Promise.all([
-        patientApi.getProfile().catch(() => ({ ok: false })),
-        patientApi.getRecords().catch(() => ({ ok: false }))
+        patientApi.getProfile(),
+        patientApi.getRecords()
       ]);
 
-      if (profileRes && profileRes.ok && profileRes.patient) {
+      if (profileRes.ok && profileRes.patient) {
         setPatientProfile(profileRes.patient);
       }
-      if (recordsRes && recordsRes.ok) {
+      if (recordsRes.ok) {
         setRecordsData({
           visits: recordsRes.visits || [],
           appointments: recordsRes.appointments || [],
           stats: recordsRes.stats || {
-            totalVisits: (recordsRes.visits || []).length || 1,
-            firstVisitDate: profileRes?.patient?.registrationDate || recordsRes.patient?.registrationDate || "",
-            lastVisitDate: recordsRes.visits?.[0]?.date || profileRes?.patient?.registrationDate || "",
+            totalVisits: recordsRes.visits?.length || 1,
+            firstVisitDate: profileRes?.patient?.registrationDate || recordsRes.patient?.registrationDate,
+            lastVisitDate: recordsRes.visits?.[0]?.date || profileRes?.patient?.registrationDate,
             daysInRecovery: 1,
             activeCondition: recordsRes.visits?.[0]?.diagnosis || profileRes?.patient?.firstVisitReason || "Under Evaluation",
             nextFollowUp: recordsRes.visits?.[0]?.followUpDate || null
@@ -218,36 +225,9 @@ export default function PatientPortal({ onClose, themeProps }) {
     setLoading(true);
     try {
       const res = await patientApi.login(loginForm.identifier, loginForm.password);
-      if (res.ok && res.patient) {
-        // Pre-fetch records immediately to ensure instant rendering without white screen
-        let initialRecords = {
-          visits: [],
-          appointments: [],
-          stats: {
-            totalVisits: 1,
-            firstVisitDate: res.patient.registrationDate || "",
-            lastVisitDate: res.patient.registrationDate || "",
-            daysInRecovery: 1,
-            activeCondition: res.patient.firstVisitReason || "Under Evaluation",
-            nextFollowUp: null
-          }
-        };
-        try {
-          const recRes = await patientApi.getRecords();
-          if (recRes && recRes.ok) {
-            initialRecords = {
-              visits: recRes.visits || [],
-              appointments: recRes.appointments || [],
-              stats: recRes.stats || initialRecords.stats
-            };
-          }
-        } catch (rErr) {
-          console.error("Immediate record fetch error:", rErr);
-        }
-
-        setRecordsData(initialRecords);
-        setPatientProfile(res.patient);
+      if (res.ok) {
         setPatientToken(res.token);
+        setPatientProfile(res.patient);
         setLoginForm({ identifier: "", password: "" });
       } else {
         setLoginError(res.error || "Login failed. Please check your Patient ID or Registered Mobile number.");
@@ -284,33 +264,9 @@ export default function PatientPortal({ onClose, themeProps }) {
         ...registerForm,
         phone: cleanPhone
       });
-      if (res.ok && res.patient) {
-        let initialRecords = {
-          visits: [],
-          appointments: [],
-          stats: {
-            totalVisits: 1,
-            firstVisitDate: res.patient.registrationDate || "",
-            lastVisitDate: res.patient.registrationDate || "",
-            daysInRecovery: 1,
-            activeCondition: res.patient.firstVisitReason || "Under Evaluation",
-            nextFollowUp: null
-          }
-        };
-        try {
-          const recRes = await patientApi.getRecords();
-          if (recRes && recRes.ok) {
-            initialRecords = {
-              visits: recRes.visits || [],
-              appointments: recRes.appointments || [],
-              stats: recRes.stats || initialRecords.stats
-            };
-          }
-        } catch (rErr) {}
-
-        setRecordsData(initialRecords);
-        setPatientProfile(res.patient);
+      if (res.ok) {
         setPatientToken(res.token);
+        setPatientProfile(res.patient);
         setRegisterSuccess("Registration successful! Entering your recovery portal...");
       } else {
         setRegisterError(res.error || "Registration failed. Please check your details.");
@@ -522,15 +478,6 @@ export default function PatientPortal({ onClose, themeProps }) {
             </div>
           </div>
 
-          <button
-            className="portal-refresh-btn"
-            onClick={() => loadPatientData()}
-            title="Refresh clinical records & appointments"
-          >
-            <span>🔄</span>
-            <span className="btn-label">Refresh</span>
-          </button>
-
           <button className="portal-exit-btn" onClick={handleLogout} title="Sign Out">
             <span className="btn-icon">🚪</span>
             <span className="btn-label">Sign Out</span>
@@ -557,8 +504,8 @@ export default function PatientPortal({ onClose, themeProps }) {
         >
           <span className="tab-icon">📅</span>
           <span className="tab-label">Appointments</span>
-          {(recordsData?.appointments?.length || 0) > 0 && (
-            <span className="tab-bubble">{recordsData?.appointments?.length || 0}</span>
+          {recordsData?.appointments?.length > 0 && (
+            <span className="tab-bubble">{recordsData.appointments.length}</span>
           )}
         </button>
 
@@ -607,11 +554,14 @@ export default function PatientPortal({ onClose, themeProps }) {
       {/* Main Content Area */}
       <main className="patient-main-container">
         {/* ================================================================= */}
+        {/* TAB 1: DASHBOARD */}
+        {/* ========================        {/* ================================================================= */}
         {/* TAB 1: DASHBOARD (Mobile Native App 6-Box Layout) */}
         {/* ================================================================= */}
         {activeTab === "dashboard" && (
           <div className="tab-pane dashboard-pane mobile-app-home-view">
-            {/* 1. Dynamic Greeting & Patient Identity */}
+            {/* 1. Dynamic Greeting & Patient Identity (Matching Image 3 Reference) */}
+            {/* 1. Dynamic Greeting & Patient Identity (Matching Image 2 Reference) */}
             <div className="mobile-app-greeting-card">
               <div className="mobile-hero-brand">
                 {CLINIC_LOGO_B64 && (
@@ -636,7 +586,7 @@ export default function PatientPortal({ onClose, themeProps }) {
 
             {/* 2. Desktop Only: Status / Next Appointment Highlight */}
             <div className="app-status-highlight-card desktop-only-widget">
-              {recordsData?.appointments?.[0] ? (
+              {recordsData?.appointments?.length > 0 ? (
                 <div className="status-highlight-body">
                   <div className="status-badge-row">
                     <span className="status-indicator-dot green"></span>
@@ -682,7 +632,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               )}
             </div>
 
-            {/* 3. EXACTLY SIX PROMINENT FEATURE BOXES (2x3 Touch Grid) */}
+            {/* 3. EXACTLY SIX PROMINENT FEATURE BOXES (2x3 Touch Grid Matching Image 3) */}
             <div className="mobile-app-grid-6">
               <button className="mobile-app-card" onClick={() => selectTab("appointments")}>
                 <div className="card-icon-bubble blue">
@@ -690,7 +640,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </div>
                 <strong className="card-title">My Appointments</strong>
                 <span className="card-caption">
-                  {(recordsData?.appointments?.length || 0) > 0
+                  {recordsData?.appointments?.length > 0
                     ? `${recordsData.appointments.length} Scheduled`
                     : "View & manage"}
                 </span>
@@ -702,7 +652,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </div>
                 <strong className="card-title">My Visits</strong>
                 <span className="card-caption">
-                  {(recordsData?.visits?.length || 0) > 0
+                  {recordsData?.visits?.length > 0
                     ? `${recordsData.visits.length} Completed`
                     : "Visit history"}
                 </span>
@@ -746,18 +696,18 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="section-header-flex">
                 <h3>Recent Visit History</h3>
                 <button className="view-all-link" onClick={() => setActiveTab("visits")}>
-                  View All ({(recordsData?.visits || []).length}) →
+                  View All ({recordsData.visits.length}) →
                 </button>
               </div>
 
-              {(recordsData?.visits || []).length === 0 ? (
+              {recordsData.visits.length === 0 ? (
                 <div className="empty-state-box">
                   <span>🩺</span>
                   <p>Your visit history will appear here following your clinic consultation.</p>
                 </div>
               ) : (
                 <div className="timeline-cards-list">
-                  {(recordsData?.visits || []).slice(0, 2).map((v) => {
+                  {recordsData.visits.slice(0, 2).map((v) => {
                     const receiptObj = makeReceiptObj(v);
                     return (
                       <div className="patient-visit-card" key={v.visitId}>
@@ -817,7 +767,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
               <div className="booking-actions">
                 <a
-                  href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile?.name || 'Patient')}%20(ID:%20${patientProfile?.patientId || ''}).%20I%20would%20like%20to%20schedule%20my%20next%20physiotherapy%20visit.`}
+                  href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile.name)}%20(ID:%20${patientProfile.patientId}).%20I%20would%20like%20to%20schedule%20my%20next%20physiotherapy%20visit.`}
                   target="_blank"
                   rel="noreferrer"
                   className="patient-primary-btn"
@@ -889,11 +839,11 @@ export default function PatientPortal({ onClose, themeProps }) {
               );
             })()}
 
-            {(recordsData?.appointments || []).length > 0 && (
+            {recordsData.appointments.length > 0 && (
               <div className="appointments-list-container">
-                <h3 className="appointments-history-title" style={{ color: "#0f172a" }}>Appointment History & Booking Enquiries ({(recordsData?.appointments || []).length})</h3>
+                <h3 className="appointments-history-title" style={{ color: "#0f172a" }}>Appointment History & Booking Enquiries ({recordsData.appointments.length})</h3>
                 <div className="appointments-grid">
-                  {(recordsData?.appointments || []).map((appt) => (
+                  {recordsData.appointments.map((appt) => (
                     <div className="appointment-card" key={appt.id}>
                       <div className="appt-head">
                         <span className="appt-id">{appt.id}</span>
@@ -921,11 +871,11 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "visits" && (
           <div className="tab-pane visits-pane">
             <div className="section-title-box">
-              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Chronological Visit History ({(recordsData?.visits || []).length})</h2>
+              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Chronological Visit History ({recordsData.visits.length})</h2>
               <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Complete record of your physical therapy sessions, clinical evaluations, and doctor recommendations.</p>
             </div>
 
-            {(recordsData?.visits || []).length === 0 ? (
+            {recordsData.visits.length === 0 ? (
               <div className="empty-state-box">
                 <span>🩺</span>
                 <p>No clinic visits logged yet. Records are added in real-time during your consultation with Dr. Satyam Vishwakarma.</p>
@@ -983,7 +933,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                       </div>
                       <div style={{ fontSize: "12.5px", color: "#475569", marginTop: "4px" }}>
                         Condition / Focus: <strong style={{ color: "#0f172a" }}>{latestVisit.reason || latestVisit.diagnosis || "Clinical Session"}</strong>
-                        {patientProfile?.age ? ` • Patient: ${patientProfile?.name || ""} (${patientProfile?.age}y)` : ""}
+                        {patientProfile?.age ? ` • Patient: ${patientProfile.name} (${patientProfile.age}y)` : ""}
                       </div>
 
                       <div style={{
@@ -1183,7 +1133,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                           </div>
                           <div style={{ fontSize: "12.5px", color: "#475569", marginTop: "4px" }}>
                             Condition / Focus: <strong style={{ color: "#0f172a" }}>{v.reason || v.diagnosis || "Clinical Session"}</strong>
-                            {patientProfile?.age ? ` • Patient: ${patientProfile?.name || ""} (${patientProfile.age}y)` : ""}
+                            {patientProfile?.age ? ` • Patient: ${patientProfile.name} (${patientProfile.age}y)` : ""}
                           </div>
 
                           <div style={{
@@ -1492,7 +1442,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="overview-grid">
                 <div className="grid-box">
                   <label>Primary Diagnosis</label>
-                  <h4>{latestVisit?.diagnosis || patientProfile?.firstVisitReason || "Under Comprehensive Evaluation"}</h4>
+                  <h4>{latestVisit?.diagnosis || patientProfile.firstVisitReason || "Under Comprehensive Evaluation"}</h4>
                 </div>
                 <div className="grid-box">
                   <label>Consulting Physiotherapist</label>
@@ -1500,7 +1450,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </div>
                 <div className="grid-box">
                   <label>Initial Assessment Date</label>
-                  <h4>{cleanDateOnly(recordsData?.stats?.firstVisitDate || patientProfile?.registrationDate || "N/A")}</h4>
+                  <h4>{cleanDateOnly(recordsData.stats.firstVisitDate || patientProfile.registrationDate)}</h4>
                 </div>
                 <div className="grid-box">
                   <label>Total Sessions Attended</label>
@@ -1992,8 +1942,8 @@ export default function PatientPortal({ onClose, themeProps }) {
         >
           <span className="nav-icon-4">📅</span>
           <span className="nav-label-4">Appointments</span>
-          {(recordsData?.appointments?.length || 0) > 0 && (
-            <span className="bottom-nav-badge">{recordsData?.appointments?.length || 0}</span>
+          {recordsData?.appointments?.length > 0 && (
+            <span className="bottom-nav-badge">{recordsData.appointments.length}</span>
           )}
         </button>
 
@@ -2003,8 +1953,8 @@ export default function PatientPortal({ onClose, themeProps }) {
         >
           <span className="nav-icon-4">🩺</span>
           <span className="nav-label-4">Visits</span>
-          {(recordsData?.visits?.length || 0) > 0 && (
-            <span className="bottom-nav-badge">{recordsData?.visits?.length || 0}</span>
+          {recordsData?.visits?.length > 0 && (
+            <span className="bottom-nav-badge">{recordsData.visits.length}</span>
           )}
         </button>
 

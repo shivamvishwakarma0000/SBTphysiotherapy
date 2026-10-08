@@ -3075,13 +3075,22 @@ textarea:focus {
 }
 
 /* Enrollment Form Card */
-.enroll-form-card {
-  background: var(--bg-card);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 28px;
-  margin-top: 18px;
-  box-shadow: var(--shadow);
+.enroll-form-card,
+.add-visit-card,
+.consult-form {
+  background: #ffffff !important;
+  border: 1.5px solid #0f2e46 !important;
+  border-radius: 14px !important;
+  padding: 24px !important;
+  margin-top: 14px !important;
+  box-shadow: 0 4px 18px rgba(7, 25, 39, 0.08) !important;
+}
+
+[data-theme="dark"] .enroll-form-card,
+[data-theme="dark"] .add-visit-card,
+[data-theme="dark"] .consult-form {
+  background: #0f172a !important;
+  border: 1.5px solid #334155 !important;
 }
 
 .enroll-form-card label,
@@ -3095,12 +3104,11 @@ textarea:focus {
 }
 
 .form-section-title,
-[data-theme="light"] .form-section-title,
-[data-theme="dark"] .form-section-title {
+[data-theme="light"] .form-section-title {
   background: #f0f9ff !important;
   color: #0369a1 !important;
-  border: 1.5px solid #bae6fd !important;
-  border-left: 4px solid #0284c7 !important;
+  border: 1.5px solid #38bdf8 !important;
+  border-left: 5px solid #0284c7 !important;
   border-radius: 8px !important;
   padding: 10px 14px !important;
   margin: 22px 0 14px 0 !important;
@@ -3108,7 +3116,14 @@ textarea:focus {
   font-weight: 800 !important;
   letter-spacing: 0.2px !important;
   display: block !important;
-  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.1) !important;
+}
+
+[data-theme="dark"] .form-section-title {
+  background: #0c2d48 !important;
+  color: #38bdf8 !important;
+  border: 1.5px solid #0284c7 !important;
+  border-left: 5px solid #38bdf8 !important;
 }
 
 .form-row-3 {
@@ -4574,23 +4589,40 @@ textarea:focus {
 
 .empty-waiting-card {
   grid-column: 1 / -1;
-  background: var(--bg-card);
-  border: 1px dashed var(--line);
-  border-radius: 12px;
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--muted);
+  background: #ffffff !important;
+  border: 2px solid #0f2e46 !important;
+  border-radius: 16px !important;
+  padding: 38px 24px !important;
+  text-align: center !important;
+  box-shadow: 0 6px 20px rgba(7, 25, 39, 0.08) !important;
+}
+
+[data-theme="dark"] .empty-waiting-card {
+  background: #0f172a !important;
+  border: 2px solid #38bdf8 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .empty-waiting-card h3 {
-  color: var(--heading);
-  margin: 12px 0 6px;
-  font-size: 18px;
+  color: #0f172a !important;
+  margin: 12px 0 6px !important;
+  font-size: 19px !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="dark"] .empty-waiting-card h3 {
+  color: #ffffff !important;
 }
 
 .empty-waiting-card p {
-  margin: 0;
-  font-size: 13.5px;
+  color: #475569 !important;
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .empty-waiting-card p {
+  color: #94a3b8 !important;
 }
 
 .boxy-consult-card {

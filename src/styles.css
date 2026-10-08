@@ -6584,7 +6584,7 @@ textarea:focus {
 .today-visits-view > *:not(.section-header-row),
 .enquiries-view > *:not(.section-header-row),
 .settings-view > *:not(.section-header-row),
-.tab-pane > *:not(.section-title-box) {
+.tab-pane > *:not(.section-title-box):not(.mobile-app-greeting-card):not(.mobile-app-grid-6) {
   margin-left: 12px !important;
   margin-right: 12px !important;
   width: calc(100% - 24px) !important;
@@ -6598,7 +6598,7 @@ textarea:focus {
   .today-visits-view > *:not(.section-header-row),
   .enquiries-view > *:not(.section-header-row),
   .settings-view > *:not(.section-header-row),
-  .tab-pane > *:not(.section-title-box) {
+  .tab-pane > *:not(.section-title-box):not(.mobile-app-greeting-card):not(.mobile-app-grid-6) {
     margin-left: 20px !important;
     margin-right: 20px !important;
     width: calc(100% - 40px) !important;

@@ -1079,7 +1079,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                       </div>
                       <div style={{ fontSize: "12.5px", color: "#475569", marginTop: "4px" }}>
                         Condition / Focus: <strong style={{ color: "#0f172a" }}>{latestVisit.reason || latestVisit.diagnosis || "Clinical Session"}</strong>
-                        {patientProfile?.age ? ` • Patient: ${patientProfile.name} (${patientProfile.age}y)` : ""}
+                        {patientProfile?.age ? ` • Patient: ${patientProfile?.name || ""} (${patientProfile?.age}y)` : ""}
                       </div>
 
                       <div style={{
@@ -1279,7 +1279,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                           </div>
                           <div style={{ fontSize: "12.5px", color: "#475569", marginTop: "4px" }}>
                             Condition / Focus: <strong style={{ color: "#0f172a" }}>{v.reason || v.diagnosis || "Clinical Session"}</strong>
-                            {patientProfile?.age ? ` • Patient: ${patientProfile.name} (${patientProfile.age}y)` : ""}
+                            {patientProfile?.age ? ` • Patient: ${patientProfile?.name || ""} (${patientProfile.age}y)` : ""}
                           </div>
 
                           <div style={{

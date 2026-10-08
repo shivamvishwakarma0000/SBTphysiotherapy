@@ -16,7 +16,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     
-    <!-- Anti-Flash Early Theme Initializer -->
+    <!-- Anti-Flash Early Theme Initializer & Anti-Inspect Security -->
     <script>
       (function() {
         try {
@@ -30,6 +30,47 @@
             metaColor.setAttribute('content', resolved === 'dark' ? '#0B1F2A' : '#0878C9');
           }
         } catch (e) {}
+
+        // Global Anti-Inspect and Security Protection
+        try {
+          document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+          }, { passive: false });
+
+          document.addEventListener('keydown', function(e) {
+            // F12
+            if (e.key === 'F12' || e.keyCode === 123) {
+              e.preventDefault();
+              return false;
+            }
+            // Ctrl+Shift+I / Cmd+Option+I (Inspect)
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.keyCode === 73)) {
+              e.preventDefault();
+              return false;
+            }
+            // Ctrl+Shift+J / Cmd+Option+J (Console)
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'J' || e.key === 'j' || e.keyCode === 74)) {
+              e.preventDefault();
+              return false;
+            }
+            // Ctrl+Shift+C / Cmd+Option+C (Inspect Element)
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'C' || e.key === 'c' || e.keyCode === 67)) {
+              e.preventDefault();
+              return false;
+            }
+            // Ctrl+U / Cmd+Option+U (View Source)
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) {
+              e.preventDefault();
+              return false;
+            }
+            // Ctrl+S / Cmd+S (Save Source)
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'S' || e.key === 's' || e.keyCode === 83) && !e.shiftKey) {
+              e.preventDefault();
+              return false;
+            }
+          }, { passive: false });
+        } catch (err) {}
       })();
     </script>
     

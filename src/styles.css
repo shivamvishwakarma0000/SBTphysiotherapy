@@ -2407,6 +2407,7 @@ textarea:focus {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  animation: fadeIn 200ms ease;
 }
 
 .doctor-navbar {
@@ -5830,6 +5831,7 @@ textarea:focus {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  animation: fadeIn 200ms ease;
 }
 
 .patient-header {

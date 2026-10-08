@@ -733,8 +733,8 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "appointments" && (
           <div className="tab-pane appointments-pane">
             <div className="section-title-box">
-              <h2>My Appointments & Bookings</h2>
-              <p>Review scheduled clinic appointments and submit new appointment requests.</p>
+              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>My Appointments & Bookings</h2>
+              <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Review scheduled clinic appointments and submit new appointment requests.</p>
             </div>
 
             <div className="appointment-booking-card">
@@ -847,8 +847,8 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "visits" && (
           <div className="tab-pane visits-pane">
             <div className="section-title-box">
-              <h2>Chronological Visit History ({recordsData.visits.length})</h2>
-              <p>Complete record of your physical therapy sessions, clinical evaluations, and doctor recommendations.</p>
+              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Chronological Visit History ({recordsData.visits.length})</h2>
+              <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Complete record of your physical therapy sessions, clinical evaluations, and doctor recommendations.</p>
             </div>
 
             {recordsData.visits.length === 0 ? (
@@ -1269,8 +1269,8 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "receipts" && (
           <div className="tab-pane receipts-pane">
             <div className="section-title-box">
-              <h2>Official Consultation & Fee Receipts</h2>
-              <p>Download and print clinic-authenticated receipts featuring official registration, clinic header, and Dr. Satyam Vishwakarma's signature.</p>
+              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Official Consultation & Fee Receipts</h2>
+              <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Download and print clinic-authenticated receipts featuring official registration, clinic header, and Dr. Satyam Vishwakarma's signature.</p>
             </div>
 
             {sortedVisits.length === 0 ? (
@@ -1405,8 +1405,8 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "treatment" && (
           <div className="tab-pane treatment-pane">
             <div className="section-title-box">
-              <h2>My Treatment & Care Summary</h2>
-              <p>Overview of your diagnosis, therapy plan, and personalized medical guidance.</p>
+              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>My Treatment & Care Summary</h2>
+              <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Overview of your diagnosis, therapy plan, and personalized medical guidance.</p>
             </div>
 
             <div className="treatment-overview-card">
@@ -1473,8 +1473,8 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "exercises" && (
           <div className="tab-pane exercises-pane">
             <div className="section-title-box">
-              <h2>Home Rehabilitation Exercise Library</h2>
-              <p>Physiotherapist-guided home exercise regimens to accelerate your mobility and recovery between clinic visits.</p>
+              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Home Rehabilitation Exercise Library</h2>
+              <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Physiotherapist-guided home exercise regimens to accelerate your mobility and recovery between clinic visits.</p>
             </div>
 
             <div className="exercises-grid">
@@ -1570,8 +1570,8 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "security" && (
           <div className="tab-pane security-pane">
             <div className="section-title-box" style={{ marginBottom: "16px" }}>
-              <h2 style={{ fontSize: "20px", fontWeight: "800", margin: "0 0 4px 0" }}>My Profile & Password Settings</h2>
-              <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>View your patient registration details and manage your portal login password.</p>
+              <h2 style={{ color: "#ffffff", fontSize: "20px", fontWeight: "800", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>My Profile & Password Settings</h2>
+              <p style={{ margin: 0, fontSize: "13.5px", color: "#e2e8f0", opacity: 0.95 }}>View your patient registration details and manage your portal login password.</p>
             </div>
 
             {/* 1. MASTER TOP HEADER BOX (Matching Image 5 Reference) */}

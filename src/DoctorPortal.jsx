@@ -1947,8 +1947,8 @@ _(Saved in patient clinic records)_`;
           <div className="enroll-view">
             <div className="section-header-row">
               <div>
-                <h2>Step 1: Patient Intake & Registration</h2>
-                <p>Register arriving patient details & problem history. Patient will be placed in the Waiting Queue for Dr. Satyam Vishwakarma.</p>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Step 1: Patient Intake & Registration</h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Register arriving patient details & problem history. Patient will be placed in the Waiting Queue for Dr. Satyam Vishwakarma.</p>
               </div>
             </div>
 
@@ -2245,8 +2245,8 @@ _(Saved in patient clinic records)_`;
           <div className="waiting-queue-view">
             <div className="section-header-row">
               <div>
-                <h2>Step 2: Patients Awaiting Doctor Consultation</h2>
-                <p>Enrolled patients currently waiting in the clinic. Open a patient to perform examination, enter diagnosis & fee, and issue the official receipt.</p>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Step 2: Patients Awaiting Doctor Consultation</h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Enrolled patients currently waiting in the clinic. Open a patient to perform examination, enter diagnosis & fee, and issue the official receipt.</p>
               </div>
               <button className="primary-btn" onClick={() => setActiveTab("new-patient")}>
                 ➕ 1. Intake New Patient
@@ -2331,24 +2331,10 @@ _(Saved in patient clinic records)_`;
         {/* ================= 3. PATIENTS DIRECTORY ================= */}
         {activeTab === "patients" && (
           <div className="patients-directory-view">
-            <div className="patient-directory-master-banner" style={{
-              background: "linear-gradient(135deg, #071927, #0B2A3D)",
-              borderRadius: "14px",
-              padding: "18px 20px",
-              color: "#ffffff",
-              marginBottom: "16px",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-              boxShadow: "0 6px 20px rgba(7, 25, 39, 0.25)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "12px"
-            }}>
-              <div style={{ flex: "1 1 240px", minWidth: 0 }}>
-                <h2 className="directory-banner-title" style={{ color: "#ffffff", margin: 0, fontSize: "20px", fontWeight: "800", letterSpacing: "-0.3px", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
-                  Patient Directory & Clinical Profiles
-                </h2>
+            <div className="section-header-row">
+              <div>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Patient Directory & Clinical Profiles</h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Complete directory of registered patients, clinical history & records.</p>
               </div>
               <button
                 className="primary-btn"
@@ -2357,11 +2343,12 @@ _(Saved in patient clinic records)_`;
                   background: "linear-gradient(135deg, #0284c7, #0369a1)",
                   color: "#ffffff",
                   fontWeight: "800",
-                  padding: "10px 18px",
+                  padding: "8px 16px",
                   borderRadius: "8px",
                   border: "none",
-                  boxShadow: "0 4px 12px rgba(2, 132, 199, 0.35)",
-                  whiteSpace: "nowrap"
+                  boxShadow: "0 2px 8px rgba(2, 132, 199, 0.3)",
+                  whiteSpace: "nowrap",
+                  fontSize: "13px"
                 }}
               >
                 ➕ Intake New Patient
@@ -2649,8 +2636,8 @@ _(Saved in patient clinic records)_`;
           <div className="today-visits-view">
             <div className="section-header-row">
               <div>
-                <h2>Today's Patient Queue ({new Date().toISOString().slice(0, 10)})</h2>
-                <p>Real-time list of all patient consultations logged for today.</p>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Today's Patient Queue ({new Date().toISOString().slice(0, 10)})</h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Real-time list of all patient consultations logged for today.</p>
               </div>
               <button className="secondary-btn" onClick={() => handleExportCSV("visits")}>
                 📥 Export Today's Visits (CSV)
@@ -2711,8 +2698,8 @@ _(Saved in patient clinic records)_`;
 
             <div className="section-header-row">
               <div>
-                <h2>Website Consultation Leads ({enquiries.length})</h2>
-                <p>Clean, organized cards for every consultation request. Convert directly to registered patients, hide/archive, or delete spam.</p>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Website Consultation Leads ({enquiries.length})</h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Clean, organized cards for every consultation request. Convert directly to registered patients, hide/archive, or delete spam.</p>
               </div>
               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginBottom: "14px" }}>
                 <button className="secondary-btn" onClick={() => handleExportCSV("enquiries")}>
@@ -3339,8 +3326,8 @@ _(Saved in patient clinic records)_`;
           <div className="settings-view">
             <div className="section-header-row">
               <div>
-                <h2>Settings & Cloud Synchronization</h2>
-                <p>Manage doctor security credentials, real-time Google Sheets sync, and database backups.</p>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Settings & Cloud Synchronization</h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Manage doctor security credentials, real-time Google Sheets sync, and database backups.</p>
               </div>
             </div>
 

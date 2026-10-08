@@ -8899,14 +8899,14 @@ textarea:focus {
   color: #0f172a !important;
 }
 
-[data-theme="light"] .doctor-main-content h1,
-[data-theme="light"] .doctor-main-content h2,
-[data-theme="light"] .doctor-main-content h3,
-[data-theme="light"] .doctor-main-content h4,
-[data-theme="light"] .patient-main-container h1:not(.greeting-headline),
-[data-theme="light"] .patient-main-container h2:not(.greeting-headline),
-[data-theme="light"] .patient-main-container h3,
-[data-theme="light"] .patient-main-container h4 {
+[data-theme="light"] .doctor-main-content h1:not(.section-header-row h1),
+[data-theme="light"] .doctor-main-content h2:not(.section-header-row h2),
+[data-theme="light"] .doctor-main-content h3:not(.section-header-row h3),
+[data-theme="light"] .doctor-main-content h4:not(.section-header-row h4),
+[data-theme="light"] .patient-main-container h1:not(.section-title-box h1):not(.greeting-headline),
+[data-theme="light"] .patient-main-container h2:not(.section-title-box h2):not(.greeting-headline),
+[data-theme="light"] .patient-main-container h3:not(.section-title-box h3),
+[data-theme="light"] .patient-main-container h4:not(.section-title-box h4) {
   color: #0f172a !important;
 }
 
@@ -8919,6 +8919,14 @@ textarea:focus {
 .section-header-row h2,
 .section-header-row h3,
 .section-header-row h4,
+.patient-main-container .section-title-box h1,
+.patient-main-container .section-title-box h2,
+.patient-main-container .section-title-box h3,
+.patient-main-container .section-title-box h4,
+.doctor-main-content .section-header-row h1,
+.doctor-main-content .section-header-row h2,
+.doctor-main-content .section-header-row h3,
+.doctor-main-content .section-header-row h4,
 [data-theme="light"] .section-title-box h1,
 [data-theme="light"] .section-title-box h2,
 [data-theme="light"] .section-title-box h3,
@@ -8926,16 +8934,29 @@ textarea:focus {
 [data-theme="light"] .section-header-row h1,
 [data-theme="light"] .section-header-row h2,
 [data-theme="light"] .section-header-row h3,
-[data-theme="light"] .section-header-row h4 {
+[data-theme="light"] .section-header-row h4,
+[data-theme="light"] .patient-main-container .section-title-box h1,
+[data-theme="light"] .patient-main-container .section-title-box h2,
+[data-theme="light"] .patient-main-container .section-title-box h3,
+[data-theme="light"] .patient-main-container .section-title-box h4,
+[data-theme="light"] .doctor-main-content .section-header-row h1,
+[data-theme="light"] .doctor-main-content .section-header-row h2,
+[data-theme="light"] .doctor-main-content .section-header-row h3,
+[data-theme="light"] .doctor-main-content .section-header-row h4 {
   color: #ffffff !important;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
 }
 
 .section-title-box p,
 .section-header-row p,
+.patient-main-container .section-title-box p,
+.doctor-main-content .section-header-row p,
 [data-theme="light"] .section-title-box p,
-[data-theme="light"] .section-header-row p {
-  color: #cbd5e1 !important;
+[data-theme="light"] .section-header-row p,
+[data-theme="light"] .patient-main-container .section-title-box p,
+[data-theme="light"] .doctor-main-content .section-header-row p {
+  color: #e2e8f0 !important;
+  opacity: 0.95 !important;
 }
 
 /* Master Dark Headers always retain crisp white text */

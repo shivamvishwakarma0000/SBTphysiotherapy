@@ -77,21 +77,19 @@ export default function PatientPortal({ onClose, themeProps }) {
     setExpandedVisitIds((prev) => ({ ...prev, [vId]: !prev[vId] }));
   };
 
-  // Lock background body scroll when any modal or sheet is open
+  // Lock background document scroll while PatientPortal is open to prevent unwanted body scrolling
   useEffect(() => {
-    const isModalActive = Boolean(previewReceipt || showContactModal || showMoreSheet);
-    if (isModalActive) {
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-    }
+    const origBodyOverflow = document.body.style.overflow;
+    const origHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
     return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
+      document.body.style.overflow = origBodyOverflow || "";
+      document.documentElement.style.overflow = origHtmlOverflow || "";
     };
-  }, [previewReceipt, showContactModal, showMoreSheet]);
+  }, []);
 
   // Phone hardware/browser back button navigation handling
   useEffect(() => {

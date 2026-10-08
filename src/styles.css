@@ -2405,6 +2405,8 @@ textarea:focus {
   background: var(--doctor-bg);
   color: var(--text);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
 }
@@ -5828,6 +5830,8 @@ textarea:focus {
   background: var(--bg-surface, #F4F8FA);
   color: var(--text-primary, #17232B);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
 }
@@ -8313,10 +8317,14 @@ textarea:focus {
 @media (max-width: 768px) {
   .patient-portal-root,
   .doctor-portal-fullscreen {
-    min-height: 100vh !important;
+    height: 100% !important;
+    min-height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     background: #f0f4f8 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
   }
 
   .patient-main-container,
@@ -8332,8 +8340,7 @@ textarea:focus {
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
+    overflow-y: visible !important;
     box-sizing: border-box !important;
   }
 

@@ -1677,7 +1677,7 @@ _(Saved in patient clinic records)_`;
             />
             <div className="doctor-brand-text">
               <strong>Dr. Satyam Vishwakarma</strong>
-              <span>Consultant Physiotherapist (B.P.T.)</span>
+              <span>Consultant Physiotherapist (D.P.T., B.P.T.)</span>
             </div>
           </div>
 

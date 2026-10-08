@@ -22,7 +22,7 @@ const navItems = [
 ];
 
 const stats = [
-  ["BPT, DPT", "Clinical Diagnostics & Therapeutics"],
+  ["DPT, BPT", "Clinical Diagnostics & Therapeutics"],
   ["CCYP BHU", "Yoga & Movement Biomechanics"],
   ["Neuro + Sports", "Advanced Clinical Protocols"]
 ];
@@ -108,7 +108,7 @@ const programs = [
 ];
 
 const timeline = [
-  ["Clinical Foundation & Training", "Advanced diagnostic expertise and clinical therapeutics strengthened through BPT & DPT degrees."],
+  ["Clinical Foundation & Training", "Advanced diagnostic expertise and clinical therapeutics strengthened through DPT & BPT degrees."],
   ["BHU CCYP Depth", "Combining evidence-based physiotherapy with CCYP depth from Banaras Hindu University for holistic recovery."],
   ["Specialized Clinical Focus", "Tailored treatment tracks for spine care, cupping therapy, neuro & paralysis rehab, and pediatric care."],
   ["Patient-Centered Results", "Serving patients across Vindhyachal, Mirzapur, and Eastern U.P. with compassionate, evidence-based care."]
@@ -431,7 +431,7 @@ function LeadConsultant() {
           </div>
           <h2>Dr. Satyam Vishwakarma</h2>
           <p className="consultant-qualification">
-            Consultant Physiotherapist • BPT, DPT, CCYP (BHU)
+            Consultant Physiotherapist • DPT, BPT, CCYP (BHU)
           </p>
 
           <p className="consultant-bio">
@@ -648,11 +648,11 @@ function Heritage() {
           <p className="eyebrow">BANARAS HINDU UNIVERSITY DEPTH</p>
           <h2>Clinical diagnostic rigor paired with therapeutic movement science.</h2>
           <p>
-            <strong>DR. SATYAM VISHWAKARMA</strong> combines clinical physiotherapy education (BPT, DPT) with CCYP training from Banaras Hindu University (BHU), creating an integrative model of care focused on musculoskeletal health, neuromuscular retraining, and long-term functional recovery.
+            <strong>DR. SATYAM VISHWAKARMA</strong> combines clinical physiotherapy education (DPT, BPT) with CCYP training from Banaras Hindu University (BHU), creating an integrative model of care focused on musculoskeletal health, neuromuscular retraining, and long-term functional recovery.
           </p>
           <div className="credential-row">
-            <span>BPT</span>
             <span>DPT</span>
+            <span>BPT</span>
             <span>CCYP (BHU)</span>
             <span>Consultant Physiotherapist</span>
           </div>
@@ -1050,7 +1050,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
             <ClinicLogo isDark={true} />
             <h2>DR. SATYAM VISHWAKARMA</h2>
           </div>
-          <p className="footer-credentials">Consultant Physiotherapist | BPT, DPT, CCYP (BHU)</p>
+          <p className="footer-credentials">Consultant Physiotherapist | DPT, BPT, CCYP (BHU)</p>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.4)", borderRadius: "20px", padding: "4px 10px", margin: "6px 0 10px", color: "#34d399", fontSize: "11.5px", fontWeight: "800" }}>
             <span>⭐</span>
             <span>7+ Years Clinical Excellence</span>
@@ -1145,7 +1145,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
         </div>
       </div>
       <div className="footer-bottom-bar">
-        <p>© {new Date().getFullYear()} Vindhy Physio & Rehab Center. All rights reserved. Dr. Satyam Vishwakarma (BPT, DPT, CCYP BHU) • 7+ Years Experience.</p>
+        <p>© {new Date().getFullYear()} Vindhy Physio & Rehab Center. All rights reserved. Dr. Satyam Vishwakarma (DPT, BPT, CCYP BHU) • 7+ Years Experience.</p>
       </div>
     </footer>
   );

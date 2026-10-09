@@ -191,9 +191,9 @@ function initializeLocalDatabase() {
   if (!localStorage.getItem(KEYS.PATIENTS)) {
     setLocal(KEYS.PATIENTS, []);
   } else {
-    // Purge legacy ghost test data (e.g. shivam / 2027 test records)
+    // Clean corrupt null/undefined records
     const pts = getLocal(KEYS.PATIENTS, []);
-    const cleanPts = pts.filter(p => p && p.patientId !== "VPR-2026-2027" && p.name?.toLowerCase() !== "shivam");
+    const cleanPts = pts.filter(p => p && p.patientId);
     if (cleanPts.length !== pts.length) {
       setLocal(KEYS.PATIENTS, cleanPts);
     }
@@ -203,7 +203,7 @@ function initializeLocalDatabase() {
     setLocal(KEYS.VISITS, []);
   } else {
     const vts = getLocal(KEYS.VISITS, []);
-    const cleanVts = vts.filter(v => v && v.patientId !== "VPR-2026-2027" && v.patientName?.toLowerCase() !== "shivam");
+    const cleanVts = vts.filter(v => v && v.visitId);
     if (cleanVts.length !== vts.length) {
       setLocal(KEYS.VISITS, cleanVts);
     }
@@ -213,6 +213,7 @@ function initializeLocalDatabase() {
     setLocal(KEYS.ENQUIRIES, []);
   }
 }
+
 
 export function clearLocalPatientsCache() {
   localStorage.removeItem(KEYS.PATIENTS);
@@ -295,6 +296,10 @@ export async function restoreFromGoogleSheets() {
           const cleanPhone = rp.phone ? String(rp.phone).trim() : "";
           const nPh = normPhone(cleanPhone);
 
+          const patientStatus = (rp.status && String(rp.status).trim()) 
+            ? String(rp.status).trim() 
+            : (Number(rp.totalVisits) > 0 ? "Active" : "Waiting for Doctor");
+
           const patientObj = {
             ...rp,
             patientId: cleanId,
@@ -304,8 +309,8 @@ export async function restoreFromGoogleSheets() {
             gender: rp.gender || "Male",
             address: rp.address || "Vindhyachal, Mirzapur",
             firstVisitReason: rp.firstVisitReason || "Physiotherapy Consultation",
-            status: rp.status || "Active",
-            totalVisits: 0,
+            status: patientStatus,
+            totalVisits: Number(rp.totalVisits) || 0,
             registrationDate: rp.registrationDate ? String(rp.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
             lastVisitDate: rp.lastVisitDate ? String(rp.lastVisitDate).slice(0, 10) : (rp.registrationDate ? String(rp.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10))
           };
@@ -314,6 +319,23 @@ export async function restoreFromGoogleSheets() {
           if (nPh) phoneToIdMap.set(nPh, cleanId || nPh);
         }
       });
+
+      // Merge all locally registered patients so newly enrolled patients in browser never disappear
+      const currentLocalPatients = getLocal(KEYS.PATIENTS, []);
+      currentLocalPatients.forEach(lp => {
+        if (lp && lp.patientId && !deletedPatientIds.has(lp.patientId)) {
+          if (!pMap.has(lp.patientId)) {
+            pMap.set(lp.patientId, lp);
+          } else {
+            const sheetP = pMap.get(lp.patientId);
+            const resolvedStatus = (lp.status === "Waiting for Doctor" || sheetP.status === "Waiting for Doctor")
+              ? "Waiting for Doctor"
+              : (sheetP.status || lp.status || "Active");
+            pMap.set(lp.patientId, { ...sheetP, ...lp, status: resolvedStatus });
+          }
+        }
+      });
+
 
       // 2. Process Google Sheets Visits (Strictly from Google Sheets, do NOT resurrect deleted visits)
       const vMap = new Map();
@@ -783,6 +805,11 @@ export const api = {
 
     // 3. Remove permanently from local storage collections
     const patients = getLocal(KEYS.PATIENTS, []);
+    const patientToDelete = patients.find(p => p.patientId === patientId);
+    if (patientToDelete && patientToDelete.phone) {
+      deletedPatientIds.add(patientToDelete.phone);
+      setLocal(KEYS.DELETED_PATIENT_IDS, Array.from(deletedPatientIds));
+    }
     const visits = getLocal(KEYS.VISITS, []);
     const authList = getLocal(KEYS.PATIENT_AUTH, []);
 
@@ -794,8 +821,12 @@ export const api = {
     setLocal(KEYS.VISITS, updatedVisits);
     setLocal(KEYS.PATIENT_AUTH, updatedAuth);
 
-    // 4. Sync deletion to Google Sheets
-    syncToGoogleSheets("delete_patient", { patientId });
+    // 4. Sync deletion to Google Sheets Webhook
+    syncToGoogleSheets("delete_patient", {
+      patientId,
+      phone: patientToDelete?.phone || "",
+      name: patientToDelete?.name || ""
+    });
 
     return { ok: true, message: `Patient ${patientId} permanently deleted.` };
   },

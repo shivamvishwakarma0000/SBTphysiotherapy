@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 
 /**
- * Universal Native-Style Long-Pull-To-Refresh
- * - Prevents accidental triggers during normal scrolling.
- * - Requires an intentional, deliberate LONG downward drag (~110px+ finger travel)
- *   started strictly at the top of the page.
+ * Ultra-Safe Native-Style Long-Pull-To-Refresh
+ * - Completely prevents accidental triggers during regular page reading / scrolling.
+ * - Requires a VERY LONG, intentional downward drag (180px+ finger travel).
+ * - Ignores initial 60px swipe (deadzone).
+ * - Only initiates if strictly at the very top (scrollY === 0).
  */
 export default function PullToRefresh({ onRefresh, children, className = "", disabled = false }) {
   const [pullY, setPullY] = useState(0);
@@ -18,10 +19,10 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
   const isReadyRef = useRef(false);
   const containerRef = useRef(null);
 
-  // Calibrated long-pull parameters
-  const DEADZONE = 35;        // First 35px of swipe is ignored (prevents micro-scroll triggers)
-  const PULL_THRESHOLD = 110; // Must pull at least 110px physically to activate
-  const MAX_VISUAL_PULL = 75; // Maximum indicator travel
+  // Intentional Very-Long-Pull Constants (Prevents all accidental triggers)
+  const DEADZONE = 60;        // Initial 60px downward movement is completely ignored
+  const PULL_THRESHOLD = 180; // Must pull down at least 180px physically to activate refresh
+  const MAX_VISUAL_PULL = 72; // Maximum visual travel for the floating spinner
 
   useEffect(() => {
     if (disabled) return;
@@ -67,8 +68,8 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
       const diffY = currentY - startYRef.current;
       const diffX = currentX - startXRef.current;
 
-      // Cancel if swiping horizontally or scrolling up
-      if (Math.abs(diffX) * 1.1 > diffY || diffY <= 0) {
+      // Cancel if horizontal swipe or scrolling upwards
+      if (Math.abs(diffX) * 1.15 > diffY || diffY <= 0) {
         setPullY(0);
         setIsReady(false);
         isReadyRef.current = false;
@@ -83,7 +84,7 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
         return;
       }
 
-      // Ignore small drag inside deadzone
+      // Small down scrolls within the 60px deadzone do NOT trigger or show spinner
       if (diffY <= DEADZONE) {
         setPullY(0);
         setIsReady(false);
@@ -91,11 +92,12 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
         return;
       }
 
-      // Calculate smooth spring dampened travel
+      // Calculate smooth spring-dampened resistance for deliberate long pull
       const activeDistance = diffY - DEADZONE;
-      const dampened = Math.min(MAX_VISUAL_PULL, activeDistance * 0.48);
+      const dampened = Math.min(MAX_VISUAL_PULL, Math.pow(activeDistance, 0.7) * 1.35);
       setPullY(dampened);
 
+      // Only mark ready when physical drag is >= 180px
       const ready = diffY >= PULL_THRESHOLD;
       setIsReady(ready);
       isReadyRef.current = ready;

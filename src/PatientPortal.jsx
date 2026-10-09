@@ -439,7 +439,11 @@ export default function PatientPortal({ onClose, themeProps }) {
   // =========================================================================
   const patientDisplayName = patientProfile?.name || patientProfile?.patientName || "Patient";
   const patientFirstName = patientDisplayName.split(" ")[0];
-  const totalVisitsCount = recordsData?.stats?.totalVisits || recordsData?.visits?.length || 1;
+  const totalVisitsCount = recordsData?.stats?.totalVisits || recordsData?.visits?.length || 0;
+
+  const isAwaitingConsultation =
+    patientProfile?.status === "Waiting for Doctor" ||
+    ((patientProfile?.totalVisits || 0) === 0 && (recordsData?.visits?.length || 0) === 0);
 
   const sortedVisits = useMemo(() => {
     const list = [...(recordsData?.visits || [])];
@@ -468,7 +472,9 @@ export default function PatientPortal({ onClose, themeProps }) {
           )}
           <div className="portal-clinic-meta">
             <h1>Vindhy Physio & Rehab Center</h1>
-            <span className="portal-badge-pill">PATIENT RECOVERY PORTAL</span>
+            <span className="portal-badge-pill">
+              {isAwaitingConsultation ? "PATIENT INTAKE • WAITING QUEUE" : "PATIENT RECOVERY PORTAL"}
+            </span>
           </div>
         </div>
 
@@ -492,77 +498,243 @@ export default function PatientPortal({ onClose, themeProps }) {
       </header>
 
       {/* Navigation Bar (Desktop Top Tabs & Mobile Sticky Bottom Bar) */}
-      <nav className="patient-navbar">
-        <button
-          className={`nav-tab ${activeTab === "dashboard" ? "active" : ""}`}
-          onClick={() => setActiveTab("dashboard")}
-        >
-          <span className="tab-icon">🏠</span>
-          <span className="tab-label">Dashboard</span>
-        </button>
+      {!isAwaitingConsultation ? (
+        <nav className="patient-navbar">
+          <button
+            className={`nav-tab ${activeTab === "dashboard" ? "active" : ""}`}
+            onClick={() => setActiveTab("dashboard")}
+          >
+            <span className="tab-icon">🏠</span>
+            <span className="tab-label">Dashboard</span>
+          </button>
 
-        <button
-          className={`nav-tab ${activeTab === "appointments" ? "active" : ""}`}
-          onClick={() => setActiveTab("appointments")}
-        >
-          <span className="tab-icon">📅</span>
-          <span className="tab-label">Appointments</span>
-          {(recordsData?.appointments?.length || 0) > 0 && (
-            <span className="tab-bubble">{recordsData.appointments.length}</span>
-          )}
-        </button>
+          <button
+            className={`nav-tab ${activeTab === "appointments" ? "active" : ""}`}
+            onClick={() => setActiveTab("appointments")}
+          >
+            <span className="tab-icon">📅</span>
+            <span className="tab-label">Appointments</span>
+            {(recordsData?.appointments?.length || 0) > 0 && (
+              <span className="tab-bubble">{recordsData.appointments.length}</span>
+            )}
+          </button>
 
-        <button
-          className={`nav-tab ${activeTab === "visits" ? "active" : ""}`}
-          onClick={() => setActiveTab("visits")}
-        >
-          <span className="tab-icon">🩺</span>
-          <span className="tab-label">My Visits</span>
-          <span className="tab-bubble">{recordsData?.visits?.length || 0}</span>
-        </button>
+          <button
+            className={`nav-tab ${activeTab === "visits" ? "active" : ""}`}
+            onClick={() => setActiveTab("visits")}
+          >
+            <span className="tab-icon">🩺</span>
+            <span className="tab-label">My Visits</span>
+            <span className="tab-bubble">{recordsData?.visits?.length || 0}</span>
+          </button>
 
-        <button
-          className={`nav-tab ${activeTab === "receipts" ? "active" : ""}`}
-          onClick={() => setActiveTab("receipts")}
-        >
-          <span className="tab-icon">🧾</span>
-          <span className="tab-label">Receipts</span>
-        </button>
+          <button
+            className={`nav-tab ${activeTab === "receipts" ? "active" : ""}`}
+            onClick={() => setActiveTab("receipts")}
+          >
+            <span className="tab-icon">🧾</span>
+            <span className="tab-label">Receipts</span>
+          </button>
 
-        <button
-          className={`nav-tab ${activeTab === "treatment" ? "active" : ""}`}
-          onClick={() => setActiveTab("treatment")}
-        >
-          <span className="tab-icon">📋</span>
-          <span className="tab-label">Treatment</span>
-        </button>
+          <button
+            className={`nav-tab ${activeTab === "treatment" ? "active" : ""}`}
+            onClick={() => setActiveTab("treatment")}
+          >
+            <span className="tab-icon">📋</span>
+            <span className="tab-label">Treatment</span>
+          </button>
 
-        <button
-          className={`nav-tab ${activeTab === "exercises" ? "active" : ""}`}
-          onClick={() => setActiveTab("exercises")}
-        >
-          <span className="tab-icon">🏃</span>
-          <span className="tab-label">Exercises</span>
-        </button>
+          <button
+            className={`nav-tab ${activeTab === "exercises" ? "active" : ""}`}
+            onClick={() => setActiveTab("exercises")}
+          >
+            <span className="tab-icon">🏃</span>
+            <span className="tab-label">Exercises</span>
+          </button>
 
-        <button
-          className={`nav-tab ${activeTab === "security" ? "active" : ""}`}
-          onClick={() => setActiveTab("security")}
-        >
-          <span className="tab-icon">🔐</span>
-          <span className="tab-label">Profile & Password</span>
-        </button>
-      </nav>
+          <button
+            className={`nav-tab ${activeTab === "security" ? "active" : ""}`}
+            onClick={() => setActiveTab("security")}
+          >
+            <span className="tab-icon">🔐</span>
+            <span className="tab-label">Profile & Password</span>
+          </button>
+        </nav>
+      ) : (
+        <div style={{
+          background: "#0b1329",
+          borderBottom: "1px solid #1e293b",
+          padding: "10px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          color: "#fbbf24",
+          fontSize: "13px",
+          fontWeight: "700"
+        }}>
+          <span>⏳ Status: Waiting Queue (Token: {patientProfile?.patientId})</span>
+          <span style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "normal" }}>Clinical profile unlocks after doctor consultation</span>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="patient-main-container">
-        {/* ================================================================= */}
-        {/* TAB 1: DASHBOARD */}
-        {/* ========================        {/* ================================================================= */}
-        {/* TAB 1: DASHBOARD (Mobile Native App 6-Box Layout) */}
-        {/* ================================================================= */}
-        {activeTab === "dashboard" && (
-          <div className="tab-pane dashboard-pane mobile-app-home-view">
+        {isAwaitingConsultation ? (
+          <div className="tab-pane waiting-status-pane" style={{ maxWidth: "680px", margin: "30px auto", padding: "0 16px" }}>
+            <div style={{
+              background: "linear-gradient(135deg, #1e293b, #0f172a)",
+              borderRadius: "18px",
+              padding: "26px",
+              border: "1.5px solid #334155",
+              boxShadow: "0 12px 30px -6px rgba(0, 0, 0, 0.45)",
+              color: "#ffffff"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "18px" }}>
+                <span style={{ fontSize: "32px" }}>⏳</span>
+                <div>
+                  <span style={{
+                    background: "rgba(245, 158, 11, 0.2)",
+                    color: "#fbbf24",
+                    padding: "4px 12px",
+                    borderRadius: "20px",
+                    fontSize: "12px",
+                    fontWeight: "800",
+                    border: "1px solid rgba(245, 158, 11, 0.4)",
+                    letterSpacing: "0.5px",
+                    display: "inline-block",
+                    marginBottom: "4px"
+                  }}>
+                    IN CLINIC WAITING QUEUE
+                  </span>
+                  <h2 style={{ fontSize: "20px", fontWeight: "800", margin: 0, color: "#f8fafc" }}>
+                    Doctor Consultation Pending
+                  </h2>
+                </div>
+              </div>
+
+              <p style={{ fontSize: "14.5px", lineHeight: "1.6", color: "#cbd5e1", margin: "0 0 18px 0" }}>
+                Hello <strong style={{ color: "#ffffff" }}>{patientDisplayName}</strong>, your intake registration has been completed. You are currently in the clinic waiting queue for examination with <strong style={{ color: "#38bdf8" }}>Dr. Satyam Vishwakarma (D.P.T., B.P.T.)</strong>.
+              </p>
+
+              <div style={{
+                background: "rgba(15, 23, 42, 0.7)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: "14px",
+                padding: "16px",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "14px",
+                fontSize: "13px",
+                marginBottom: "18px"
+              }}>
+                <div>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "11px", fontWeight: "700" }}>PATIENT ID</span>
+                  <strong style={{ color: "#38bdf8", fontSize: "14.5px" }}>{patientProfile?.patientId || "VPR-2026"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "11px", fontWeight: "700" }}>REGISTERED MOBILE</span>
+                  <strong style={{ color: "#ffffff", fontSize: "14.5px" }}>+91 {patientProfile?.phone}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "11px", fontWeight: "700" }}>AGE &amp; GENDER</span>
+                  <strong style={{ color: "#e2e8f0" }}>{patientProfile?.age} Yrs • {patientProfile?.gender}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "11px", fontWeight: "700" }}>INTAKE TIME / DATE</span>
+                  <strong style={{ color: "#e2e8f0" }}>{patientProfile?.intakeTime || "Today"} ({cleanDateOnly(patientProfile?.registrationDate || new Date())})</strong>
+                </div>
+                <div style={{ gridColumn: "span 2", paddingTop: "6px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "11px", fontWeight: "700" }}>CHIEF CONCERN / REASON FOR VISIT</span>
+                  <strong style={{ color: "#38bdf8", fontSize: "14px" }}>🩺 {patientProfile?.firstVisitReason || "Physiotherapy Rehabilitation"}</strong>
+                </div>
+              </div>
+
+              <div style={{
+                background: "rgba(2, 132, 199, 0.12)",
+                border: "1px solid rgba(2, 132, 199, 0.35)",
+                borderRadius: "12px",
+                padding: "16px",
+                fontSize: "13.5px",
+                color: "#bae6fd",
+                lineHeight: "1.55",
+                marginBottom: "20px"
+              }}>
+                🔒 <strong>Clinical Profile Locked:</strong><br />
+                Your medical diagnosis, digital prescription, customized home rehabilitation exercises, and official fee receipts will automatically become available in this portal right after Dr. Satyam Vishwakarma concludes your first clinical consultation.
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <button
+                  onClick={loadPatientData}
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    borderRadius: "12px",
+                    background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                    color: "#ffffff",
+                    fontSize: "14px",
+                    fontWeight: "800",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 14px rgba(2, 132, 199, 0.35)"
+                  }}
+                >
+                  🔄 Check Live Consultation Status
+                </button>
+
+                <a
+                  href="tel:+919140301849"
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "12px",
+                    borderRadius: "12px",
+                    background: "rgba(255, 255, 255, 0.06)",
+                    color: "#e2e8f0",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    textDecoration: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px"
+                  }}
+                >
+                  📞 Contact Clinic Reception: +91 91403 01849
+                </a>
+
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    borderRadius: "12px",
+                    background: "transparent",
+                    color: "#94a3b8",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    border: "none",
+                    cursor: "pointer",
+                    marginTop: "4px"
+                  }}
+                >
+                  🚪 Sign Out of Portal
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* ================================================================= */}
+            {/* TAB 1: DASHBOARD */}
+            {/* ================================================================= */}
+            {activeTab === "dashboard" && (
+              <div className="tab-pane dashboard-pane mobile-app-home-view">
             {/* 1. Dynamic Greeting & Patient Identity (Matching Image 3 Reference) */}
             {/* 1. Dynamic Greeting & Patient Identity (Matching Image 2 Reference) */}
             <div className="mobile-app-greeting-card">
@@ -1808,6 +1980,8 @@ export default function PatientPortal({ onClose, themeProps }) {
             </div>
           </div>
         )}
+        </>
+        )}
       </main>
 
       {/* Digital Receipt Preview Modal */}
@@ -1930,45 +2104,47 @@ export default function PatientPortal({ onClose, themeProps }) {
       {/* ================================================================= */}
       {/* FIXED 4-ITEM MOBILE BOTTOM NAVIGATION */}
       {/* ================================================================= */}
-      <nav className="mobile-bottom-nav-4" aria-label="Mobile Bottom Navigation">
-        <button
-          className={`nav-item-4 ${activeTab === "dashboard" && !showMoreSheet ? "active" : ""}`}
-          onClick={() => { setActiveTab("dashboard"); setShowMoreSheet(false); }}
-        >
-          <span className="nav-icon-4">🏠</span>
-          <span className="nav-label-4">Home</span>
-        </button>
+      {!isAwaitingConsultation && (
+        <nav className="mobile-bottom-nav-4" aria-label="Mobile Bottom Navigation">
+          <button
+            className={`nav-item-4 ${activeTab === "dashboard" && !showMoreSheet ? "active" : ""}`}
+            onClick={() => { setActiveTab("dashboard"); setShowMoreSheet(false); }}
+          >
+            <span className="nav-icon-4">🏠</span>
+            <span className="nav-label-4">Home</span>
+          </button>
 
-        <button
-          className={`nav-item-4 ${activeTab === "appointments" && !showMoreSheet ? "active" : ""}`}
-          onClick={() => { setActiveTab("appointments"); setShowMoreSheet(false); }}
-        >
-          <span className="nav-icon-4">📅</span>
-          <span className="nav-label-4">Appointments</span>
-          {(recordsData?.appointments?.length || 0) > 0 && (
-            <span className="bottom-nav-badge">{recordsData.appointments.length}</span>
-          )}
-        </button>
+          <button
+            className={`nav-item-4 ${activeTab === "appointments" && !showMoreSheet ? "active" : ""}`}
+            onClick={() => { setActiveTab("appointments"); setShowMoreSheet(false); }}
+          >
+            <span className="nav-icon-4">📅</span>
+            <span className="nav-label-4">Appointments</span>
+            {(recordsData?.appointments?.length || 0) > 0 && (
+              <span className="bottom-nav-badge">{recordsData.appointments.length}</span>
+            )}
+          </button>
 
-        <button
-          className={`nav-item-4 ${activeTab === "visits" && !showMoreSheet ? "active" : ""}`}
-          onClick={() => selectTab("visits")}
-        >
-          <span className="nav-icon-4">🩺</span>
-          <span className="nav-label-4">Visits</span>
-          {(recordsData?.visits?.length || 0) > 0 && (
-            <span className="bottom-nav-badge">{recordsData.visits.length}</span>
-          )}
-        </button>
+          <button
+            className={`nav-item-4 ${activeTab === "visits" && !showMoreSheet ? "active" : ""}`}
+            onClick={() => selectTab("visits")}
+          >
+            <span className="nav-icon-4">🩺</span>
+            <span className="nav-label-4">Visits</span>
+            {(recordsData?.visits?.length || 0) > 0 && (
+              <span className="bottom-nav-badge">{recordsData.visits.length}</span>
+            )}
+          </button>
 
-        <button
-          className={`nav-item-4 ${showMoreSheet ? "active" : ""}`}
-          onClick={toggleMoreSheet}
-        >
-          <span className="nav-icon-4">☰</span>
-          <span className="nav-label-4">More</span>
-        </button>
-      </nav>
+          <button
+            className={`nav-item-4 ${showMoreSheet ? "active" : ""}`}
+            onClick={toggleMoreSheet}
+          >
+            <span className="nav-icon-4">☰</span>
+            <span className="nav-label-4">More</span>
+          </button>
+        </nav>
+      )}
 
       {/* ================================================================= */}
       {/* "MORE" SECONDARY ESSENTIAL FEATURES SHEET */}

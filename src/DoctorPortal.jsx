@@ -398,12 +398,15 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const filteredPatients = useMemo(() => {
     let list = [...patients];
     const todayStr = cleanDateOnly(new Date());
-    if (patientFilter === "today") {
-      list = list.filter(p => cleanDateOnly(p.lastVisitDate || p.registrationDate) === todayStr);
+    if (patientFilter === "all") {
+      // By default in Enrolled Patients directory, show enrolled patients who completed doctor consultation
+      list = list.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0);
+    } else if (patientFilter === "today") {
+      list = list.filter(p => cleanDateOnly(p.lastVisitDate || p.registrationDate) === todayStr && p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0);
     } else if (patientFilter === "active") {
-      list = list.filter(p => (p.status || "Active").toLowerCase() === "active");
+      list = list.filter(p => (p.status || "Active").toLowerCase() === "active" && p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0);
     } else if (patientFilter === "waiting") {
-      list = list.filter(p => (p.status || "").toLowerCase().includes("wait") || p.totalVisits === 0);
+      list = list.filter(p => (p.status || "").toLowerCase().includes("wait") || (p.totalVisits || 0) === 0);
     } else if (patientFilter === "completed") {
       list = list.filter(p => (p.status || "").toLowerCase().includes("complete"));
     }
@@ -986,6 +989,12 @@ export default function DoctorPortal({ onClose, themeProps }) {
     try {
       const data = await api.getPatientDetails(patientId);
       if (data.ok) {
+        const isWaiting = data.patient.status === "Waiting for Doctor" || (data.patient.totalVisits || 0) === 0;
+        if (isWaiting) {
+          alert(`Patient ${data.patient.name} (${data.patient.patientId}) is currently in the Waiting Queue and has not completed doctor consultation yet. Opening consultation room now.`);
+          handleOpenConsultationModal(data.patient);
+          return;
+        }
         setSelectedPatient(data.patient);
         setPatientVisits(data.visits);
         setNewPatientPassInput("");
@@ -1687,14 +1696,14 @@ _(Saved in patient clinic records)_`;
             ➕ 1. Intake Patient
           </button>
           <button className={activeTab === "waiting" ? "active" : ""} onClick={() => setActiveTab("waiting")}>
-            ⏳ 2. Waiting Queue {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length > 0 && (
+            ⏳ 2. Waiting Queue {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length > 0 && (
               <span className="enq-badge" style={{ background: "#f59e0b" }}>
-                {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length}
+                {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length}
               </span>
             )}
           </button>
           <button className={activeTab === "patients" ? "active" : ""} onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
-            👥 3. All Patients ({patients.length})
+            👥 3. Enrolled Patients ({patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length})
           </button>
           <button className={activeTab === "today" ? "active" : ""} onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
             📅 4. Today's Visits ({todayVisits.length})
@@ -1761,14 +1770,16 @@ _(Saved in patient clinic records)_`;
                 <div className="card-icon-bubble amber">⏳</div>
                 <strong className="card-title">Waiting Queue</strong>
                 <span className="card-count-badge amber">
-                  {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length}
+                  {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length}
                 </span>
               </div>
 
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("patients"); fetchPatients(); }}>
                 <div className="card-icon-bubble teal">👥</div>
-                <strong className="card-title">All Patients</strong>
-                <span className="card-count-badge teal">{stats.totalPatients || patients.length}</span>
+                <strong className="card-title">Enrolled Patients</strong>
+                <span className="card-count-badge teal">
+                  {patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length}
+                </span>
               </div>
 
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}>
@@ -1842,7 +1853,7 @@ _(Saved in patient clinic records)_`;
                 <div className="panel-header">
                   <div>
                     <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "700" }}>Recent Patients</h3>
-                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{patients.length} total enrolled</span>
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length} total enrolled</span>
                   </div>
                   <button className="text-link-btn" onClick={() => { setActiveTab("patients"); fetchPatients(); }}>View All →</button>
                 </div>
@@ -1857,19 +1868,19 @@ _(Saved in patient clinic records)_`;
                       </tr>
                     </thead>
                     <tbody>
-                      {patients.slice(0, 5).map(p => (
+                      {patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).slice(0, 5).map(p => (
                         <tr key={p.patientId}>
                           <td><span className="patient-id-badge">{p.patientId}</span></td>
                           <td><strong>{p.name}</strong> ({p.age}y/{p.gender?.[0] || ""})</td>
                           <td>+91 {p.phone}</td>
                           <td>
-                            <button className="table-action-btn" onClick={() => openPatientProfile(p.patientId)}>Consult & Slip</button>
+                            <button className="table-action-btn" onClick={() => openPatientProfile(p.patientId)}>Profile & Records</button>
                           </td>
                         </tr>
                       ))}
-                      {patients.length === 0 && (
+                      {patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length === 0 && (
                         <tr>
-                          <td colSpan="4" className="empty-cell">No patients enrolled yet. Click "+ Intake New Patient" to start.</td>
+                          <td colSpan="4" className="empty-cell">No enrolled patients yet. Consult patients from Waiting Queue to build clinical records.</td>
                         </tr>
                       )}
                     </tbody>
@@ -2244,7 +2255,7 @@ _(Saved in patient clinic records)_`;
                 </div>
               ))}
 
-              {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).length === 0 && (
+              {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length === 0 && (
                 <div className="empty-waiting-card">
                   <span style={{ fontSize: "40px" }}>🎉</span>
                   <h3>No Patients Currently in Waiting Queue!</h3>
@@ -2258,13 +2269,13 @@ _(Saved in patient clinic records)_`;
           </div>
         )}
 
-        {/* ================= 3. PATIENTS DIRECTORY ================= */}
+        {/* ================= 3. ENROLLED PATIENTS DIRECTORY ================= */}
         {activeTab === "patients" && (
           <div className="patients-directory-view">
             <div className="section-header-row">
               <div>
-                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Patient Directory & Clinical Profiles</h2>
-                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Complete directory of registered patients, clinical history & records.</p>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Enrolled Patients Directory &amp; Clinical Profiles</h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Directory of consulted active patients, ongoing rehabilitation plans &amp; records.</p>
               </div>
               <button
                 className="primary-btn"
@@ -2334,25 +2345,25 @@ _(Saved in patient clinic records)_`;
                   className={`filter-pill ${patientFilter === "all" ? "active" : ""}`}
                   onClick={() => setPatientFilter("all")}
                 >
-                  All ({patients.length})
+                  Enrolled ({patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length})
                 </button>
                 <button
                   className={`filter-pill ${patientFilter === "today" ? "active" : ""}`}
                   onClick={() => setPatientFilter("today")}
                 >
-                  📅 Today ({patients.filter(p => cleanDateOnly(p.lastVisitDate || p.registrationDate) === new Date().toISOString().slice(0, 10)).length})
+                  📅 Today ({patients.filter(p => cleanDateOnly(p.lastVisitDate || p.registrationDate) === new Date().toISOString().slice(0, 10) && p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length})
                 </button>
                 <button
                   className={`filter-pill ${patientFilter === "active" ? "active" : ""}`}
                   onClick={() => setPatientFilter("active")}
                 >
-                  Active ({patients.filter(p => (p.status || "Active").toLowerCase() === "active").length})
+                  Active ({patients.filter(p => (p.status || "Active").toLowerCase() === "active" && p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length})
                 </button>
                 <button
                   className={`filter-pill ${patientFilter === "waiting" ? "active" : ""}`}
                   onClick={() => setPatientFilter("waiting")}
                 >
-                  ⏳ Waiting ({patients.filter(p => (p.status || "").toLowerCase().includes("wait") || p.totalVisits === 0).length})
+                  ⏳ Waiting ({patients.filter(p => (p.status || "").toLowerCase().includes("wait") || (p.totalVisits || 0) === 0).length})
                 </button>
                 <button
                   className={`filter-pill ${patientFilter === "completed" ? "active" : ""}`}
@@ -2394,41 +2405,177 @@ _(Saved in patient clinic records)_`;
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPatients.map(p => (
-                    <tr key={p.patientId}>
-                      <td><span className="patient-id-badge">{p.patientId}</span></td>
-                      <td><strong>{p.name}</strong></td>
-                      <td>{p.age}y / {p.gender}</td>
-                      <td>+91 {p.phone}</td>
-                      <td>{p.address || "Vindhyachal"}</td>
-                      <td>{p.firstVisitReason}</td>
-                      <td>
-                        <span className={`status-badge ${(p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`}>
-                          {p.status || "Active"}
-                        </span>
-                      </td>
-                      <td><span className="visit-count-tag">{p.totalVisits || 1} Visits</span></td>
-                      <td>{cleanDateOnly(p.lastVisitDate || p.registrationDate)}</td>
-                      <td>
-                        <div className="patient-table-actions-grid">
-                          <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)} title="Open Full Profile">
+                  {filteredPatients.map(p => {
+                    const isWaiting = p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0;
+                    return (
+                      <tr key={p.patientId}>
+                        <td><span className="patient-id-badge">{p.patientId}</span></td>
+                        <td><strong>{p.name}</strong></td>
+                        <td>{p.age}y / {p.gender}</td>
+                        <td>+91 {p.phone}</td>
+                        <td>{p.address || "Vindhyachal"}</td>
+                        <td>{p.firstVisitReason}</td>
+                        <td>
+                          <span className={`status-badge ${isWaiting ? 'waiting-for-doctor' : (p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`}>
+                            {isWaiting ? "⏳ Waiting for Doctor" : (p.status || "Active")}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="visit-count-tag">
+                            {isWaiting ? "0 Visits (Waiting)" : `${p.totalVisits || 0} Visits`}
+                          </span>
+                        </td>
+                        <td>{cleanDateOnly(p.lastVisitDate || p.registrationDate)}</td>
+                        <td>
+                          {isWaiting ? (
+                            <div className="patient-table-actions-grid" style={{ display: "flex", gap: "8px" }}>
+                              <button
+                                className="table-action-btn"
+                                style={{ background: "#0284c7", color: "#ffffff", fontWeight: "700", padding: "6px 12px", border: "none", borderRadius: "6px", flex: 1 }}
+                                onClick={() => handleOpenConsultationModal(p)}
+                                title="Patient is waiting in queue. Click to consult."
+                              >
+                                🩺 Start Consult
+                              </button>
+                              <button
+                                className="table-action-btn btn-delete"
+                                onClick={() => handleDeletePatient(p.patientId, p.name)}
+                                title="Cancel / Delete intake record"
+                              >
+                                ✕ Delete
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="patient-table-actions-grid">
+                              <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)} title="Open Full Profile">
+                                👤 Profile
+                              </button>
+                              <button 
+                                className="table-action-btn"
+                                style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", fontWeight: "800" }}
+                                onClick={() => openQuickDailyVisitModal(p)} 
+                                title="1-Tap Quick Daily Session Entry"
+                              >
+                                ⚡ +1 Daily Visit
+                              </button>
+                              <button 
+                                className="table-action-btn btn-consult" 
+                                onClick={() => {
+                                  setSelectedPatient(p);
+                                  setShowAddVisitModal(true);
+                                }} 
+                                title="Record Consultation / Visit"
+                              >
+                                ➕ Consult
+                              </button>
+                              <button 
+                                className="table-action-btn btn-whatsapp" 
+                                onClick={() => {
+                                  handleWhatsAppDirectShare({
+                                    patient: p,
+                                    visit: {
+                                      visitId: `VST-${p.patientId.replace("VPR-2026-", "")}-1`,
+                                      patientId: p.patientId,
+                                      patientName: p.name,
+                                      phone: p.phone,
+                                      visitNumber: p.totalVisits || 1,
+                                      date: cleanDateOnly(p.lastVisitDate || p.registrationDate),
+                                      time: "10:00 AM",
+                                      reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
+                                      complaint: p.firstVisitReason || "Consultation",
+                                      diagnosis: p.lastDiagnosis || p.firstVisitReason || "Under Evaluation",
+                                      treatmentNotes: "Physical evaluation & physiotherapy management.",
+                                      followUpDate: "As advised by doctor",
+                                      fee: p.lastFee || "₹500",
+                                      status: "Completed",
+                                      doctor: "Dr. Satyam Vishwakarma"
+                                    }
+                                  });
+                                }}
+                                title="Send Receipt PDF to WhatsApp"
+                              >
+                                💬 WhatsApp
+                              </button>
+                              <button 
+                                className="table-action-btn btn-delete" 
+                                onClick={() => handleDeletePatient(p.patientId, p.name)}
+                                title="Permanently delete patient record"
+                              >
+                                ✕ Delete
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredPatients.length === 0 && (
+                    <tr>
+                      <td colSpan="10" className="empty-cell">No matching patient records found for the selected filter.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Patient Cards (No horizontal overflow, compact & touch-friendly) */}
+            <div className="mobile-patient-cards hide-on-desktop">
+              {filteredPatients.map(p => {
+                const isWaiting = p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0;
+                return (
+                  <article className="mobile-patient-card" key={p.patientId}>
+                    <div className="mobile-patient-top">
+                      <div>
+                        <span className="patient-id-badge">{p.patientId}</span>
+                        <h3 className="mobile-patient-name" style={{ color: "#0f172a" }}>{p.name || p.patientName || "Patient"}</h3>
+                        <p className="mobile-patient-sub" style={{ color: "#0f172a" }}>{p.age}y • {p.gender} • +91 {p.phone}</p>
+                      </div>
+                      <span className={`status-badge ${isWaiting ? 'waiting-for-doctor' : (p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`}>
+                        {isWaiting ? "⏳ Waiting for Doctor" : (p.status || "Active")}
+                      </span>
+                    </div>
+                    <div className="mobile-patient-info">
+                      <span className="patient-concern-pill">🩺 {p.firstVisitReason}</span>
+                      <span className="visit-count-tag">{isWaiting ? "0 Visits (Waiting)" : `${p.totalVisits || 0} Visits`}</span>
+                    </div>
+                    {isWaiting ? (
+                      <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                        <button
+                          className="primary-btn"
+                          style={{ flex: 1, padding: "10px", fontSize: "13px", fontWeight: "700" }}
+                          onClick={() => handleOpenConsultationModal(p)}
+                        >
+                          🩺 Start Doctor Consultation
+                        </button>
+                        <button
+                          className="secondary-btn"
+                          style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#f87171", fontWeight: "800", padding: "10px 14px", borderRadius: "8px" }}
+                          onClick={() => handleDeletePatient(p.patientId, p.name)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mobile-patient-actions-2x2">
+                        <div className="mobile-actions-row">
+                          <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)}>
                             👤 Profile
                           </button>
                           <button 
-                            className="table-action-btn"
-                            style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", fontWeight: "800" }}
-                            onClick={() => openQuickDailyVisitModal(p)} 
-                            title="1-Tap Quick Daily Session Entry"
+                            className="table-action-btn btn-daily"
+                            style={{ background: "#ecfdf5", color: "#059669", border: "1.5px solid #a7f3d0", fontWeight: "800" }}
+                            onClick={() => openQuickDailyVisitModal(p)}
                           >
                             ⚡ +1 Daily Visit
                           </button>
+                        </div>
+                        <div className="mobile-actions-row">
                           <button 
                             className="table-action-btn btn-consult" 
                             onClick={() => {
                               setSelectedPatient(p);
                               setShowAddVisitModal(true);
-                            }} 
-                            title="Record Consultation / Visit"
+                            }}
                           >
                             ➕ Consult
                           </button>
@@ -2438,7 +2585,7 @@ _(Saved in patient clinic records)_`;
                               handleWhatsAppDirectShare({
                                 patient: p,
                                 visit: {
-                                  visitId: `VST-${p.patientId}-1`,
+                                  visitId: `VST-${p.patientId.replace("VPR-2026-", "")}-1`,
                                   patientId: p.patientId,
                                   patientName: p.name,
                                   phone: p.phone,
@@ -2456,102 +2603,15 @@ _(Saved in patient clinic records)_`;
                                 }
                               });
                             }}
-                            title="Send Receipt PDF to WhatsApp"
                           >
                             💬 WhatsApp
                           </button>
-                          <button 
-                            className="table-action-btn btn-delete" 
-                            onClick={() => handleDeletePatient(p.patientId, p.name)}
-                            title="Permanently delete patient record"
-                          >
-                            ✕ Delete
-                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredPatients.length === 0 && (
-                    <tr>
-                      <td colSpan="10" className="empty-cell">No matching patient records found for the selected filter.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Patient Cards (No horizontal overflow, compact & touch-friendly) */}
-            <div className="mobile-patient-cards hide-on-desktop">
-              {filteredPatients.map(p => (
-                <article className="mobile-patient-card" key={p.patientId}>
-                  <div className="mobile-patient-top">
-                    <div>
-                      <span className="patient-id-badge">{p.patientId}</span>
-                      <h3 className="mobile-patient-name" style={{ color: "#0f172a" }}>{p.name || p.patientName || "Patient"}</h3>
-                      <p className="mobile-patient-sub" style={{ color: "#0f172a" }}>{p.age}y • {p.gender} • +91 {p.phone}</p>
-                    </div>
-                    <span className={`status-badge ${(p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`}>
-                      {p.status || "Active"}
-                    </span>
-                  </div>
-                  <div className="mobile-patient-info">
-                    <span className="patient-concern-pill">🩺 {p.firstVisitReason}</span>
-                    <span className="visit-count-tag">{p.totalVisits || 1} Visits</span>
-                  </div>
-                  <div className="mobile-patient-actions-2x2">
-                    <div className="mobile-actions-row">
-                      <button className="table-action-btn btn-profile" onClick={() => openPatientProfile(p.patientId)}>
-                        👤 Profile
-                      </button>
-                      <button 
-                        className="table-action-btn btn-daily"
-                        style={{ background: "#ecfdf5", color: "#059669", border: "1.5px solid #a7f3d0", fontWeight: "800" }}
-                        onClick={() => openQuickDailyVisitModal(p)}
-                      >
-                        ⚡ +1 Daily Visit
-                      </button>
-                    </div>
-                    <div className="mobile-actions-row">
-                      <button 
-                        className="table-action-btn btn-consult"
-                        onClick={() => {
-                          setSelectedPatient(p);
-                          setShowAddVisitModal(true);
-                        }}
-                      >
-                        ➕ Consult
-                      </button>
-                      <button 
-                        className="table-action-btn btn-whatsapp"
-                        onClick={() => {
-                          handleWhatsAppDirectShare({
-                            patient: p,
-                            visit: {
-                              visitId: `VST-${p.patientId}-1`,
-                              patientId: p.patientId,
-                              patientName: p.name,
-                              phone: p.phone,
-                              visitNumber: p.totalVisits || 1,
-                              date: cleanDateOnly(p.lastVisitDate || p.registrationDate),
-                              time: "10:00 AM",
-                              reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
-                              complaint: p.firstVisitReason || "Consultation",
-                              diagnosis: p.lastDiagnosis || p.firstVisitReason || "Under Evaluation",
-                              treatmentNotes: "Physical evaluation & physiotherapy management.",
-                              followUpDate: "As advised by doctor",
-                              fee: p.lastFee || "₹500",
-                              status: "Completed",
-                              doctor: "Dr. Satyam Vishwakarma"
-                            }
-                          });
-                        }}
-                      >
-                        💬 WhatsApp
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
               {filteredPatients.length === 0 && (
                 <div className="mobile-empty-card">
                   <p>No matching patient records found for the selected filter.</p>

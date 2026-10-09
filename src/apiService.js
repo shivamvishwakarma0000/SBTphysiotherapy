@@ -1205,31 +1205,18 @@ export const patientApi = {
       });
 
       if (!p) {
-        if (cleanDigits.length === 10 && cleanPassword.toLowerCase() === "vindhy") {
-          const newId = `VPR-2026-${1000 + patients.length + 1}`;
-          const todayStr = new Date().toISOString().split("T")[0];
-          p = {
-            patientId: newId,
-            name: `Patient (${cleanDigits.slice(-4)})`,
-            age: 32,
-            gender: "Male",
-            phone: cleanDigits,
-            altPhone: "",
-            address: "Vindhyachal, Mirzapur",
-            firstVisitReason: "Clinical Assessment",
-            registrationDate: todayStr,
-            status: "Active",
-            totalVisits: 1,
-            lastVisitDate: todayStr
-          };
-          patients.unshift(p);
-          setLocal(KEYS.PATIENTS, patients);
-        } else {
-          return {
-            ok: false,
-            error: "No registered patient account found with this phone number or ID. Please register first or contact Dr. Satyam Vishwakarma."
-          };
-        }
+        return {
+          ok: false,
+          error: "No registered patient account found with this phone number or ID. Please register at the clinic reception or consult Dr. Satyam Vishwakarma."
+        };
+      }
+
+      // Check if patient is still in waiting queue (consultation not yet completed)
+      if ((p.status || "").toLowerCase().includes("wait") || Number(p.totalVisits || 0) === 0) {
+        return {
+          ok: false,
+          error: "Your consultation with Dr. Satyam Vishwakarma is currently pending. Patient Portal access will be activated immediately after your doctor consultation."
+        };
       }
 
       const inputPass = cleanPassword;

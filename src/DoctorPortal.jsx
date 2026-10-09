@@ -2224,30 +2224,22 @@ _(Saved in patient clinic records)_`;
                     )}
                   </div>
 
-                  <div className="waiting-card-actions">
+                  <div className="waiting-card-actions" style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "14px" }}>
                     <button
                       className="primary-btn consult-start-btn"
+                      style={{ flex: 1, padding: "10px 16px", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
                       onClick={() => handleOpenConsultationModal(p)}
                     >
                       🩺 Start Doctor Consultation & Issue Receipt
                     </button>
-                    <div className="waiting-mini-actions">
-                      <button
-                        className="secondary-btn"
-                        onClick={() => openPatientProfile(p.patientId)}
-                        title="View Full Profile"
-                      >
-                        👤 Profile
-                      </button>
-                      <button
-                        className="secondary-btn delete-action"
-                        style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#f87171", fontSize: "13px", fontWeight: "800", padding: "4px 8px" }}
-                        onClick={() => handleDeletePatient(p.patientId, p.name)}
-                        title="Delete Patient"
-                      >
-                        ✕
-                      </button>
-                    </div>
+                    <button
+                      className="secondary-btn delete-action"
+                      style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#f87171", fontSize: "13px", fontWeight: "800", padding: "10px 14px", borderRadius: "8px" }}
+                      onClick={() => handleDeletePatient(p.patientId, p.name)}
+                      title="Cancel / Delete Intake"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
               ))}

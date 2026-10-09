@@ -72,10 +72,25 @@ function initializeLocalDatabase() {
   // Ensure arrays exist (No dummy seed data, all records come from Google Sheets or real doctor intake)
   if (!localStorage.getItem(KEYS.PATIENTS)) {
     setLocal(KEYS.PATIENTS, []);
+  } else {
+    // Purge legacy ghost test data (e.g. shivam / 2027 test records)
+    const pts = getLocal(KEYS.PATIENTS, []);
+    const cleanPts = pts.filter(p => p && p.patientId !== "VPR-2026-2027" && p.name?.toLowerCase() !== "shivam");
+    if (cleanPts.length !== pts.length) {
+      setLocal(KEYS.PATIENTS, cleanPts);
+    }
   }
+
   if (!localStorage.getItem(KEYS.VISITS)) {
     setLocal(KEYS.VISITS, []);
+  } else {
+    const vts = getLocal(KEYS.VISITS, []);
+    const cleanVts = vts.filter(v => v && v.patientId !== "VPR-2026-2027" && v.patientName?.toLowerCase() !== "shivam");
+    if (cleanVts.length !== vts.length) {
+      setLocal(KEYS.VISITS, cleanVts);
+    }
   }
+
   if (!localStorage.getItem(KEYS.ENQUIRIES)) {
     setLocal(KEYS.ENQUIRIES, []);
   }
@@ -154,10 +169,11 @@ export async function restoreFromGoogleSheets() {
       const pMap = new Map();
       const phoneToIdMap = new Map();
 
+      // 1. Process Google Sheets Patients
       (data.patients || []).forEach(rp => {
-        if (rp && rp.patientId) {
-          const cleanId = String(rp.patientId).trim();
-          if (deletedPatientIds.has(cleanId)) return;
+        if (rp && (rp.patientId || rp.phone)) {
+          const cleanId = String(rp.patientId || "").trim();
+          if (cleanId && deletedPatientIds.has(cleanId)) return;
           const cleanPhone = rp.phone ? String(rp.phone).trim() : "";
           const nPh = normPhone(cleanPhone);
 
@@ -171,48 +187,30 @@ export async function restoreFromGoogleSheets() {
             address: rp.address || "Vindhyachal, Mirzapur",
             firstVisitReason: rp.firstVisitReason || "Physiotherapy Consultation",
             status: rp.status || "Active",
-            totalVisits: Number(rp.totalVisits) || 1,
+            totalVisits: 0,
             registrationDate: rp.registrationDate ? String(rp.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
             lastVisitDate: rp.lastVisitDate ? String(rp.lastVisitDate).slice(0, 10) : (rp.registrationDate ? String(rp.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10))
           };
 
-          pMap.set(cleanId, patientObj);
-          if (nPh) phoneToIdMap.set(nPh, cleanId);
+          if (cleanId) pMap.set(cleanId, patientObj);
+          if (nPh) phoneToIdMap.set(nPh, cleanId || nPh);
         }
       });
 
-      // Retain newly added local patients that might not have pushed to sheet yet
-      const localPatients = getLocal(KEYS.PATIENTS, []);
-      localPatients.forEach(lp => {
-        if (lp && lp.patientId && !deletedPatientIds.has(lp.patientId) && !pMap.has(lp.patientId)) {
-          const nPh = normPhone(lp.phone);
-          if (!nPh || !phoneToIdMap.has(nPh)) {
-            pMap.set(lp.patientId, lp);
-            if (nPh) phoneToIdMap.set(nPh, lp.patientId);
-          }
-        }
-      });
-
-      // Visits
+      // 2. Process Google Sheets Visits (Strictly from Google Sheets, do NOT resurrect deleted visits)
       const vMap = new Map();
       (data.visits || []).forEach(rv => {
-        if (rv && rv.visitId) {
-          const cleanVId = String(rv.visitId).trim();
+        if (rv && (rv.visitId || rv.patientId)) {
+          const cleanVId = String(rv.visitId || `VST-${rv.patientId}-${rv.visitNumber || 1}`).trim();
           if (deletedVisitIds.has(cleanVId)) return;
           if (rv.patientId && deletedPatientIds.has(String(rv.patientId).trim())) return;
-          vMap.set(cleanVId, rv);
+          vMap.set(cleanVId, { ...rv, visitId: cleanVId });
         }
       });
-      const localVisits = getLocal(KEYS.VISITS, []);
-      localVisits.forEach(lv => {
-        if (lv && lv.visitId && !deletedVisitIds.has(String(lv.visitId).trim()) && !vMap.has(String(lv.visitId).trim())) {
-          if (lv.patientId && deletedPatientIds.has(String(lv.patientId).trim())) return;
-          vMap.set(String(lv.visitId).trim(), lv);
-        }
-      });
+
       const mergedVisits = Array.from(vMap.values());
 
-      // SELF-HEALING RECONCILIATION: Check if any visit belongs to an orphan/overwritten patient missing from pMap
+      // 3. RECONCILIATION: Recover any patient in visits who might have collided or be missing from pMap
       mergedVisits.forEach(v => {
         const vPhone = normPhone(v.phone);
         const vName = String(v.patientName || "").trim();
@@ -220,15 +218,13 @@ export async function restoreFromGoogleSheets() {
 
         if (vPid && deletedPatientIds.has(vPid)) return;
 
-        // Check if existing patient mapped by vPid has different phone and name (collision)
         const existingWithId = pMap.get(vPid);
         const hasCollision = existingWithId && vPhone && normPhone(existingWithId.phone) && normPhone(existingWithId.phone) !== vPhone;
 
         if (!existingWithId || hasCollision) {
-          // If collision or missing, check if we already synthesized a separate patient by phone
           let targetPid = vPhone ? phoneToIdMap.get(vPhone) : null;
-          if (!targetPid) {
-            // Find next safe patient ID
+          if (!targetPid || targetPid === vPid) {
+            // Find next sequential series ID
             let maxN = 1000;
             pMap.forEach((_, k) => {
               const m = k.match(/(\d{4,})/);
@@ -249,14 +245,13 @@ export async function restoreFromGoogleSheets() {
               address: "Vindhyachal, Mirzapur",
               firstVisitReason: v.reason || v.complaint || "Physiotherapy Rehabilitation",
               status: "Active",
-              totalVisits: 1,
+              totalVisits: 0,
               registrationDate: v.date ? String(v.date).slice(0, 10) : new Date().toISOString().slice(0, 10),
               lastVisitDate: v.date ? String(v.date).slice(0, 10) : new Date().toISOString().slice(0, 10)
             };
             pMap.set(targetPid, recoveredPatient);
           }
 
-          // Point visit to the correct disambiguated patient ID
           if (hasCollision && targetPid) {
             v.patientId = targetPid;
           }
@@ -265,36 +260,48 @@ export async function restoreFromGoogleSheets() {
 
       const mergedPatients = Array.from(pMap.values());
 
-      // Enquiries
+      // 4. Enquiries (Strictly from Google Sheets)
       const eMap = new Map();
       (data.enquiries || []).forEach(re => {
         if (re && re.id) {
           eMap.set(String(re.id), re);
         }
       });
-      const localEnquiries = getLocal(KEYS.ENQUIRIES, []);
-      localEnquiries.forEach(le => {
-        if (le && le.id && !eMap.has(String(le.id))) {
-          eMap.set(String(le.id), le);
-        }
-      });
       const mergedEnquiries = Array.from(eMap.values());
 
-      // Recalculate visit counts accurately
+      // 5. ACCURATE VISIT RECALCULATION & SEQUENCING:
       mergedPatients.forEach(patient => {
         const pVisits = mergedVisits.filter(v => 
-          String(v.patientId).trim().toUpperCase() === String(patient.patientId).trim().toUpperCase() ||
+          (v.patientId && String(v.patientId).trim().toUpperCase() === String(patient.patientId).trim().toUpperCase()) ||
           (normPhone(v.phone) && normPhone(v.phone) === normPhone(patient.phone))
         );
+
+        // Sort visits chronologically (oldest to newest) to assign clean visit numbers 1, 2, ...
+        pVisits.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+        pVisits.forEach((v, idx) => {
+          v.visitNumber = idx + 1;
+          v.patientId = patient.patientId;
+          v.patientName = patient.name;
+          v.phone = patient.phone;
+          const pSuffix = patient.patientId.replace("VPR-2026-", "").replace("VPR-", "") || "1001";
+          v.visitId = `VST-${pSuffix}-${v.visitNumber}`;
+        });
+
+        patient.totalVisits = pVisits.length;
         if (pVisits.length > 0) {
-          patient.totalVisits = pVisits.length;
-          const sorted = [...pVisits].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-          patient.lastVisitDate = sorted[0].date;
+          patient.lastVisitDate = pVisits[pVisits.length - 1].date;
+          patient.lastDiagnosis = pVisits[pVisits.length - 1].diagnosis || patient.firstVisitReason;
+          patient.firstVisitDate = pVisits[0].date;
         } else {
-          patient.totalVisits = Math.max(1, Number(patient.totalVisits) || 1);
+          patient.totalVisits = 0;
+          patient.lastVisitDate = patient.registrationDate;
         }
       });
 
+      // Sort patients cleanly by sequential Series ID (VPR-2026-1001, VPR-2026-1002, ...)
+      mergedPatients.sort((a, b) => (a.patientId || "").localeCompare(b.patientId || ""));
+
+      // Replace local storage with the authoritative cleaned records
       setLocal(KEYS.PATIENTS, mergedPatients);
       setLocal(KEYS.VISITS, mergedVisits);
       setLocal(KEYS.ENQUIRIES, mergedEnquiries);

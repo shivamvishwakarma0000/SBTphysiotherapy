@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 import DoctorPortal from "./DoctorPortal";
 import PatientPortal from "./PatientPortal";
+import PullToRefresh from "./PullToRefresh";
 import ErrorBoundary from "./ErrorBoundary";
 import { api } from "./apiService";
 import { useTheme } from "./useTheme";
@@ -194,6 +195,26 @@ function FacebookIcon() {
 function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, showDownloadBtn, themeProps }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDark = true;
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.classList.add("modal-open");
+      document.documentElement.classList.add("modal-open");
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.classList.remove("modal-open");
+      document.documentElement.classList.remove("modal-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+    return () => {
+      document.body.classList.remove("modal-open");
+      document.documentElement.classList.remove("modal-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   const handleNavClick = () => {
     setMobileMenuOpen(false);
@@ -1162,6 +1183,26 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
     setIsIOS(/iphone|ipad|ipod/.test(ua));
   }, []);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add("modal-open");
+      document.documentElement.classList.add("modal-open");
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.classList.remove("modal-open");
+      document.documentElement.classList.remove("modal-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+    return () => {
+      document.body.classList.remove("modal-open");
+      document.documentElement.classList.remove("modal-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleDownload = async () => {
@@ -1281,6 +1322,26 @@ function AutoEnquiryModal({ isOpen, onClose }) {
     concern: ""
   });
   const [status, setStatus] = useState("idle"); // idle, loading, success, error, invalid
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add("modal-open");
+      document.documentElement.classList.add("modal-open");
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.classList.remove("modal-open");
+      document.documentElement.classList.remove("modal-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+    return () => {
+      document.body.classList.remove("modal-open");
+      document.documentElement.classList.remove("modal-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -1718,67 +1779,103 @@ function App() {
   );
   const canShowDownloadBtn = isTabletOrPhone && !isAppInstalled && !showDoctorPortal && !showPatientPortal;
 
+  // Lock background body scroll when doctor or patient portal is active
+  useEffect(() => {
+    const isPortalActive = showDoctorPortal || showPatientPortal;
+    if (isPortalActive) {
+      document.body.classList.add("portal-active");
+      document.documentElement.classList.add("modal-open");
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.classList.remove("portal-active");
+      document.documentElement.classList.remove("modal-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+    return () => {
+      document.body.classList.remove("portal-active");
+      document.documentElement.classList.remove("modal-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [showDoctorPortal, showPatientPortal]);
+
+  const handleWebsiteRefresh = async () => {
+    try {
+      if (typeof api.getPublicClinicData === "function") {
+        await api.getPublicClinicData();
+      }
+    } catch (e) {
+      console.log("Website refresh:", e);
+    }
+  };
+
   return (
-    <div className={`app-root ${themeProps.resolvedTheme}`}>
-      <Header
-        onOpenDoctorPortal={openDoctorPortal}
-        onOpenPatientPortal={openPatientPortal}
-        onOpenDownloadApp={() => setShowDownloadModal(true)}
-        showDownloadBtn={canShowDownloadBtn}
-        themeProps={themeProps}
-      />
-      <main>
-        <Hero />
-        <QuickActions />
-        <LeadConsultant />
-        <Treatments />
-        <BodyMap />
-        <Programs />
-        <Heritage />
-        <Assessment />
-        <Testimonials />
-      </main>
-      <Footer
-        onOpenDoctorPortal={openDoctorPortal}
-        onOpenPatientPortal={openPatientPortal}
-        isDark={themeProps.isDark}
-      />
+    <PullToRefresh
+      onRefresh={handleWebsiteRefresh}
+      disabled={showDoctorPortal || showPatientPortal || showDownloadModal || showAutoEnquiry}
+    >
+      <div className={`app-root ${themeProps.resolvedTheme}`}>
+        <Header
+          onOpenDoctorPortal={openDoctorPortal}
+          onOpenPatientPortal={openPatientPortal}
+          onOpenDownloadApp={() => setShowDownloadModal(true)}
+          showDownloadBtn={canShowDownloadBtn}
+          themeProps={themeProps}
+        />
+        <main>
+          <Hero />
+          <QuickActions />
+          <LeadConsultant />
+          <Treatments />
+          <BodyMap />
+          <Programs />
+          <Heritage />
+          <Assessment />
+          <Testimonials />
+        </main>
+        <Footer
+          onOpenDoctorPortal={openDoctorPortal}
+          onOpenPatientPortal={openPatientPortal}
+          isDark={themeProps.isDark}
+        />
 
-      <WhatsAppFloating />
+        <WhatsAppFloating />
 
-      <AutoEnquiryModal
-        isOpen={showAutoEnquiry && !showDoctorPortal && !showPatientPortal}
-        onClose={handleCloseAutoEnquiry}
-      />
+        <AutoEnquiryModal
+          isOpen={showAutoEnquiry && !showDoctorPortal && !showPatientPortal}
+          onClose={handleCloseAutoEnquiry}
+        />
 
-      <AppDownloadModal
-        isOpen={showDownloadModal && !showDoctorPortal && !showPatientPortal}
-        onClose={handleDismissDownload}
-        deferredPrompt={deferredPrompt}
-        onInstalled={() => setIsAppInstalled(true)}
-      />
+        <AppDownloadModal
+          isOpen={showDownloadModal && !showDoctorPortal && !showPatientPortal}
+          onClose={handleDismissDownload}
+          deferredPrompt={deferredPrompt}
+          onInstalled={() => setIsAppInstalled(true)}
+        />
 
+        {/* Doctor Portal Modal / View */}
+        {showDoctorPortal && (
+          <ErrorBoundary fallbackMessage="Doctor Portal session is ready. Tap to reload.">
+            <DoctorPortal
+              onClose={closeDoctorPortal}
+              themeProps={themeProps}
+            />
+          </ErrorBoundary>
+        )}
 
-      {/* Doctor Portal Modal / View */}
-      {showDoctorPortal && (
-        <ErrorBoundary fallbackMessage="Doctor Portal session is ready. Tap to reload.">
-          <DoctorPortal
-            onClose={closeDoctorPortal}
-            themeProps={themeProps}
-          />
-        </ErrorBoundary>
-      )}
-
-      {/* Patient Recovery Portal Modal / View */}
-      {showPatientPortal && (
-        <ErrorBoundary fallbackMessage="Patient Health Portal session is ready. Tap to reload.">
-          <PatientPortal
-            onClose={closePatientPortal}
-            themeProps={themeProps}
-          />
-        </ErrorBoundary>
-      )}
-    </div>
+        {/* Patient Recovery Portal Modal / View */}
+        {showPatientPortal && (
+          <ErrorBoundary fallbackMessage="Patient Health Portal session is ready. Tap to reload.">
+            <PatientPortal
+              onClose={closePatientPortal}
+              themeProps={themeProps}
+            />
+          </ErrorBoundary>
+        )}
+      </div>
+    </PullToRefresh>
   );
 }
 

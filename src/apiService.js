@@ -56,29 +56,29 @@ export function setReviewUrl(url) {
   }
 }
 
-// Helper: Generate structured, short & sweet WhatsApp review message
+// Helper: Generate structured, short & sweet WhatsApp review message (100% UTF-8 & Emoji Safe)
 export function generateReviewWhatsAppMessage(patientName, customReviewUrl = "") {
   const activeUrl = (customReviewUrl || getReviewUrl() || "").trim();
   const linkText = activeUrl ? activeUrl : "[Review Link: Configure in Doctor Portal Settings]";
   const pName = (patientName || "Patient").trim();
 
-  return `Namaste ${pName} ji 🙏,
+  return `Namaste ${pName} ji \u{1F64F},
 
 Thank you for visiting Vindhy Physio & Rehab Center today for your consultation with Dr. Satyam Vishwakarma (PT).
 
-🌟 Please take 30 seconds to share your valuable review & feedback:
-👉 ${linkText}
+\u{2B50} Please take 30 seconds to share your valuable review & feedback:
+\u{1F449} ${linkText}
 
-Wishing you a speedy recovery! 🌿
-Dr. Satyam Vishwakarma (PT) • 📞 +91 8382024264`;
+Wishing you a speedy recovery! \u{1F33F}
+Dr. Satyam Vishwakarma (PT) \u{2022} \u{1F4DE} +91 8382024264`;
 }
-
 
 export function getReviewWhatsAppUrl(phone, patientName, customReviewUrl = "") {
   const cleanPhone = String(phone || "").replace(/\D/g, "").slice(-10);
   const msg = generateReviewWhatsAppMessage(patientName, customReviewUrl);
-  return `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`;
+  return `https://api.whatsapp.com/send?phone=91${cleanPhone}&text=${encodeURIComponent(msg)}`;
 }
+
 
 // Review Queue Management (2-Hour Post-Consult for newly enrolled patients)
 export function getReviewQueue() {

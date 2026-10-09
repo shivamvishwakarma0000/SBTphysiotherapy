@@ -944,7 +944,7 @@ function Assessment() {
               </p>
               {lastSubmittedLead && (
                 <a
-                  href={`https://wa.me/91${phoneWhatsApp}?text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I have booked a consultation on your website:\n\n👤 Name: ${lastSubmittedLead.name}\n🎂 Age: ${lastSubmittedLead.age || "N/A"}\n📞 Phone: +91 ${lastSubmittedLead.phone}\n🩺 Problem: ${lastSubmittedLead.painArea}\n⏱️ Duration: ${lastSubmittedLead.duration}\n📅 Preferred Date: ${lastSubmittedLead.appointmentDate || "Flexible"}\n💬 Message: ${lastSubmittedLead.concern || "Consultation requested"}`)}`}
+                  href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I have booked a consultation on your website:\n\n👤 Name: ${lastSubmittedLead.name}\n🎂 Age: ${lastSubmittedLead.age || "N/A"}\n📞 Phone: +91 ${lastSubmittedLead.phone}\n🩺 Problem: ${lastSubmittedLead.painArea}\n⏱️ Duration: ${lastSubmittedLead.duration}\n📅 Preferred Date: ${lastSubmittedLead.appointmentDate || "Flexible"}\n💬 Message: ${lastSubmittedLead.concern || "Consultation requested"}`)}`}
                   target="_blank"
                   rel="noreferrer"
                   style={{
@@ -1407,7 +1407,7 @@ function AutoEnquiryModal({ isOpen, onClose }) {
               Dr. Satyam's clinic reception will contact you at +91 {form.phone} shortly. You can also chat directly on WhatsApp:
             </p>
             <a
-              href={`https://wa.me/91${phoneWhatsApp}?text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I have sent an enquiry on your website:\n\n👤 Name: ${form.name}\n🎂 Age: ${form.age || "N/A"}\n📞 Phone: +91 ${form.phone}\n🩺 Condition: ${form.painArea}\n💬 Query: ${form.concern || "Physiotherapy Guidance"}`)}`}
+              href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I have sent an enquiry on your website:\n\n👤 Name: ${form.name}\n🎂 Age: ${form.age || "N/A"}\n📞 Phone: +91 ${form.phone}\n🩺 Condition: ${form.painArea}\n💬 Query: ${form.concern || "Physiotherapy Guidance"}`)}`}
               target="_blank"
               rel="noreferrer"
               style={{

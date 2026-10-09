@@ -2454,19 +2454,18 @@ _(Saved in patient clinic records)_`;
                   </button>
                 </div>
 
-                {reviewQueue.length === 0 ? (
-                  <div className="empty-waiting-card" style={{ padding: "20px", background: "var(--bg-card, #1e293b)", border: "1px solid var(--line, #334155)" }}>
-                    <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary, #94a3b8)" }}>
-                      ⏳ No post-consultation reviews in queue. When you complete a first-time consultation for any newly enrolled patient from the queue above, they will automatically be queued here for a 2-hour WhatsApp follow-up.
+                {pendingReviews.length === 0 ? (
+                  <div className="empty-waiting-card" style={{ padding: "20px", background: "var(--bg-card, #1e293b)", border: "1px solid var(--line, #334155)", textAlign: "center" }}>
+                    <span style={{ fontSize: "28px" }}>✅</span>
+                    <h4 style={{ margin: "6px 0 2px 0", color: "var(--text, #ffffff)", fontSize: "14px" }}>No Pending Follow-Up Reviews</h4>
+                    <p style={{ margin: 0, fontSize: "12.5px", color: "var(--text-secondary, #94a3b8)" }}>
+                      All post-consultation WhatsApp review requests are complete. When a new 1st-time patient is consulted, their 2-hour follow-up will appear here until sent.
                     </p>
                   </div>
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "14px" }}>
-                    {reviewQueue.slice(0, 10).map((q) => {
-                      const isReady = q.status === "pending" && currentTime >= q.scheduledSendAt;
-                      const isPendingNotReady = q.status === "pending" && currentTime < q.scheduledSendAt;
-                      const isSent = q.status === "sent";
-                      const isDismissed = q.status === "dismissed";
+                    {pendingReviews.map((q) => {
+                      const isReady = currentTime >= q.scheduledSendAt;
                       const minsLeft = Math.ceil((q.scheduledSendAt - currentTime) / 60000);
 
                       return (
@@ -2474,7 +2473,7 @@ _(Saved in patient clinic records)_`;
                           key={q.queueId}
                           className="patient-waiting-card"
                           style={{
-                            borderLeft: isReady ? "4px solid #10b981" : isSent ? "4px solid #3b82f6" : "4px solid #f59e0b",
+                            borderLeft: isReady ? "4px solid #10b981" : "4px solid #f59e0b",
                             background: isReady ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card, #1e293b) 100%)" : "var(--bg-card, #1e293b)"
                           }}
                         >
@@ -2486,24 +2485,13 @@ _(Saved in patient clinic records)_`;
                               </div>
                             </div>
                             <div>
-                              {isReady && (
+                              {isReady ? (
                                 <span className="status-badge" style={{ background: "#10b981", color: "#ffffff", fontWeight: "700", fontSize: "11px" }}>
                                   🔔 2h Ready to Send
                                 </span>
-                              )}
-                              {isPendingNotReady && (
+                              ) : (
                                 <span className="status-badge" style={{ background: "rgba(2, 132, 199, 0.15)", color: "#38bdf8", border: "1px solid rgba(2, 132, 199, 0.3)", fontSize: "11px" }}>
                                   ⏳ In {minsLeft > 60 ? `${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m` : `${minsLeft}m`} ({q.scheduledTimeStr})
-                                </span>
-                              )}
-                              {isSent && (
-                                <span className="status-badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.3)", fontSize: "11px" }}>
-                                  ✓ Sent on WhatsApp
-                                </span>
-                              )}
-                              {isDismissed && (
-                                <span className="status-badge" style={{ background: "rgba(148, 163, 184, 0.15)", color: "#94a3b8", fontSize: "11px" }}>
-                                  ✕ Dismissed
                                 </span>
                               )}
                             </div>
@@ -2526,36 +2514,33 @@ _(Saved in patient clinic records)_`;
                               }}
                               onClick={() => handleSendReviewWhatsApp(q)}
                             >
-                              📲 {isSent ? "Re-send on WhatsApp" : isReady ? "Send 2h Review Message" : "Send WhatsApp Review"}
+                              📲 {isReady ? "Send 2h Review Message" : "Send WhatsApp Review"}
                             </button>
 
-                            {q.status === "pending" && (
-                              <button
-                                className="secondary-btn"
-                                style={{ minHeight: "38px", padding: "6px 10px", fontSize: "11px" }}
-                                onClick={() => handleMarkReviewSent(q.queueId)}
-                                title="Mark as sent manually without opening WhatsApp"
-                              >
-                                ✓ Mark Sent
-                              </button>
-                            )}
+                            <button
+                              className="secondary-btn"
+                              style={{ minHeight: "38px", padding: "6px 10px", fontSize: "11px" }}
+                              onClick={() => handleMarkReviewSent(q.queueId)}
+                              title="Mark as sent manually and remove from queue"
+                            >
+                              ✓ Mark Sent
+                            </button>
 
-                            {q.status === "pending" && (
-                              <button
-                                className="secondary-btn"
-                                style={{ minHeight: "38px", padding: "6px 10px", fontSize: "11px", color: "#ef4444" }}
-                                onClick={() => handleDismissReview(q.queueId)}
-                                title="Dismiss this review reminder"
-                              >
-                                ✕
-                              </button>
-                            )}
+                            <button
+                              className="secondary-btn"
+                              style={{ minHeight: "38px", padding: "6px 10px", fontSize: "11px", color: "#ef4444" }}
+                              onClick={() => handleDismissReview(q.queueId)}
+                              title="Dismiss and remove this review reminder"
+                            >
+                              ✕
+                            </button>
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 )}
+
               </div>
             </div>
           </div>

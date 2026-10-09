@@ -10895,3 +10895,52 @@ html, body {
   font-size: 14px !important;
 }
 
+/* ==========================================================================
+   PULL-TO-REFRESH COMPONENT ENHANCEMENTS & SAFEGUARD STYLING
+   ========================================================================== */
+.pull-to-refresh-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ptr-indicator-pill {
+  will-change: transform, top, opacity;
+  backface-visibility: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ==========================================================================
+   UNIVERSAL RESPONSIVE FIT & OVERFLOW PREVENTION (ALL SCREENS)
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .site-header .header-inner,
+  .hero-inner,
+  .portal-shell,
+  .booking-card,
+  .doctor-portal-fullscreen {
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+
+  /* Prevent tight buttons or badges from overflowing */
+  .portal-nav-btn,
+  .header-rect-btn,
+  .tab-btn {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+

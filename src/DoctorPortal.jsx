@@ -1,7 +1,22 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import jsPDF from "jspdf";
 import { CLINIC_LOGO_B64, DOCTOR_SIGNATURE_B64 } from "./pdfAssets";
-import { api, getWebhookUrl, setWebhookUrl, restoreFromGoogleSheets, syncToGoogleSheets, clearLocalPatientsCache } from "./apiService";
+import {
+  api,
+  getWebhookUrl,
+  setWebhookUrl,
+  getReviewUrl,
+  setReviewUrl,
+  getReviewQueue,
+  markReviewSent,
+  dismissReview,
+  generateReviewWhatsAppMessage,
+  getReviewWhatsAppUrl,
+  restoreFromGoogleSheets,
+  syncToGoogleSheets,
+  clearLocalPatientsCache
+} from "./apiService";
+
 import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly, formatVisitDateTimeDisplay } from "./receiptUtils";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
@@ -305,6 +320,13 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [locationSearchLoading, setLocationSearchLoading] = useState(false);
   const [locationSavedMsg, setLocationSavedMsg] = useState("");
 
+  // Google Review & Feedback Link State (2-Hour Post-Consultation Automated System)
+  const [reviewUrlInput, setReviewUrlInput] = useState(() => getReviewUrl());
+  const [reviewSavedMsg, setReviewSavedMsg] = useState("");
+  const [reviewQueue, setReviewQueue] = useState(() => getReviewQueue());
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+
   // Patient Portal Security Account State (Doctor Controls)
   const [patientAccountData, setPatientAccountData] = useState(null);
   const [accountActionLoading, setAccountActionLoading] = useState(false);
@@ -591,6 +613,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
           await restoreFromGoogleSheets();
         }
         await Promise.all([fetchStats(), fetchPatients(), fetchTodayVisits(), fetchEnquiries()]);
+        fetchReviewQueue();
       } catch (e) {
         // silent background sync
       }
@@ -636,6 +659,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
             fetchPatients();
             fetchTodayVisits();
             fetchEnquiries();
+            fetchReviewQueue();
           }
         })
         .catch(() => {
@@ -644,6 +668,60 @@ export default function DoctorPortal({ onClose, themeProps }) {
         });
     }
   }, [token]);
+
+  // Periodic live countdown timer for 2-Hour Review Queue (updates every 15 seconds)
+  useEffect(() => {
+    const reviewTimer = setInterval(() => {
+      setCurrentTime(Date.now());
+      setReviewQueue(getReviewQueue());
+    }, 15000);
+    return () => clearInterval(reviewTimer);
+  }, []);
+
+  const fetchReviewQueue = () => {
+    setReviewQueue(getReviewQueue());
+  };
+
+  const handleSaveReviewUrl = (e) => {
+    e.preventDefault();
+    const clean = (reviewUrlInput || "").trim();
+    setReviewUrl(clean);
+    setReviewSavedMsg("✅ Google Review / Feedback link saved successfully!");
+    setTimeout(() => setReviewSavedMsg(""), 4000);
+  };
+
+  const handleSendReviewWhatsApp = (queueItem) => {
+    if (!queueItem) return;
+    const url = getReviewWhatsAppUrl(queueItem.phone, queueItem.patientName, reviewUrlInput);
+    window.open(url, "_blank", "noopener,noreferrer");
+    markReviewSent(queueItem.queueId);
+    fetchReviewQueue();
+    setShareFeedback(`📲 WhatsApp Review message launched for ${queueItem.patientName}! Marked as Sent.`);
+    setTimeout(() => setShareFeedback(""), 4500);
+  };
+
+  const handleDismissReview = (queueId) => {
+    dismissReview(queueId);
+    fetchReviewQueue();
+    setShareFeedback("Review reminder dismissed.");
+    setTimeout(() => setShareFeedback(""), 3000);
+  };
+
+  const handleMarkReviewSent = (queueId) => {
+    markReviewSent(queueId);
+    fetchReviewQueue();
+    setShareFeedback("✅ Status updated to Sent.");
+    setTimeout(() => setShareFeedback(""), 3000);
+  };
+
+  const pendingReviews = useMemo(() => {
+    return reviewQueue.filter(q => q.status === "pending");
+  }, [reviewQueue]);
+
+  const readyReviews = useMemo(() => {
+    return reviewQueue.filter(q => q.status === "pending" && currentTime >= q.scheduledSendAt);
+  }, [reviewQueue, currentTime]);
+
 
   // Phone hardware/browser back button navigation handling for Doctor Portal
   useEffect(() => {
@@ -942,10 +1020,11 @@ export default function DoctorPortal({ onClose, themeProps }) {
       fetchStats();
       fetchPatients();
       fetchTodayVisits();
+      fetchReviewQueue();
       setActiveConsultPatient(null);
       // Immediately open the official receipt modal
       setActiveReceipt({ patient: data.patient, visit: data.visit });
-      setShareFeedback(`✅ Consultation finalized! Fee: ${data.visit.fee}. Official receipt ready.`);
+      setShareFeedback(`✅ Consultation finalized! Fee: ${data.visit.fee}. ⭐ WhatsApp review scheduled for delivery in 2 hours.`);
     } catch (err) {
       alert("Error finalizing consultation: " + err.message);
     } finally {
@@ -1724,6 +1803,69 @@ _(Saved in patient clinic records)_`;
         </div>
       )}
 
+      {/* 2-Hour Post-Consultation WhatsApp Review Reminder Banner */}
+      {readyReviews.length > 0 && (
+        <div
+          className="review-alert-banner"
+          style={{
+            background: "linear-gradient(135deg, #064e3b 0%, #047857 100%)",
+            color: "#ffffff",
+            padding: "10px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "10px",
+            fontSize: "13px",
+            fontWeight: "600",
+            borderBottom: "1px solid rgba(16, 185, 129, 0.4)",
+            boxShadow: "0 4px 14px rgba(4, 120, 87, 0.3)"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "17px" }}>⭐</span>
+            <span>
+              <strong>{readyReviews.length} Review Request{readyReviews.length > 1 ? "s" : ""} Ready:</strong> 2 hours have passed since consultation for{" "}
+              {readyReviews.map(r => r.patientName).join(", ")}.
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              className="primary-btn"
+              style={{
+                background: "#ffffff",
+                color: "#065f46",
+                fontWeight: "800",
+                padding: "6px 14px",
+                fontSize: "12px",
+                borderRadius: "6px",
+                border: "none",
+                cursor: "pointer"
+              }}
+              onClick={() => handleSendReviewWhatsApp(readyReviews[0])}
+            >
+              📲 Send WhatsApp to {readyReviews[0].patientName}
+            </button>
+            <button
+              className="secondary-btn"
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                color: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.35)",
+                padding: "6px 12px",
+                fontSize: "12px",
+                borderRadius: "6px",
+                cursor: "pointer"
+              }}
+              onClick={() => setActiveTab("waiting")}
+            >
+              View Queue ({readyReviews.length})
+            </button>
+          </div>
+        </div>
+      )}
+
+
       <main className="doctor-main-content">
         
         {/* ================= 1. DASHBOARD VIEW ================= */}
@@ -2265,6 +2407,136 @@ _(Saved in patient clinic records)_`;
                   </button>
                 </div>
               )}
+
+              {/* ⭐ 2-Hour Post-Consultation WhatsApp Review Automation Section */}
+              <div className="review-queue-panel" style={{ marginTop: "30px", borderTop: "1px dashed var(--line, #334155)", paddingTop: "24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "16px" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: "800", color: "var(--text, #ffffff)", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>⭐</span> Post-Consultation Review Queue (2-Hour Follow-Up)
+                      {pendingReviews.length > 0 && (
+                        <span className="enq-badge" style={{ background: readyReviews.length > 0 ? "#10b981" : "#0284c7", fontSize: "11px", padding: "2px 8px" }}>
+                          {readyReviews.length > 0 ? `${readyReviews.length} Ready` : `${pendingReviews.length} Scheduled`}
+                        </span>
+                      )}
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "12.5px", color: "var(--text-secondary, #94a3b8)" }}>
+                      Automatically scheduled for <strong>newly enrolled patients</strong> (1st consultation). Triggers 2 hours after doctor consultation.
+                    </p>
+                  </div>
+                  <button
+                    className="secondary-btn"
+                    style={{ fontSize: "12px", padding: "6px 12px" }}
+                    onClick={() => setActiveTab("settings")}
+                    title="Change Google Review Link / Feedback Form URL"
+                  >
+                    ⚙️ Configure Review Link
+                  </button>
+                </div>
+
+                {reviewQueue.length === 0 ? (
+                  <div className="empty-waiting-card" style={{ padding: "20px", background: "var(--bg-card, #1e293b)", border: "1px solid var(--line, #334155)" }}>
+                    <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary, #94a3b8)" }}>
+                      ⏳ No post-consultation reviews in queue. When you complete a first-time consultation for any newly enrolled patient from the queue above, they will automatically be queued here for a 2-hour WhatsApp follow-up.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "14px" }}>
+                    {reviewQueue.slice(0, 10).map((q) => {
+                      const isReady = q.status === "pending" && currentTime >= q.scheduledSendAt;
+                      const isPendingNotReady = q.status === "pending" && currentTime < q.scheduledSendAt;
+                      const isSent = q.status === "sent";
+                      const isDismissed = q.status === "dismissed";
+                      const minsLeft = Math.ceil((q.scheduledSendAt - currentTime) / 60000);
+
+                      return (
+                        <div
+                          key={q.queueId}
+                          className="patient-waiting-card"
+                          style={{
+                            borderLeft: isReady ? "4px solid #10b981" : isSent ? "4px solid #3b82f6" : "4px solid #f59e0b",
+                            background: isReady ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card, #1e293b) 100%)" : "var(--bg-card, #1e293b)"
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                            <div>
+                              <strong style={{ fontSize: "15px", color: "var(--text, #ffffff)" }}>{q.patientName}</strong>
+                              <div style={{ fontSize: "12px", color: "var(--text-secondary, #94a3b8)", marginTop: "2px" }}>
+                                📞 +91 {q.phone} • ID: {q.patientId}
+                              </div>
+                            </div>
+                            <div>
+                              {isReady && (
+                                <span className="status-badge" style={{ background: "#10b981", color: "#ffffff", fontWeight: "700", fontSize: "11px" }}>
+                                  🔔 2h Ready to Send
+                                </span>
+                              )}
+                              {isPendingNotReady && (
+                                <span className="status-badge" style={{ background: "rgba(2, 132, 199, 0.15)", color: "#38bdf8", border: "1px solid rgba(2, 132, 199, 0.3)", fontSize: "11px" }}>
+                                  ⏳ In {minsLeft > 60 ? `${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m` : `${minsLeft}m`} ({q.scheduledTimeStr})
+                                </span>
+                              )}
+                              {isSent && (
+                                <span className="status-badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.3)", fontSize: "11px" }}>
+                                  ✓ Sent on WhatsApp
+                                </span>
+                              )}
+                              {isDismissed && (
+                                <span className="status-badge" style={{ background: "rgba(148, 163, 184, 0.15)", color: "#94a3b8", fontSize: "11px" }}>
+                                  ✕ Dismissed
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: "12px", color: "var(--text-secondary, #94a3b8)", marginBottom: "12px", background: "rgba(0,0,0,0.15)", padding: "6px 10px", borderRadius: "6px" }}>
+                            <div>🩺 <strong>Consultation:</strong> {q.diagnosis || "Physiotherapy Rehab"}</div>
+                            <div>⏱️ <strong>Completed At:</strong> {q.completedTimeStr} • <strong>2h Trigger:</strong> {q.scheduledTimeStr}</div>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                            <button
+                              className="primary-btn"
+                              style={{
+                                flex: 1,
+                                minHeight: "38px",
+                                fontSize: "12.5px",
+                                fontWeight: "700",
+                                background: isReady ? "linear-gradient(135deg, #059669, #047857)" : "linear-gradient(135deg, #0284c7, #0369a1)"
+                              }}
+                              onClick={() => handleSendReviewWhatsApp(q)}
+                            >
+                              📲 {isSent ? "Re-send on WhatsApp" : isReady ? "Send 2h Review Message" : "Send WhatsApp Review"}
+                            </button>
+
+                            {q.status === "pending" && (
+                              <button
+                                className="secondary-btn"
+                                style={{ minHeight: "38px", padding: "6px 10px", fontSize: "11px" }}
+                                onClick={() => handleMarkReviewSent(q.queueId)}
+                                title="Mark as sent manually without opening WhatsApp"
+                              >
+                                ✓ Mark Sent
+                              </button>
+                            )}
+
+                            {q.status === "pending" && (
+                              <button
+                                className="secondary-btn"
+                                style={{ minHeight: "38px", padding: "6px 10px", fontSize: "11px", color: "#ef4444" }}
+                                onClick={() => handleDismissReview(q.queueId)}
+                                title="Dismiss this review reminder"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -3446,6 +3718,74 @@ _(Saved in patient clinic records)_`;
                   </button>
                 </div>
               </div>
+
+              {/* ⭐ Google Review & Patient Feedback Automation Settings */}
+              <div className="settings-card" style={{ border: "1.5px solid #059669", background: "linear-gradient(180deg, rgba(5, 150, 105, 0.06) 0%, var(--bg-card, #1e293b) 100%)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+                  <span style={{ fontSize: "22px" }}>⭐</span>
+                  <h3 style={{ margin: 0, color: "#10b981" }}>Google Review &amp; Patient Feedback WhatsApp Link</h3>
+                </div>
+                <p style={{ fontSize: "13px", color: "var(--text-secondary, #94a3b8)", margin: "0 0 14px 0" }}>
+                  When any <strong>new patient</strong> completes their initial consultation, the system automatically schedules a personalized WhatsApp review request to be sent <strong>2 hours after consultation</strong> with Dr. Satyam Vishwakarma (PT).
+                </p>
+
+                <form onSubmit={handleSaveReviewUrl}>
+                  <label>
+                    Google Review Link / Feedback Form URL
+                    <input
+                      type="url"
+                      placeholder="https://g.page/r/your-google-review-link or https://forms.gle/..."
+                      value={reviewUrlInput}
+                      onChange={(e) => setReviewUrlInput(e.target.value)}
+                      style={{ fontSize: "13px" }}
+                    />
+                  </label>
+                  {reviewSavedMsg && (
+                    <div style={{ color: "#10b981", fontSize: "12px", marginBottom: "8px", fontWeight: "700" }}>
+                      {reviewSavedMsg}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "10px" }}>
+                    <button type="submit" className="primary-btn" style={{ background: "linear-gradient(135deg, #059669 0%, #047857 100%)", flex: 1, minHeight: "42px" }}>
+                      💾 Save Review Link
+                    </button>
+                    <a
+                      href={getReviewWhatsAppUrl("8382024264", "Satyam (Test)", reviewUrlInput)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="secondary-btn"
+                      style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", minHeight: "42px" }}
+                      title="Test how the message looks on WhatsApp"
+                    >
+                      📲 Test Message on My WhatsApp
+                    </a>
+                  </div>
+                </form>
+
+                {/* Live Message Preview */}
+                <div style={{ marginTop: "16px", background: "rgba(0, 0, 0, 0.25)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "10px", padding: "14px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: "700", color: "#38bdf8", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span>💬</span> WhatsApp Message Preview (Auto-Personalized for Each Patient):
+                  </div>
+                  <pre
+                    style={{
+                      whiteSpace: "pre-wrap",
+                      fontSize: "12px",
+                      lineHeight: "1.5",
+                      color: "var(--text, #f1f5f9)",
+                      fontFamily: "inherit",
+                      margin: 0,
+                      background: "rgba(255,255,255,0.03)",
+                      padding: "10px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid rgba(255,255,255,0.06)"
+                    }}
+                  >
+                    {generateReviewWhatsAppMessage("Rahul Kumar", reviewUrlInput)}
+                  </pre>
+                </div>
+              </div>
+
 
               <div className="settings-card">
                 <h3>Export Clinic Database (CSV / Excel)</h3>

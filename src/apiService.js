@@ -15,6 +15,8 @@ const KEYS = {
   VISITS: "vindhy_visits_db",
   ENQUIRIES: "vindhy_enquiries_db",
   WEBHOOK_URL: "vindhy_webhook_url",
+  REVIEW_URL: "vindhy_review_url",
+  REVIEW_QUEUE: "vindhy_review_queue",
   DELETED_PATIENT_IDS: "vindhy_deleted_patient_ids",
   DELETED_VISIT_IDS: "vindhy_deleted_visit_ids",
   DELETED_ENQUIRY_IDS: "vindhy_deleted_enquiry_ids"
@@ -34,6 +36,128 @@ export function setWebhookUrl(url) {
     localStorage.setItem(KEYS.WEBHOOK_URL, url.trim());
   } else {
     localStorage.removeItem(KEYS.WEBHOOK_URL);
+  }
+}
+
+// Helper: Get configured Google Review / Feedback URL
+export function getReviewUrl() {
+  const custom = localStorage.getItem(KEYS.REVIEW_URL);
+  if (custom && custom.trim() !== "") return custom.trim();
+  const envUrl = import.meta.env.VITE_GOOGLE_REVIEW_URL;
+  if (envUrl && envUrl.trim() !== "") return envUrl.trim();
+  return "";
+}
+
+export function setReviewUrl(url) {
+  if (url && url.trim() !== "") {
+    localStorage.setItem(KEYS.REVIEW_URL, url.trim());
+  } else {
+    localStorage.removeItem(KEYS.REVIEW_URL);
+  }
+}
+
+// Helper: Generate structured, warm WhatsApp review message
+export function generateReviewWhatsAppMessage(patientName, customReviewUrl = "") {
+  const activeUrl = (customReviewUrl || getReviewUrl() || "").trim();
+  const linkText = activeUrl ? activeUrl : "[Review Link: Please configure in Doctor Portal Settings]";
+  const pName = (patientName || "Valued Patient").trim();
+
+  return `Namaste ${pName} ji 🙏,
+
+Thank you for visiting Vindhy Physio & Rehab Center today for your consultation with Dr. Satyam Vishwakarma (PT).
+
+We hope you had a comfortable consultation and rehabilitation session. Your recovery, pain relief, and long-term health are our highest priority! 🌸
+
+🌟 We would truly appreciate your valuable feedback! It takes just 30 seconds and helps us serve you and other patients even better:
+👉 ${linkText}
+
+For any pain relief queries, home exercise guidance, or your next appointment scheduling, feel free to message us here on WhatsApp.
+
+Wishing you a speedy and healthy recovery! 🌿
+Dr. Satyam Vishwakarma (PT)
+Lead Consultant Physiotherapist
+Vindhy Physio & Rehab Center, Robertsganj
+📞 +91 8382024264`;
+}
+
+export function getReviewWhatsAppUrl(phone, patientName, customReviewUrl = "") {
+  const cleanPhone = String(phone || "").replace(/\D/g, "").slice(-10);
+  const msg = generateReviewWhatsAppMessage(patientName, customReviewUrl);
+  return `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`;
+}
+
+// Review Queue Management (2-Hour Post-Consult for newly enrolled patients)
+export function getReviewQueue() {
+  return getLocal(KEYS.REVIEW_QUEUE, []);
+}
+
+export function scheduleReviewRequest(patient, visit) {
+  if (!patient || !patient.patientId) return null;
+  const queue = getLocal(KEYS.REVIEW_QUEUE, []);
+  
+  // Prevent duplicate queue entries for the same patient
+  const existingIndex = queue.findIndex(q => q.patientId === patient.patientId);
+  if (existingIndex !== -1) {
+    return queue[existingIndex];
+  }
+
+  const now = Date.now();
+  const scheduledSendAt = now + (2 * 60 * 60 * 1000); // exactly 2 hours after consultation completion
+  const queueItem = {
+    queueId: `REV-${patient.patientId}-${now}`,
+    patientId: patient.patientId,
+    patientName: patient.name,
+    phone: patient.phone,
+    visitId: visit?.visitId || "",
+    diagnosis: visit?.diagnosis || patient.lastDiagnosis || "",
+    completedAt: now,
+    completedTimeStr: new Date(now).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    scheduledSendAt: scheduledSendAt,
+    scheduledTimeStr: new Date(scheduledSendAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    status: "pending", // "pending" | "sent" | "dismissed"
+    sentAt: null,
+    isFirstVisit: true
+  };
+
+  queue.unshift(queueItem);
+  setLocal(KEYS.REVIEW_QUEUE, queue);
+
+  // Sync scheduled review to Google Sheets
+  try {
+    syncToGoogleSheets("sync_review_schedule", {
+      queueId: queueItem.queueId,
+      patientId: queueItem.patientId,
+      patientName: queueItem.patientName,
+      phone: queueItem.phone,
+      completedAt: queueItem.completedTimeStr,
+      scheduledSendAt: queueItem.scheduledTimeStr,
+      status: "pending"
+    });
+  } catch (e) {}
+
+  return queueItem;
+}
+
+export function markReviewSent(queueId) {
+  const queue = getLocal(KEYS.REVIEW_QUEUE, []);
+  const idx = queue.findIndex(q => q.queueId === queueId);
+  if (idx !== -1) {
+    queue[idx].status = "sent";
+    queue[idx].sentAt = Date.now();
+    queue[idx].sentTimeStr = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+    setLocal(KEYS.REVIEW_QUEUE, queue);
+    try {
+      syncToGoogleSheets("sync_review_status", { queueId, status: "sent", sentAt: queue[idx].sentTimeStr });
+    } catch (e) {}
+  }
+}
+
+export function dismissReview(queueId) {
+  const queue = getLocal(KEYS.REVIEW_QUEUE, []);
+  const idx = queue.findIndex(q => q.queueId === queueId);
+  if (idx !== -1) {
+    queue[idx].status = "dismissed";
+    setLocal(KEYS.REVIEW_QUEUE, queue);
   }
 }
 
@@ -625,6 +749,15 @@ export const api = {
         localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...storedPatient, ...patient }));
       }
     } catch (e) {}
+
+    // If this is the patient's first consultation (newly enrolled), schedule the 2-hour automated WhatsApp review
+    if (visitNum === 1 || existingVisits.length === 0 || !patient.totalVisits || patient.totalVisits <= 1) {
+      try {
+        scheduleReviewRequest(patient, newVisit);
+      } catch (e) {
+        console.warn("Auto-scheduling review error:", e);
+      }
+    }
 
     // Sync to Google Sheets
     syncToGoogleSheets("sync_patient", patient);
@@ -1363,5 +1496,32 @@ export const patientApi = {
       }
       return { ok: false, error: e.message || "Network error" };
     }
+  },
+
+  // Review System & WhatsApp Automation APIs
+  getReviewUrl() {
+    return getReviewUrl();
+  },
+  setReviewUrl(url) {
+    setReviewUrl(url);
+  },
+  getReviewQueue() {
+    return getReviewQueue();
+  },
+  scheduleReviewRequest(patient, visit) {
+    return scheduleReviewRequest(patient, visit);
+  },
+  markReviewSent(queueId) {
+    return markReviewSent(queueId);
+  },
+  dismissReview(queueId) {
+    return dismissReview(queueId);
+  },
+  generateReviewWhatsAppMessage(patientName, reviewUrl) {
+    return generateReviewWhatsAppMessage(patientName, reviewUrl);
+  },
+  getReviewWhatsAppUrl(phone, patientName, reviewUrl) {
+    return getReviewWhatsAppUrl(phone, patientName, reviewUrl);
   }
 };
+

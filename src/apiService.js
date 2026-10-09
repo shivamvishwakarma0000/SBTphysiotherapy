@@ -5,7 +5,7 @@
 
 const DEFAULT_DOCTOR_EMAIL = "shivamupsc8@gmail.com";
 const DEFAULT_DOCTOR_PASS = "@Shivam0000";
-export const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyH7cVmjuMfZDm6hbaNnA6FMdrWfngPTNiYZD-jttQDgyOa_t-HIjvtA4o-o8rvA1t7PA/exec";
+export const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxaUQWab2LHMYA_w97RPNL9A8TuJJy2jR2X3KqcAyihQj_qwvdOGwv23fO9nOFb_WYNRA/exec";
 
 // Keys for localStorage
 const KEYS = {
@@ -149,16 +149,23 @@ export async function restoreFromGoogleSheets() {
       const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
       const deletedEnquiryIds = new Set(getLocal(KEYS.DELETED_ENQUIRY_IDS, []));
 
+      const normPhone = (ph) => String(ph || "").replace(/\D/g, "").slice(-10);
+
       const pMap = new Map();
+      const phoneToIdMap = new Map();
+
       (data.patients || []).forEach(rp => {
         if (rp && rp.patientId) {
           const cleanId = String(rp.patientId).trim();
           if (deletedPatientIds.has(cleanId)) return;
-          pMap.set(cleanId, {
+          const cleanPhone = rp.phone ? String(rp.phone).trim() : "";
+          const nPh = normPhone(cleanPhone);
+
+          const patientObj = {
             ...rp,
             patientId: cleanId,
             name: rp.name || rp.patientName || "Patient",
-            phone: rp.phone ? String(rp.phone).trim() : "",
+            phone: cleanPhone,
             age: Number(rp.age) || rp.age || "",
             gender: rp.gender || "Male",
             address: rp.address || "Vindhyachal, Mirzapur",
@@ -167,7 +174,10 @@ export async function restoreFromGoogleSheets() {
             totalVisits: Number(rp.totalVisits) || 1,
             registrationDate: rp.registrationDate ? String(rp.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
             lastVisitDate: rp.lastVisitDate ? String(rp.lastVisitDate).slice(0, 10) : (rp.registrationDate ? String(rp.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10))
-          });
+          };
+
+          pMap.set(cleanId, patientObj);
+          if (nPh) phoneToIdMap.set(nPh, cleanId);
         }
       });
 
@@ -175,10 +185,13 @@ export async function restoreFromGoogleSheets() {
       const localPatients = getLocal(KEYS.PATIENTS, []);
       localPatients.forEach(lp => {
         if (lp && lp.patientId && !deletedPatientIds.has(lp.patientId) && !pMap.has(lp.patientId)) {
-          pMap.set(lp.patientId, lp);
+          const nPh = normPhone(lp.phone);
+          if (!nPh || !phoneToIdMap.has(nPh)) {
+            pMap.set(lp.patientId, lp);
+            if (nPh) phoneToIdMap.set(nPh, lp.patientId);
+          }
         }
       });
-      const mergedPatients = Array.from(pMap.values());
 
       // Visits
       const vMap = new Map();
@@ -199,6 +212,59 @@ export async function restoreFromGoogleSheets() {
       });
       const mergedVisits = Array.from(vMap.values());
 
+      // SELF-HEALING RECONCILIATION: Check if any visit belongs to an orphan/overwritten patient missing from pMap
+      mergedVisits.forEach(v => {
+        const vPhone = normPhone(v.phone);
+        const vName = String(v.patientName || "").trim();
+        const vPid = String(v.patientId || "").trim();
+
+        if (vPid && deletedPatientIds.has(vPid)) return;
+
+        // Check if existing patient mapped by vPid has different phone and name (collision)
+        const existingWithId = pMap.get(vPid);
+        const hasCollision = existingWithId && vPhone && normPhone(existingWithId.phone) && normPhone(existingWithId.phone) !== vPhone;
+
+        if (!existingWithId || hasCollision) {
+          // If collision or missing, check if we already synthesized a separate patient by phone
+          let targetPid = vPhone ? phoneToIdMap.get(vPhone) : null;
+          if (!targetPid) {
+            // Find next safe patient ID
+            let maxN = 1000;
+            pMap.forEach((_, k) => {
+              const m = k.match(/(\d{4,})/);
+              if (m) {
+                const num = parseInt(m[1], 10);
+                if (!isNaN(num) && num > maxN && num < 9000) maxN = num;
+              }
+            });
+            targetPid = `VPR-2026-${maxN + 1}`;
+            if (vPhone) phoneToIdMap.set(vPhone, targetPid);
+
+            const recoveredPatient = {
+              patientId: targetPid,
+              name: vName || "Patient",
+              phone: v.phone ? String(v.phone).trim() : "",
+              age: 35,
+              gender: "Male",
+              address: "Vindhyachal, Mirzapur",
+              firstVisitReason: v.reason || v.complaint || "Physiotherapy Rehabilitation",
+              status: "Active",
+              totalVisits: 1,
+              registrationDate: v.date ? String(v.date).slice(0, 10) : new Date().toISOString().slice(0, 10),
+              lastVisitDate: v.date ? String(v.date).slice(0, 10) : new Date().toISOString().slice(0, 10)
+            };
+            pMap.set(targetPid, recoveredPatient);
+          }
+
+          // Point visit to the correct disambiguated patient ID
+          if (hasCollision && targetPid) {
+            v.patientId = targetPid;
+          }
+        }
+      });
+
+      const mergedPatients = Array.from(pMap.values());
+
       // Enquiries
       const eMap = new Map();
       (data.enquiries || []).forEach(re => {
@@ -216,7 +282,10 @@ export async function restoreFromGoogleSheets() {
 
       // Recalculate visit counts accurately
       mergedPatients.forEach(patient => {
-        const pVisits = mergedVisits.filter(v => String(v.patientId).trim().toUpperCase() === String(patient.patientId).trim().toUpperCase());
+        const pVisits = mergedVisits.filter(v => 
+          String(v.patientId).trim().toUpperCase() === String(patient.patientId).trim().toUpperCase() ||
+          (normPhone(v.phone) && normPhone(v.phone) === normPhone(patient.phone))
+        );
         if (pVisits.length > 0) {
           patient.totalVisits = pVisits.length;
           const sorted = [...pVisits].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -410,7 +479,48 @@ export const api = {
 
   async createPatient(payload) {
     const patients = getLocal(KEYS.PATIENTS, []);
-    const newId = `VPR-2026-${1000 + patients.length + 1}`;
+    const visits = getLocal(KEYS.VISITS, []);
+    const normPh = String(payload.phone || "").replace(/\D/g, "").slice(-10);
+
+    // 1. Check if patient with same phone already exists
+    if (normPh) {
+      const existing = patients.find(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === normPh);
+      if (existing) {
+        existing.name = payload.name.trim() || existing.name;
+        existing.age = Number(payload.age) || existing.age;
+        existing.gender = payload.gender || existing.gender;
+        existing.address = (payload.address || "").trim() || existing.address;
+        if (payload.firstVisitReason || payload.reasonForVisit) {
+          existing.firstVisitReason = payload.firstVisitReason || payload.reasonForVisit;
+        }
+        setLocal(KEYS.PATIENTS, patients);
+        syncToGoogleSheets("sync_patient", existing);
+        return { ok: true, patient: existing };
+      }
+    }
+
+    // 2. Safely scan all existing IDs to find maximum suffix
+    let maxNum = 1000;
+    const allIds = [
+      ...patients.map(p => p.patientId),
+      ...visits.map(v => v.patientId),
+      ...visits.map(v => v.visitId)
+    ];
+    allIds.forEach(idStr => {
+      if (idStr) {
+        const matches = String(idStr).match(/(\d{4,})/g);
+        if (matches) {
+          matches.forEach(m => {
+            const n = parseInt(m, 10);
+            if (!isNaN(n) && n > maxNum && n < 9000) {
+              maxNum = n;
+            }
+          });
+        }
+      }
+    });
+
+    const newId = `VPR-2026-${maxNum + 1}`;
     const todayStr = new Date().toISOString().split("T")[0];
     const intakeTimeStr = payload.visitTime || payload.intakeTime || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 

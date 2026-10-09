@@ -8,6 +8,7 @@ import {
   getReviewUrl,
   setReviewUrl,
   getReviewQueue,
+  scheduleReviewRequest,
   markReviewSent,
   dismissReview,
   generateReviewWhatsAppMessage,
@@ -325,6 +326,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [reviewSavedMsg, setReviewSavedMsg] = useState("");
   const [reviewQueue, setReviewQueue] = useState(() => getReviewQueue());
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [reviewFilterTab, setReviewFilterTab] = useState("pending");
 
 
   // Patient Portal Security Account State (Doctor Controls)
@@ -718,9 +720,19 @@ export default function DoctorPortal({ onClose, themeProps }) {
     return reviewQueue.filter(q => q.status === "pending");
   }, [reviewQueue]);
 
+  const sentReviews = useMemo(() => {
+    return reviewQueue.filter(q => q.status === "sent");
+  }, [reviewQueue]);
+
   const readyReviews = useMemo(() => {
     return reviewQueue.filter(q => q.status === "pending" && currentTime >= q.scheduledSendAt);
   }, [reviewQueue, currentTime]);
+
+  const displayedReviews = useMemo(() => {
+    if (reviewFilterTab === "sent") return sentReviews;
+    if (reviewFilterTab === "all") return reviewQueue.filter(q => q.status !== "dismissed");
+    return pendingReviews;
+  }, [reviewFilterTab, pendingReviews, sentReviews, reviewQueue]);
 
 
   // Phone hardware/browser back button navigation handling for Doctor Portal
@@ -811,7 +823,24 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const fetchPatients = async (query = "") => {
     try {
       const data = await api.getPatients(query);
-      if (data.ok) setPatients(data.patients);
+      if (data.ok) {
+        setPatients(data.patients);
+        // Ensure any newly enrolled / waiting patient has an active review queue entry
+        if (data.patients && data.patients.length > 0) {
+          const currentQueue = getReviewQueue();
+          let queueUpdated = false;
+          data.patients.forEach(p => {
+            const hasQueue = currentQueue.some(q => q.patientId === p.patientId);
+            if (!hasQueue && (p.isFirstTime !== "No" || p.status === "Waiting for Doctor" || (p.totalVisits || 0) <= 1)) {
+              scheduleReviewRequest(p);
+              queueUpdated = true;
+            }
+          });
+          if (queueUpdated) {
+            setReviewQueue(getReviewQueue());
+          }
+        }
+      }
     } catch (e) {
       console.error(e);
     }
@@ -934,6 +963,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
       fetchStats();
       fetchPatients();
       fetchTodayVisits();
+      fetchReviewQueue();
 
       setNewPatientForm({
         name: "",
@@ -2441,40 +2471,103 @@ _(Saved in patient clinic records)_`;
                       )}
                     </h3>
                     <p style={{ margin: 0, fontSize: "12.5px", color: "var(--text-secondary, #94a3b8)" }}>
-                      Automatically scheduled for <strong>newly enrolled patients</strong> (1st consultation). Triggers 2 hours after doctor consultation.
+                      Automatically scheduled for <strong>newly enrolled patients</strong>. Triggers 2 hours after intake or consultation.
                     </p>
                   </div>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                    <button
+                      className="secondary-btn"
+                      style={{ fontSize: "12px", padding: "6px 12px" }}
+                      onClick={() => setActiveTab("settings")}
+                      title="Change Google Review Link / Feedback Form URL"
+                    >
+                      ⚙️ Configure Review Link
+                    </button>
+                  </div>
+                </div>
+
+                {/* Queue Filter Sub-Tabs */}
+                <div style={{ display: "flex", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
                   <button
-                    className="secondary-btn"
-                    style={{ fontSize: "12px", padding: "6px 12px" }}
-                    onClick={() => setActiveTab("settings")}
-                    title="Change Google Review Link / Feedback Form URL"
+                    type="button"
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      background: reviewFilterTab === "pending" ? "#0284c7" : "var(--bg-card, #1e293b)",
+                      color: reviewFilterTab === "pending" ? "#ffffff" : "var(--text-secondary, #94a3b8)",
+                      border: "1px solid var(--line, #334155)"
+                    }}
+                    onClick={() => setReviewFilterTab("pending")}
                   >
-                    ⚙️ Configure Review Link
+                    ⏳ Pending / Scheduled ({pendingReviews.length})
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      background: reviewFilterTab === "sent" ? "#059669" : "var(--bg-card, #1e293b)",
+                      color: reviewFilterTab === "sent" ? "#ffffff" : "var(--text-secondary, #94a3b8)",
+                      border: "1px solid var(--line, #334155)"
+                    }}
+                    onClick={() => setReviewFilterTab("sent")}
+                  >
+                    ✓ Sent on WhatsApp ({sentReviews.length})
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      background: reviewFilterTab === "all" ? "#6366f1" : "var(--bg-card, #1e293b)",
+                      color: reviewFilterTab === "all" ? "#ffffff" : "var(--text-secondary, #94a3b8)",
+                      border: "1px solid var(--line, #334155)"
+                    }}
+                    onClick={() => setReviewFilterTab("all")}
+                  >
+                    📋 All ({reviewQueue.filter(q => q.status !== "dismissed").length})
                   </button>
                 </div>
 
-                {pendingReviews.length === 0 ? (
+                {displayedReviews.length === 0 ? (
                   <div className="empty-waiting-card" style={{ padding: "20px", background: "var(--bg-card, #1e293b)", border: "1px solid var(--line, #334155)", textAlign: "center" }}>
-                    <span style={{ fontSize: "28px" }}>✅</span>
-                    <h4 style={{ margin: "6px 0 2px 0", color: "var(--text, #ffffff)", fontSize: "14px" }}>No Pending Follow-Up Reviews</h4>
+                    <span style={{ fontSize: "28px" }}>{reviewFilterTab === "sent" ? "📲" : "✅"}</span>
+                    <h4 style={{ margin: "6px 0 2px 0", color: "var(--text, #ffffff)", fontSize: "14px" }}>
+                      {reviewFilterTab === "sent" ? "No Reviews Sent Yet" : "No Pending Follow-Up Reviews"}
+                    </h4>
                     <p style={{ margin: 0, fontSize: "12.5px", color: "var(--text-secondary, #94a3b8)" }}>
-                      All post-consultation WhatsApp review requests are complete. When a new 1st-time patient is consulted, their 2-hour follow-up will appear here until sent.
+                      {reviewFilterTab === "sent"
+                        ? "Once you click Send WhatsApp on any scheduled patient, their record will appear here."
+                        : "When a new patient is enrolled or consulted, their 2-hour WhatsApp follow-up will appear here until sent."}
                     </p>
                   </div>
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "14px" }}>
-                    {pendingReviews.map((q) => {
+                    {displayedReviews.map((q) => {
                       const isReady = currentTime >= q.scheduledSendAt;
                       const minsLeft = Math.ceil((q.scheduledSendAt - currentTime) / 60000);
+                      const isSent = q.status === "sent";
 
                       return (
                         <div
                           key={q.queueId}
                           className="patient-waiting-card"
                           style={{
-                            borderLeft: isReady ? "4px solid #10b981" : "4px solid #f59e0b",
-                            background: isReady ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card, #1e293b) 100%)" : "var(--bg-card, #1e293b)"
+                            borderLeft: isSent ? "4px solid #10b981" : isReady ? "4px solid #10b981" : "4px solid #f59e0b",
+                            background: isSent
+                              ? "linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, var(--bg-card, #1e293b) 100%)"
+                              : isReady
+                              ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card, #1e293b) 100%)"
+                              : "var(--bg-card, #1e293b)"
                           }}
                         >
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
@@ -2485,7 +2578,11 @@ _(Saved in patient clinic records)_`;
                               </div>
                             </div>
                             <div>
-                              {isReady ? (
+                              {isSent ? (
+                                <span className="status-badge" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#10b981", border: "1px solid rgba(16, 185, 129, 0.4)", fontWeight: "700", fontSize: "11px" }}>
+                                  ✓ Sent ({q.sentTimeStr || "Done"})
+                                </span>
+                              ) : isReady ? (
                                 <span className="status-badge" style={{ background: "#10b981", color: "#ffffff", fontWeight: "700", fontSize: "11px" }}>
                                   🔔 2h Ready to Send
                                 </span>
@@ -2499,7 +2596,7 @@ _(Saved in patient clinic records)_`;
 
                           <div style={{ fontSize: "12px", color: "var(--text-secondary, #94a3b8)", marginBottom: "12px", background: "rgba(0,0,0,0.15)", padding: "6px 10px", borderRadius: "6px" }}>
                             <div>🩺 <strong>Consultation:</strong> {q.diagnosis || "Physiotherapy Rehab"}</div>
-                            <div>⏱️ <strong>Completed At:</strong> {q.completedTimeStr} • <strong>2h Trigger:</strong> {q.scheduledTimeStr}</div>
+                            <div>⏱️ <strong>Intake/Done At:</strong> {q.completedTimeStr} • <strong>2h Trigger:</strong> {q.scheduledTimeStr}</div>
                           </div>
 
                           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
@@ -2510,21 +2607,27 @@ _(Saved in patient clinic records)_`;
                                 minHeight: "38px",
                                 fontSize: "12.5px",
                                 fontWeight: "700",
-                                background: isReady ? "linear-gradient(135deg, #059669, #047857)" : "linear-gradient(135deg, #0284c7, #0369a1)"
+                                background: isSent
+                                  ? "linear-gradient(135deg, #059669, #047857)"
+                                  : isReady
+                                  ? "linear-gradient(135deg, #059669, #047857)"
+                                  : "linear-gradient(135deg, #0284c7, #0369a1)"
                               }}
                               onClick={() => handleSendReviewWhatsApp(q)}
                             >
-                              📲 {isReady ? "Send 2h Review Message" : "Send WhatsApp Review"}
+                              📲 {isSent ? "Re-send on WhatsApp" : isReady ? "Send 2h Review Message" : "Send WhatsApp Review"}
                             </button>
 
-                            <button
-                              className="secondary-btn"
-                              style={{ minHeight: "38px", padding: "6px 10px", fontSize: "11px" }}
-                              onClick={() => handleMarkReviewSent(q.queueId)}
-                              title="Mark as sent manually and remove from queue"
-                            >
-                              ✓ Mark Sent
-                            </button>
+                            {!isSent && (
+                              <button
+                                className="secondary-btn"
+                                style={{ minHeight: "38px", padding: "6px 10px", fontSize: "11px" }}
+                                onClick={() => handleMarkReviewSent(q.queueId)}
+                                title="Mark as sent manually"
+                              >
+                                ✓ Mark Sent
+                              </button>
+                            )}
 
                             <button
                               className="secondary-btn"

@@ -89,21 +89,26 @@ export function scheduleReviewRequest(patient, visit) {
   if (!patient || !patient.patientId) return null;
   const queue = getLocal(KEYS.REVIEW_QUEUE, []);
   
-  // Prevent duplicate queue entries for the same patient
+  // Prevent duplicate queue entries for the same patient, update visit details if provided
   const existingIndex = queue.findIndex(q => q.patientId === patient.patientId);
   if (existingIndex !== -1) {
+    if (visit) {
+      queue[existingIndex].visitId = visit.visitId || queue[existingIndex].visitId;
+      queue[existingIndex].diagnosis = visit.diagnosis || queue[existingIndex].diagnosis;
+      setLocal(KEYS.REVIEW_QUEUE, queue);
+    }
     return queue[existingIndex];
   }
 
   const now = Date.now();
-  const scheduledSendAt = now + (2 * 60 * 60 * 1000); // exactly 2 hours after consultation completion
+  const scheduledSendAt = now + (2 * 60 * 60 * 1000); // exactly 2 hours after enrollment/consultation
   const queueItem = {
     queueId: `REV-${patient.patientId}-${now}`,
     patientId: patient.patientId,
     patientName: patient.name,
     phone: patient.phone,
     visitId: visit?.visitId || "",
-    diagnosis: visit?.diagnosis || patient.lastDiagnosis || "",
+    diagnosis: visit?.diagnosis || patient.firstVisitReason || patient.lastDiagnosis || patient.reasonForVisit || "Physiotherapy Rehabilitation",
     completedAt: now,
     completedTimeStr: new Date(now).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
     scheduledSendAt: scheduledSendAt,
@@ -694,6 +699,13 @@ export const api = {
 
     patients.unshift(newPatient);
     setLocal(KEYS.PATIENTS, patients);
+
+    // Auto-schedule 2-Hour WhatsApp Follow-up Review for newly enrolled patient
+    try {
+      scheduleReviewRequest(newPatient);
+    } catch (e) {
+      console.warn("Auto-scheduling review error on patient create:", e);
+    }
 
     // Real-time Push to Google Sheets (Non-blocking)
     syncToGoogleSheets("sync_patient", newPatient);

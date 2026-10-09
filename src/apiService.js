@@ -56,29 +56,23 @@ export function setReviewUrl(url) {
   }
 }
 
-// Helper: Generate structured, warm WhatsApp review message
+// Helper: Generate structured, short & sweet WhatsApp review message
 export function generateReviewWhatsAppMessage(patientName, customReviewUrl = "") {
   const activeUrl = (customReviewUrl || getReviewUrl() || "").trim();
-  const linkText = activeUrl ? activeUrl : "[Review Link: Please configure in Doctor Portal Settings]";
-  const pName = (patientName || "Valued Patient").trim();
+  const linkText = activeUrl ? activeUrl : "[Review Link: Configure in Doctor Portal Settings]";
+  const pName = (patientName || "Patient").trim();
 
   return `Namaste ${pName} ji 🙏,
 
 Thank you for visiting Vindhy Physio & Rehab Center today for your consultation with Dr. Satyam Vishwakarma (PT).
 
-We hope you had a comfortable consultation and rehabilitation session. Your recovery, pain relief, and long-term health are our highest priority! 🌸
-
-🌟 We would truly appreciate your valuable feedback! It takes just 30 seconds and helps us serve you and other patients even better:
+🌟 Please take 30 seconds to share your valuable review & feedback:
 👉 ${linkText}
 
-For any pain relief queries, home exercise guidance, or your next appointment scheduling, feel free to message us here on WhatsApp.
-
-Wishing you a speedy and healthy recovery! 🌿
-Dr. Satyam Vishwakarma (PT)
-Lead Consultant Physiotherapist
-Vindhy Physio & Rehab Center, Robertsganj
-📞 +91 8382024264`;
+Wishing you a speedy recovery! 🌿
+Dr. Satyam Vishwakarma (PT) • 📞 +91 8382024264`;
 }
+
 
 export function getReviewWhatsAppUrl(phone, patientName, customReviewUrl = "") {
   const cleanPhone = String(phone || "").replace(/\D/g, "").slice(-10);

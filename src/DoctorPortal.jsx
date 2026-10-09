@@ -1825,8 +1825,8 @@ _(Saved in patient clinic records)_`;
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "17px" }}>⭐</span>
             <span>
-              <strong>{readyReviews.length} Review Request{readyReviews.length > 1 ? "s" : ""} Ready:</strong> 2 hours have passed since consultation for{" "}
-              {readyReviews.map(r => r.patientName).join(", ")}.
+              <strong>Post-Consultation Review:</strong> 2 hours completed for{" "}
+              <strong>{readyReviews[0].patientName}</strong> ({readyReviews[0].phone}). Send feedback message?
             </span>
           </div>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -1844,26 +1844,46 @@ _(Saved in patient clinic records)_`;
               }}
               onClick={() => handleSendReviewWhatsApp(readyReviews[0])}
             >
-              📲 Send WhatsApp to {readyReviews[0].patientName}
+              📲 Send WhatsApp
             </button>
             <button
               className="secondary-btn"
               style={{
-                background: "rgba(255,255,255,0.15)",
-                color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.35)",
+                background: "rgba(239, 68, 68, 0.2)",
+                color: "#fee2e2",
+                border: "1px solid rgba(239, 68, 68, 0.45)",
                 padding: "6px 12px",
                 fontSize: "12px",
                 borderRadius: "6px",
-                cursor: "pointer"
+                cursor: "pointer",
+                fontWeight: "700"
               }}
-              onClick={() => setActiveTab("waiting")}
+              onClick={() => handleDismissReview(readyReviews[0].queueId)}
+              title="Decline / Do not send for this patient"
             >
-              View Queue ({readyReviews.length})
+              ✕ Don't Send
             </button>
+            {readyReviews.length > 1 && (
+              <button
+                className="secondary-btn"
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255,255,255,0.35)",
+                  padding: "6px 10px",
+                  fontSize: "11px",
+                  borderRadius: "6px",
+                  cursor: "pointer"
+                }}
+                onClick={() => setActiveTab("waiting")}
+              >
+                +{readyReviews.length - 1} More
+              </button>
+            )}
           </div>
         </div>
       )}
+
 
 
       <main className="doctor-main-content">

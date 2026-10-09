@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 
 /**
- * Universal Long-Pull-To-Refresh Component
- * Designed specifically to prevent accidental triggers during normal scrolling.
- * Requires an intentional, deliberate LONG downward drag (160px+ finger travel)
- * when strictly at the very top of the page before activating refresh.
+ * Universal Native-Style Long-Pull-To-Refresh
+ * - Prevents accidental triggers during normal scrolling.
+ * - Requires an intentional, deliberate LONG downward drag (~110px+ finger travel)
+ *   started strictly at the top of the page.
  */
 export default function PullToRefresh({ onRefresh, children, className = "", disabled = false }) {
   const [pullY, setPullY] = useState(0);
@@ -16,34 +16,24 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
   const startXRef = useRef(0);
   const isPullingRef = useRef(false);
   const isReadyRef = useRef(false);
-  const hasVibratedRef = useRef(false);
   const containerRef = useRef(null);
 
-  // Intentional Long-Pull Constants (prevents small scroll triggers)
-  const DEADZONE = 55;            // Initial 55px of drag is completely ignored
-  const MIN_PULL_DISTANCE = 160;  // Must pull finger down at least 160px physically
-  const MAX_VISUAL_PULL = 82;     // Maximum visual travel for the indicator
-  const READY_THRESHOLD = 64;     // Visual threshold where "Release to refresh" activates
+  // Calibrated long-pull parameters
+  const DEADZONE = 35;        // First 35px of swipe is ignored (prevents micro-scroll triggers)
+  const PULL_THRESHOLD = 110; // Must pull at least 110px physically to activate
+  const MAX_VISUAL_PULL = 75; // Maximum indicator travel
 
   useEffect(() => {
     if (disabled) return;
 
-    // Helper to verify if the page and all touch parent containers are strictly at top (scrollTop <= 1)
-    const isStrictlyAtTop = (target) => {
+    const isAtTop = () => {
       const winScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-      if (winScroll > 1) return false;
-
-      let el = target;
-      while (el && el !== document.body && el !== document.documentElement) {
-        if (el.scrollTop > 1) return false;
-        el = el.parentElement;
-      }
-      return true;
+      return winScroll <= 1;
     };
 
     const handleTouchStart = (e) => {
       if (isRefreshing || disabled) return;
-      if (!e.touches || e.touches.length !== 1) return; // Single-touch only
+      if (!e.touches || e.touches.length !== 1) return;
 
       const target = e.target;
       if (
@@ -58,12 +48,11 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
         return;
       }
 
-      if (isStrictlyAtTop(target)) {
+      if (isAtTop()) {
         startYRef.current = e.touches[0].clientY;
         startXRef.current = e.touches[0].clientX;
         isPullingRef.current = true;
         isReadyRef.current = false;
-        hasVibratedRef.current = false;
       } else {
         isPullingRef.current = false;
       }
@@ -78,16 +67,15 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
       const diffY = currentY - startYRef.current;
       const diffX = currentX - startXRef.current;
 
-      // Cancel pull if swiping horizontally or scrolling up
-      if (Math.abs(diffX) * 1.15 > diffY || diffY <= 0) {
+      // Cancel if swiping horizontally or scrolling up
+      if (Math.abs(diffX) * 1.1 > diffY || diffY <= 0) {
         setPullY(0);
         setIsReady(false);
         isReadyRef.current = false;
         return;
       }
 
-      // If page or container is no longer at the top, immediately cancel
-      if (!isStrictlyAtTop(e.target)) {
+      if (!isAtTop()) {
         setPullY(0);
         setIsReady(false);
         isReadyRef.current = false;
@@ -95,7 +83,7 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
         return;
       }
 
-      // Small down scrolls within the deadzone do NOT trigger or move indicator
+      // Ignore small drag inside deadzone
       if (diffY <= DEADZONE) {
         setPullY(0);
         setIsReady(false);
@@ -103,26 +91,14 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
         return;
       }
 
-      // Calculate damped resistance for deliberate long downward pull
+      // Calculate smooth spring dampened travel
       const activeDistance = diffY - DEADZONE;
-      const dampened = Math.min(MAX_VISUAL_PULL, Math.pow(activeDistance, 0.72) * 1.5);
+      const dampened = Math.min(MAX_VISUAL_PULL, activeDistance * 0.48);
       setPullY(dampened);
 
-      // Ready requires both visual threshold AND physical long drag distance (160px+)
-      const ready = diffY >= MIN_PULL_DISTANCE && dampened >= READY_THRESHOLD;
+      const ready = diffY >= PULL_THRESHOLD;
       setIsReady(ready);
       isReadyRef.current = ready;
-
-      if (ready && !hasVibratedRef.current) {
-        hasVibratedRef.current = true;
-        try {
-          if (navigator.vibrate) {
-            navigator.vibrate(10);
-          }
-        } catch (_) {}
-      } else if (!ready) {
-        hasVibratedRef.current = false;
-      }
     };
 
     const handleTouchEnd = async () => {
@@ -135,11 +111,11 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
 
       if (shouldRefresh) {
         setIsRefreshing(true);
-        setPullY(50);
+        setPullY(46);
 
         try {
           if (navigator.vibrate) {
-            navigator.vibrate(14);
+            navigator.vibrate(12);
           }
         } catch (_) {}
 
@@ -148,7 +124,7 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
             await onRefresh();
           }
         } catch (err) {
-          console.warn("Pull-to-refresh execution error:", err);
+          console.warn("Pull refresh:", err);
         } finally {
           setRefreshDone(true);
           setTimeout(() => {
@@ -158,7 +134,7 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
           }, 450);
         }
       } else {
-        // Did not pull far enough: smoothly snap back without refreshing
+        // Did not pull far enough: snap back cleanly without refreshing
         setPullY(0);
       }
     };
@@ -176,7 +152,7 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
     };
   }, [isRefreshing, onRefresh, disabled]);
 
-  const progress = Math.min(1, Math.max(0, pullY / READY_THRESHOLD));
+  const progress = Math.min(1, Math.max(0, pullY / 46));
 
   return (
     <div
@@ -184,21 +160,21 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
       className={`pull-to-refresh-wrapper ${className}`}
       style={{ position: "relative", width: "100%" }}
     >
-      {/* Intentional Long-Pull Circular Floating Spinner */}
+      {/* Floating Refresh Indicator Pill */}
       {(pullY > 0 || isRefreshing) && (
         <div
           className="ptr-indicator-pill"
           style={{
             position: "fixed",
-            top: `${Math.max(12, Math.min(pullY - 10, 52))}px`,
+            top: `${Math.max(12, Math.min(pullY - 6, 52))}px`,
             left: "50%",
-            transform: `translateX(-50%) scale(${Math.min(1.05, 0.7 + progress * 0.35)})`,
+            transform: `translateX(-50%) scale(${Math.min(1.05, 0.75 + progress * 0.3)})`,
             zIndex: 999999,
-            width: isReady ? "44px" : "40px",
-            height: isReady ? "44px" : "40px",
+            width: isReady ? "42px" : "38px",
+            height: isReady ? "42px" : "38px",
             borderRadius: "50%",
             background: "var(--ptr-bg, #ffffff)",
-            border: isReady ? "2px solid #10b981" : "1px solid rgba(0, 0, 0, 0.08)",
+            border: isReady ? "2px solid #10b981" : "1px solid rgba(0, 0, 0, 0.1)",
             boxShadow: isReady
               ? "0 8px 24px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(0, 0, 0, 0.12)"
               : "0 6px 20px rgba(0, 0, 0, 0.16), 0 1px 4px rgba(0, 0, 0, 0.08)",
@@ -208,19 +184,19 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
             pointerEvents: "none",
             transition: isPullingRef.current
               ? "width 0.15s ease, height 0.15s ease, border 0.15s ease"
-              : "top 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.25s ease, opacity 0.2s ease, width 0.2s ease, height 0.2s ease",
-            opacity: Math.max(0.4, progress)
+              : "top 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.22s ease, opacity 0.2s ease",
+            opacity: Math.max(0.45, progress)
           }}
         >
           {isRefreshing ? (
             refreshDone ? (
-              <span style={{ color: "#10b981", fontSize: "19px", fontWeight: "bold" }}>✓</span>
+              <span style={{ color: "#10b981", fontSize: "18px", fontWeight: "bold" }}>✓</span>
             ) : (
               <div
                 className="ptr-spinner-ring"
                 style={{
-                  width: "20px",
-                  height: "20px",
+                  width: "18px",
+                  height: "18px",
                   border: "2.5px solid rgba(2, 132, 199, 0.2)",
                   borderTopColor: "#0284c7",
                   borderRadius: "50%",
@@ -235,12 +211,12 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
               viewBox="0 0 24 24"
               fill="none"
               stroke={isReady ? "#10b981" : "#0284c7"}
-              strokeWidth="2.6"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
               style={{
                 transform: isReady ? "rotate(180deg)" : `rotate(${progress * 220}deg)`,
-                transition: "transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.15s ease"
+                transition: "transform 0.15s ease, stroke 0.15s ease"
               }}
             >
               <polyline points="7 10 12 15 17 10"></polyline>

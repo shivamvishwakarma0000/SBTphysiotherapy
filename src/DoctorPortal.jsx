@@ -6,6 +6,7 @@ import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly, form
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
 import { PatientAvatar } from "./PatientAvatar";
+import PullToRefresh from "./PullToRefresh";
 
 
 // =============================================================================
@@ -1599,7 +1600,19 @@ _(Saved in patient clinic records)_`;
   // RENDER: DOCTOR DASHBOARD & CLINIC MANAGEMENT
   // ==========================================
   return (
-    <div className="doctor-portal-fullscreen">
+    <PullToRefresh
+      onRefresh={async () => {
+        try {
+          if (getWebhookUrl()) {
+            await restoreFromGoogleSheets();
+          }
+          await Promise.all([fetchStats(), fetchPatients(), fetchTodayVisits(), fetchEnquiries()]);
+        } catch (e) {
+          console.warn("Pull refresh:", e);
+        }
+      }}
+    >
+      <div className="doctor-portal-fullscreen">
       <header className="doctor-navbar">
         <div className="doctor-nav-top-row">
           <div className="doctor-nav-brand">
@@ -5124,6 +5137,7 @@ _(Saved in patient clinic records)_`;
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }

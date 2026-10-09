@@ -4,6 +4,7 @@ import { downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils
 import { CLINIC_LOGO_B64 } from "./pdfAssets";
 import { PatientAvatar } from "./PatientAvatar";
 import ErrorBoundary from "./ErrorBoundary";
+import PullToRefresh from "./PullToRefresh";
 
 export default function PatientPortal({ onClose, themeProps }) {
   const handleToggleTheme = () => {
@@ -453,7 +454,8 @@ export default function PatientPortal({ onClose, themeProps }) {
   const latestVisit = sortedVisits[0] || null;
 
   return (
-    <div className="patient-portal-root">
+    <PullToRefresh onRefresh={loadPatientData}>
+      <div className="patient-portal-root">
       {/* Top Clinic Header */}
       <header className="patient-header">
         <div className="header-left">
@@ -2097,6 +2099,7 @@ export default function PatientPortal({ onClose, themeProps }) {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }

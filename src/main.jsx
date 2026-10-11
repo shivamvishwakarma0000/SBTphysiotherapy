@@ -1088,7 +1088,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
             <h4 style={{ color: "#ffffff", fontSize: "12.5px", fontWeight: "700", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Follow Dr. Satyam</h4>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <a
-                href="https://www.instagram.com/vindhyadrsatyam1/?hl=en#"
+                href="https://www.instagram.com/vindhydrsatyam1/"
                 target="_blank"
                 rel="noreferrer"
                 style={{
@@ -1109,7 +1109,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
                 <span>Instagram</span>
               </a>
               <a
-                href="https://www.facebook.com"
+                href="https://www.facebook.com/vindhydrsatyam1"
                 target="_blank"
                 rel="noreferrer"
                 style={{

@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 import DoctorPortal from "./DoctorPortal";
 import PatientPortal from "./PatientPortal";
-import PullToRefresh from "./PullToRefresh";
 import ErrorBoundary from "./ErrorBoundary";
 import { api } from "./apiService";
 import { useTheme } from "./useTheme";
@@ -1711,11 +1710,11 @@ function App() {
       showDoctorPortal ||
       showPatientPortal;
 
-    // Trigger Download App popup on first visit for anyone landing on the website
+    // Trigger Download App popup after user has explored the website (not immediately on first touch)
     if (!isStandalone && !isAppInstalled && !dismissed && !isPortalActive) {
       timer = setTimeout(() => {
         setShowDownloadModal(true);
-      }, 700);
+      }, 12000);
     }
 
     const checkHash = () => {
@@ -1822,22 +1821,8 @@ function App() {
     };
   }, [showDoctorPortal, showPatientPortal]);
 
-  const handleWebsiteRefresh = async () => {
-    try {
-      if (typeof api.getPublicClinicData === "function") {
-        await api.getPublicClinicData();
-      }
-    } catch (e) {
-      console.log("Website refresh:", e);
-    }
-  };
-
   return (
-    <PullToRefresh
-      onRefresh={handleWebsiteRefresh}
-      disabled={showDoctorPortal || showPatientPortal || showDownloadModal || showAutoEnquiry}
-    >
-      <div className={`app-root ${themeProps.resolvedTheme}`}>
+    <div className={`app-root ${themeProps.resolvedTheme}`}>
         <Header
           onOpenDoctorPortal={openDoctorPortal}
           onOpenPatientPortal={openPatientPortal}
@@ -1896,7 +1881,6 @@ function App() {
           </ErrorBoundary>
         )}
       </div>
-    </PullToRefresh>
   );
 }
 

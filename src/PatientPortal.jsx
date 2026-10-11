@@ -487,6 +487,26 @@ export default function PatientPortal({ onClose, themeProps }) {
             </div>
           </div>
 
+          <button
+            className="portal-refresh-btn"
+            onClick={loadPatientData}
+            title="Refresh clinical records & visits"
+            style={{
+              background: "rgba(2, 132, 199, 0.08)",
+              border: "1px solid rgba(2, 132, 199, 0.2)",
+              color: "#0284c7",
+              borderRadius: "8px",
+              padding: "6px 10px",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              fontSize: "12px",
+              fontWeight: "700"
+            }}
+          >
+            🔄 Refresh
+          </button>
           <button className="portal-exit-btn" onClick={handleLogout} title="Sign Out">
             <span className="btn-icon">🚪</span>
             <span className="btn-label">Sign Out</span>

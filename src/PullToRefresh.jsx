@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 
 /**
- * Ultra-Safe Native-Style Long-Pull-To-Refresh
- * - Completely prevents accidental triggers during regular page reading / scrolling.
- * - Requires a VERY LONG, intentional downward drag (180px+ finger travel).
- * - Ignores initial 60px swipe (deadzone).
- * - Only initiates if strictly at the very top (scrollY === 0).
+ * Mobile In-App Pull-To-Refresh for Android & iOS
+ * - Designed specifically for Doctor Portal, Patient Portal & standalone apps.
+ * - Detects container scrollTop accurately (.doctor-portal-fullscreen, .patient-portal-root).
+ * - Comfortable natural drag threshold (~80px).
+ * - Never blocks normal up/down scrolling or horizontal navigation.
  */
 export default function PullToRefresh({ onRefresh, children, className = "", disabled = false }) {
   const [pullY, setPullY] = useState(0);
@@ -19,17 +19,37 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
   const isReadyRef = useRef(false);
   const containerRef = useRef(null);
 
-  // Intentional Very-Long-Pull Constants (Prevents all accidental triggers)
-  const DEADZONE = 60;        // Initial 60px downward movement is completely ignored
-  const PULL_THRESHOLD = 180; // Must pull down at least 180px physically to activate refresh
-  const MAX_VISUAL_PULL = 72; // Maximum visual travel for the floating spinner
+  // Responsive Pull Constants
+  const DEADZONE = 10;        // 10px tap/jitter deadzone
+  const PULL_THRESHOLD = 80;  // 80px comfortable downward drag to activate
+  const MAX_VISUAL_PULL = 64; // Max travel for spinner
 
   useEffect(() => {
     if (disabled) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const getScrollableElement = () => {
+      const scrollChild = container.querySelector(
+        ".doctor-portal-fullscreen, .patient-portal-root, [data-scrollable='true']"
+      );
+      if (scrollChild) return scrollChild;
+      if (
+        container.scrollHeight > container.clientHeight &&
+        window.getComputedStyle(container).overflowY !== "visible"
+      ) {
+        return container;
+      }
+      return null;
+    };
 
     const isAtTop = () => {
+      const scrollEl = getScrollableElement();
+      if (scrollEl) {
+        return scrollEl.scrollTop <= 2;
+      }
       const winScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-      return winScroll <= 1;
+      return winScroll <= 2;
     };
 
     const handleTouchStart = (e) => {
@@ -63,19 +83,6 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
       if (!isPullingRef.current || isRefreshing || disabled) return;
       if (!e.touches || e.touches.length !== 1) return;
 
-      const currentY = e.touches[0].clientY;
-      const currentX = e.touches[0].clientX;
-      const diffY = currentY - startYRef.current;
-      const diffX = currentX - startXRef.current;
-
-      // Cancel if horizontal swipe or scrolling upwards
-      if (Math.abs(diffX) * 1.15 > diffY || diffY <= 0) {
-        setPullY(0);
-        setIsReady(false);
-        isReadyRef.current = false;
-        return;
-      }
-
       if (!isAtTop()) {
         setPullY(0);
         setIsReady(false);
@@ -84,7 +91,20 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
         return;
       }
 
-      // Small down scrolls within the 60px deadzone do NOT trigger or show spinner
+      const currentY = e.touches[0].clientY;
+      const currentX = e.touches[0].clientX;
+      const diffY = currentY - startYRef.current;
+      const diffX = currentX - startXRef.current;
+
+      // Immediately cancel if user is scrolling up or swiping horizontally
+      if (diffY <= 0 || Math.abs(diffX) * 1.15 > diffY) {
+        setPullY(0);
+        setIsReady(false);
+        isReadyRef.current = false;
+        isPullingRef.current = false;
+        return;
+      }
+
       if (diffY <= DEADZONE) {
         setPullY(0);
         setIsReady(false);
@@ -92,12 +112,10 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
         return;
       }
 
-      // Calculate smooth spring-dampened resistance for deliberate long pull
       const activeDistance = diffY - DEADZONE;
-      const dampened = Math.min(MAX_VISUAL_PULL, Math.pow(activeDistance, 0.7) * 1.35);
+      const dampened = Math.min(MAX_VISUAL_PULL, Math.pow(activeDistance, 0.75) * 1.6);
       setPullY(dampened);
 
-      // Only mark ready when physical drag is >= 180px
       const ready = diffY >= PULL_THRESHOLD;
       setIsReady(ready);
       isReadyRef.current = ready;
@@ -133,24 +151,23 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
             setIsRefreshing(false);
             setRefreshDone(false);
             setPullY(0);
-          }, 450);
+          }, 400);
         }
       } else {
-        // Did not pull far enough: snap back cleanly without refreshing
         setPullY(0);
       }
     };
 
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd);
-    window.addEventListener("touchcancel", handleTouchEnd);
+    container.addEventListener("touchstart", handleTouchStart, { passive: true });
+    container.addEventListener("touchmove", handleTouchMove, { passive: true });
+    container.addEventListener("touchend", handleTouchEnd);
+    container.addEventListener("touchcancel", handleTouchEnd);
 
     return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-      window.removeEventListener("touchcancel", handleTouchEnd);
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
+      container.removeEventListener("touchcancel", handleTouchEnd);
     };
   }, [isRefreshing, onRefresh, disabled]);
 
@@ -168,15 +185,15 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
           className="ptr-indicator-pill"
           style={{
             position: "fixed",
-            top: `${Math.max(12, Math.min(pullY - 6, 52))}px`,
+            top: `${Math.max(14, Math.min(pullY, 56))}px`,
             left: "50%",
-            transform: `translateX(-50%) scale(${Math.min(1.05, 0.75 + progress * 0.3)})`,
+            transform: `translateX(-50%) scale(${Math.min(1.05, 0.8 + progress * 0.25)})`,
             zIndex: 999999,
             width: isReady ? "42px" : "38px",
             height: isReady ? "42px" : "38px",
             borderRadius: "50%",
             background: "var(--ptr-bg, #ffffff)",
-            border: isReady ? "2px solid #10b981" : "1px solid rgba(0, 0, 0, 0.1)",
+            border: isReady ? "2px solid #10b981" : "1px solid rgba(0, 0, 0, 0.12)",
             boxShadow: isReady
               ? "0 8px 24px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(0, 0, 0, 0.12)"
               : "0 6px 20px rgba(0, 0, 0, 0.16), 0 1px 4px rgba(0, 0, 0, 0.08)",
@@ -185,9 +202,9 @@ export default function PullToRefresh({ onRefresh, children, className = "", dis
             justifyContent: "center",
             pointerEvents: "none",
             transition: isPullingRef.current
-              ? "width 0.15s ease, height 0.15s ease, border 0.15s ease"
-              : "top 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.22s ease, opacity 0.2s ease",
-            opacity: Math.max(0.45, progress)
+              ? "width 0.12s ease, height 0.12s ease, border 0.12s ease"
+              : "top 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.2s ease, opacity 0.2s ease",
+            opacity: Math.max(0.5, progress)
           }}
         >
           {isRefreshing ? (

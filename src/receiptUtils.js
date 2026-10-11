@@ -114,7 +114,7 @@ export const buildReceiptPDF = (receipt) => {
   doc.setFontSize(8);
   doc.setTextColor(200, 220, 230);
   doc.text("Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)", 14, 32);
-  doc.text("Phone: +91 9793093316  |  WhatsApp: +91 8382024264", 14, 38);
+  doc.text("Phone: +91 9793093316  |  WhatsApp: +91 9793093316", 14, 38);
 
   // Doctor Details on Top Right
   doc.setFont("helvetica", "bold");
@@ -272,7 +272,7 @@ export const buildReceiptPDF = (receipt) => {
   doc.text("Thank you for choosing Vindhy Physio & Rehab Center", 105, 283, { align: "center" });
   doc.setFontSize(7);
   doc.setTextColor(180, 200, 210);
-  doc.text("For appointments & medical inquiries: Call 9793093316 | WhatsApp: 8382024264 | Amravati Chauraha, Vindhyachal", 105, 289, { align: "center" });
+  doc.text("For appointments & medical inquiries: Call 9793093316 | WhatsApp: 9793093316 | Amravati Chauraha, Vindhyachal", 105, 289, { align: "center" });
 
   return doc;
 };

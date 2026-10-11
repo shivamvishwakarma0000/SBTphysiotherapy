@@ -10,7 +10,7 @@ import { useTheme } from "./useTheme";
 import ThemeToggle from "./ThemeToggle";
 
 const phonePrimary = "9793093316";
-const phoneWhatsApp = "8382024264";
+const phoneWhatsApp = "9793093316";
 const clinicAddress = "Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)";
 
 const navItems = [
@@ -794,7 +794,7 @@ function Assessment() {
           </p>
           <div className="contact-panel">
             <a href={`tel:${phonePrimary}`} className="contact-call-btn"><CallIcon /> Call: +91 9793093316</a>
-            <a href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I would like to book a physiotherapy consultation.")}`} target="_blank" rel="noreferrer" className="contact-wa-btn"><WhatsAppIcon /> WhatsApp: +91 8382024264</a>
+            <a href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I would like to book a physiotherapy consultation.")}`} target="_blank" rel="noreferrer" className="contact-wa-btn"><WhatsAppIcon /> WhatsApp: +91 9793093316</a>
           </div>
           <div className="location-badge-box">
             <strong>📍 Clinic Location:</strong>
@@ -1129,13 +1129,34 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
                 <FacebookIcon />
                 <span>Facebook</span>
               </a>
+              <a
+                href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I want to connect regarding physiotherapy appointment.")}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 12px",
+                  borderRadius: "20px",
+                  background: "#25D366",
+                  color: "#ffffff",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(37, 211, 102, 0.3)"
+                }}
+              >
+                <WhatsAppIcon />
+                <span>WhatsApp</span>
+              </a>
             </div>
           </div>
         </div>
         <div className="footer-col contact-col">
           <h3>Clinic Contact & Timings</h3>
           <a href={`tel:${phonePrimary}`} className="footer-link"><CallIcon /> Call: +91 9793093316</a>
-          <a href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I want to connect regarding physiotherapy appointment.")}`} target="_blank" rel="noreferrer" className="footer-link"><WhatsAppIcon /> WhatsApp: +91 8382024264</a>
+          <a href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent("Hello Dr. Satyam Vishwakarma, I want to connect regarding physiotherapy appointment.")}`} target="_blank" rel="noreferrer" className="footer-link"><WhatsAppIcon /> WhatsApp: +91 9793093316</a>
           <div className="footer-hours">
             🗓️ Monday – Saturday<br />
             ⏰ 9:00 AM – 8:00 PM

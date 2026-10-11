@@ -70,7 +70,7 @@ Thank you for visiting Vindhy Physio & Rehab Center today for your consultation 
 \u{1F449} ${linkText}
 
 Wishing you a speedy recovery! \u{1F33F}
-Dr. Satyam Vishwakarma (PT) \u{2022} \u{1F4DE} +91 8382024264`;
+Dr. Satyam Vishwakarma (PT) \u{2022} \u{1F4DE} +91 9793093316`;
 }
 
 export function getReviewWhatsAppUrl(phone, patientName, customReviewUrl = "") {

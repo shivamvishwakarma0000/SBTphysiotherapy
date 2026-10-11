@@ -363,7 +363,7 @@ def build_presentation():
                 "• <b>Clinic Name:</b> Vindhya Physio & Rehab Center<br/>"
                 "• <b>Consultant:</b> Dr. Satyam Vishwakarma (BPT, DPT, CCYP - BHU)<br/>"
                 "• <b>Clinic Address:</b> Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)<br/>"
-                "• <b>Helpline:</b> +91 9793093316 | <b>WhatsApp:</b> +91 8382024264<br/>"
+                "• <b>Helpline:</b> +91 9793093316 | <b>WhatsApp:</b> +91 9793093316<br/>"
                 "• <b>Web Portal:</b> <font color='#38BDF8'><b>https://vindhyaphysio.netlify.app</b></font>",
                 card_body_large
             )

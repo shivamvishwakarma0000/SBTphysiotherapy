@@ -419,7 +419,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               </p>
               <div className="helpline-chips">
                 <a href="tel:+919793093316" className="help-chip">📞 Call: +91 9793093316</a>
-                <a href="https://wa.me/918382024264" target="_blank" rel="noreferrer" className="help-chip wa">💬 WhatsApp Helpline</a>
+                <a href="https://wa.me/919793093316" target="_blank" rel="noreferrer" className="help-chip wa">💬 WhatsApp Helpline</a>
               </div>
             </div>
           </div>
@@ -942,7 +942,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
               <div className="booking-actions">
                 <a
-                  href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile.name)}%20(ID:%20${patientProfile.patientId}).%20I%20would%20like%20to%20schedule%20my%20next%20physiotherapy%20visit.`}
+                  href={`https://wa.me/919793093316?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile.name)}%20(ID:%20${patientProfile.patientId}).%20I%20would%20like%20to%20schedule%20my%20next%20physiotherapy%20visit.`}
                   target="_blank"
                   rel="noreferrer"
                   className="patient-primary-btn"
@@ -994,7 +994,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   </div>
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                     <a
-                      href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20confirming%20my%20scheduled%20follow-up%20on%20${encodeURIComponent(cleanDateOnly(followUpStr))}%20for%20${encodeURIComponent(patientProfile?.name || 'Patient')}%20(ID:%20${patientProfile?.patientId || ''}).`}
+                      href={`https://wa.me/919793093316?text=Hello%20Dr.%20Satyam,%20I%20am%20confirming%20my%20scheduled%20follow-up%20on%20${encodeURIComponent(cleanDateOnly(followUpStr))}%20for%20${encodeURIComponent(patientProfile?.name || 'Patient')}%20(ID:%20${patientProfile?.patientId || ''}).`}
                       target="_blank"
                       rel="noreferrer"
                       className="patient-primary-btn"
@@ -1654,7 +1654,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="treatment-contact-bar">
                 <span>Questions about your care plan?</span>
                 <a
-                  href="https://wa.me/918382024264"
+                  href="https://wa.me/919793093316"
                   target="_blank"
                   rel="noreferrer"
                   className="patient-primary-btn"
@@ -1998,7 +1998,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <div>
                   <h4>VINDHYA PHYSIO & REHAB CENTER</h4>
                   <p>Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)</p>
-                  <p>Phone: +91 9793093316 | WhatsApp: +91 8382024264</p>
+                  <p>Phone: +91 9793093316 | WhatsApp: +91 9793093316</p>
                 </div>
                 <div className="slip-doctor-right">
                   <strong>DR. SATYAM VISHWAKARMA</strong>
@@ -2254,7 +2254,7 @@ export default function PatientPortal({ onClose, themeProps }) {
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <a
-                href={`https://wa.me/918382024264?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile?.name || "Patient")}%20(ID:%20${patientProfile?.patientId || "VPR"}).%20I%20have%20an%20inquiry%20regarding%20my%20physiotherapy.`}
+                href={`https://wa.me/919793093316?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile?.name || "Patient")}%20(ID:%20${patientProfile?.patientId || "VPR"}).%20I%20have%20an%20inquiry%20regarding%20my%20physiotherapy.`}
                 target="_blank"
                 rel="noreferrer"
                 className="patient-primary-btn"

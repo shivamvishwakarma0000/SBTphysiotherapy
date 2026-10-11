@@ -1512,7 +1512,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
 --------------------------------------------
 👨‍⚕️ *Consultant:* Dr. Satyam Vishwakarma
 📍 *Clinic Address:* Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)
-📞 *Helpline:* +91 9793093316 | WhatsApp: +91 8382024264
+📞 *Helpline:* +91 9793093316 | WhatsApp: +91 9793093316
 --------------------------------------------
 📄 *Official Digital Clinical Receipt*
 _(Saved in patient clinic records)_`;
@@ -3858,7 +3858,7 @@ _(Saved in patient clinic records)_`;
                       💾 Save Review Link
                     </button>
                     <a
-                      href={getReviewWhatsAppUrl("8382024264", "Satyam (Test)", reviewUrlInput)}
+                      href={getReviewWhatsAppUrl("9793093316", "Satyam (Test)", reviewUrlInput)}
                       target="_blank"
                       rel="noreferrer"
                       className="secondary-btn"
@@ -4997,7 +4997,7 @@ _(Saved in patient clinic records)_`;
                   />
                   <p className="receipt-banner-address">
                     Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)<br />
-                    Phone: +91 9793093316 &nbsp;|&nbsp; WhatsApp: +91 8382024264
+                    Phone: +91 9793093316 &nbsp;|&nbsp; WhatsApp: +91 9793093316
                   </p>
                 </div>
                 <div className="receipt-banner-right">
@@ -5112,7 +5112,7 @@ _(Saved in patient clinic records)_`;
 
               <div className="receipt-footer">
                 <p>Thank you for choosing Vindhy Physio & Rehab Center</p>
-                <span>For appointments & medical inquiries: Call 9793093316 | WhatsApp: 8382024264 | Amravati Chauraha, Vindhyachal</span>
+                <span>For appointments & medical inquiries: Call 9793093316 | WhatsApp: 9793093316 | Amravati Chauraha, Vindhyachal</span>
               </div>
             </div>
 

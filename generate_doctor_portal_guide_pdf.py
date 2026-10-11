@@ -482,7 +482,7 @@ def create_guide_pdf(output_path):
             Paragraph(
                 "<b>🏥 VINDHYA PHYSIO & REHAB CENTER</b><br/>"
                 "<i>Setting the Gold Standard in Advanced Physiotherapy, Neuro Rehabilitation & Cupping Therapy.</i><br/>"
-                "📍 Amravati Chauraha, Vindhyachal, Mirzapur (U.P.) • 📞 Phone: +91 9793093316 | WhatsApp: +91 8382024264<br/>"
+                "📍 Amravati Chauraha, Vindhyachal, Mirzapur (U.P.) • 📞 Phone: +91 9793093316 | WhatsApp: +91 9793093316<br/>"
                 "🌐 Website & Portal: <b>https://vindhyaphysio.netlify.app</b>",
                 ParagraphStyle('SO', fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor("#0F172A"), alignment=TA_CENTER)
             )

@@ -34,6 +34,20 @@
   --success: #18b878;
   --radius: 12px;
 
+  /* Fluid Responsive Spacing System Tokens */
+  --space-2xs: clamp(2px, 0.4vw, 4px);
+  --space-xs: clamp(4px, 0.6vw, 6px);
+  --space-sm: clamp(8px, 1vw, 12px);
+  --space-md: clamp(12px, 1.5vw, 16px);
+  --space-lg: clamp(16px, 2.2vw, 24px);
+  --space-xl: clamp(24px, 3.5vw, 36px);
+  --space-2xl: clamp(32px, 5vw, 48px);
+
+  /* Container Boundaries & Touch Target Tokens */
+  --container-max: 1440px;
+  --container-pad: clamp(12px, 3vw, 24px);
+  --touch-target-min: 44px;
+
   /* Surfaces & Typography (Medical White/Blue/Green) */
   --bg: #f5f9fc;
   --bg-2: #edf4f9;
@@ -176,20 +190,68 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  color: #0c273d;
-  background-color: #edf5fa;
-  font-family: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text, #102a43);
+  background-color: var(--bg, #edf5fa);
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   line-height: 1.6;
   overflow-x: clip;
   -webkit-overflow-scrolling: touch;
+  min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 10% 2%, rgba(8, 120, 201, 0.08), transparent 35%),
     radial-gradient(circle at 90% 8%, rgba(24, 184, 120, 0.06), transparent 30%),
     linear-gradient(180deg, #eef5fa 0%, #e7f1f8 25%, #ebf4fa 50%, #e4f0f8 75%, #ebf4fa 100%);
+}
+
+/* Fluid responsive media & image sizing */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--primary, #0878c9) !important;
+  outline-offset: 2px !important;
+}
+
+/* Touch friendly base button & input handling */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+/* Prevent auto-zoom on iOS inputs when font-size < 16px */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="tel"],
+  input[type="email"],
+  input[type="date"],
+  input[type="time"],
+  input[type="search"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Prevent unwanted background scrolling when modals or portals are open */
@@ -224,13 +286,6 @@ footer {
 a {
   color: inherit;
   text-decoration: none;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
 }
 
 /* ================= HEADER & NAVIGATION ================= */
@@ -494,6 +549,7 @@ textarea {
   z-index: 1200;
   background: rgba(7, 43, 69, 0.6);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: flex-end;
   animation: fadeIn 200ms ease;
@@ -1321,6 +1377,7 @@ h1, h2, h3, p {
   padding: 3px 8px;
   border-radius: 6px;
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .placeholder-img {
@@ -2305,7 +2362,7 @@ textarea:focus {
 }
 
 /* ================= RESPONSIVE BREAKPOINTS ================= */
-@media (max-width: 1140px) {
+@media (max-width: 1240px) {
   nav.desktop-nav,
   .site-header nav.desktop-nav,
   .site-header nav {
@@ -2448,6 +2505,7 @@ textarea:focus {
   background: var(--doctor-nav-bg);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--shadow-sm);
 }
 
@@ -3423,6 +3481,7 @@ textarea:focus {
   z-index: 1100;
   background: rgba(2, 10, 18, 0.75);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3435,6 +3494,7 @@ textarea:focus {
 .patient-profile-card {
   width: min(840px, 100%);
   max-height: 90vh;
+  max-height: min(92dvh, calc(100vh - 24px));
   background: var(--bg-card);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -5318,6 +5378,7 @@ textarea:focus {
   z-index: 1300;
   background: rgba(2, 10, 18, 0.68);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -5842,6 +5903,7 @@ textarea:focus {
   z-index: 10050;
   background: rgba(11, 31, 42, 0.82);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5851,6 +5913,8 @@ textarea:focus {
 .patient-submodal-card {
   width: 100%;
   max-width: 440px;
+  max-height: min(92dvh, calc(100vh - 24px));
+  overflow-y: auto;
   background: var(--surface, #ffffff);
   border-radius: 16px;
   padding: 24px;
@@ -12962,6 +13026,153 @@ img, video, canvas, svg {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 6px !important;
+  }
+}
+
+/* =============================================================================
+   MOBILE LANDSCAPE & CROSS-BROWSER PRODUCTION ENHANCEMENTS
+   ============================================================================= */
+
+/* 1. Phone Landscape Mode (Short height <= 500px): Reorganize layouts horizontally */
+@media (max-height: 500px) and (orientation: landscape) {
+  .site-header {
+    padding-top: max(4px, env(safe-area-inset-top, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .hero {
+    padding: 24px clamp(16px, 4vw, 36px) 28px !important;
+  }
+
+  .hero-headline {
+    font-size: clamp(24px, 4vw, 34px) !important;
+    margin-bottom: 8px !important;
+  }
+
+  .hero-lead {
+    font-size: 14px !important;
+  }
+
+  /* Doctor & Patient Portal Header in Landscape */
+  .mobile-app-greeting-card {
+    padding: 8px max(14px, env(safe-area-inset-left, 0px)) 12px max(14px, env(safe-area-inset-right, 0px)) !important;
+    gap: 2px !important;
+  }
+
+  .mobile-hero-logo {
+    max-height: 34px !important;
+  }
+
+  .greeting-headline,
+  .greeting-title {
+    font-size: 15px !important;
+  }
+
+  /* Reorganize 6 touch boxes from 2x3 into 3 columns x 2 rows in landscape */
+  .mobile-app-grid-6 {
+    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-rows: repeat(2, auto) !important;
+    gap: 8px !important;
+    padding-left: max(12px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(12px, env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px)) !important;
+    margin-top: -6px !important;
+  }
+
+  .mobile-app-card {
+    min-height: 60px !important;
+    padding: 6px 4px !important;
+    gap: 2px !important;
+  }
+
+  .card-icon-bubble {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 15px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .card-title,
+  .mobile-app-card .card-title,
+  .mobile-app-card strong {
+    font-size: 11px !important;
+  }
+
+  /* Landscape Modals */
+  .modal-overlay,
+  .patient-profile-modal-overlay,
+  .receipt-modal-overlay,
+  .add-visit-modal-overlay,
+  .inner-modal-overlay,
+  .doctor-portal-modal-overlay {
+    padding: 8px max(12px, env(safe-area-inset-left, 0px)) !important;
+  }
+
+  .patient-profile-card,
+  .doctor-login-modal-box,
+  .cal-schedule-modal-card,
+  .enroll-form-card,
+  .add-visit-card {
+    max-height: 94dvh !important;
+  }
+}
+
+/* 2. Safe Area Insets for Modern Notched & Edge-to-Edge Displays */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .site-header {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .mobile-bottom-nav-4,
+  .patient-bottom-nav {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .doctor-main-content,
+  .patient-main-container {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+}
+
+/* 3. Reduced Motion & Performance Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 4. Print Media Styles (Clean, ink-friendly receipt and prescription printouts) */
+@media print {
+  .site-header,
+  .mobile-bottom-nav-4,
+  .patient-bottom-nav,
+  .doctor-navbar,
+  .patient-navbar,
+  .whatsapp-floating,
+  .modal-close-btn,
+  .mobile-menu-toggle-btn {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .receipt-card,
+  .patient-profile-card {
+    box-shadow: none !important;
+    border: none !important;
+    max-height: none !important;
+    width: 100% !important;
   }
 }
 

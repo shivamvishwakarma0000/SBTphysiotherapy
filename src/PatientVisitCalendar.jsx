@@ -680,7 +680,8 @@ export default function PatientVisitCalendar({
               <span className="metric-label">Next Follow-Up</span>
               {nextFollowUpKey && (
                 <span className="followup-live-beacon" title="Next Follow-up active alert">
-                  <span className="beacon-dot"></span> BLINKING
+                  <span className="beacon-dot"></span>
+                  <span className="beacon-text-desktop"> BLINKING</span>
                 </span>
               )}
             </div>

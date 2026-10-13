@@ -1,11 +1,40 @@
 // =============================================================================
 // VINDHYA PHYSIO & REHAB CENTER — CLOUD & LOCAL UNIFIED API ENGINE
-// Supports: Netlify Static Hosting, Local Express Server & Direct Google Sheets Cloud Sync
+// Supports: Netlify Static Hosting, Local Express Server, Supabase PostgreSQL & Direct Google Sheets Cloud Sync
 // =============================================================================
+
+import {
+  getSupabaseConfig,
+  setSupabaseConfig,
+  isSupabaseConnected,
+  testSupabaseConnection,
+  getSupabaseSchemaSql,
+  supabaseGetPatients,
+  supabaseUpsertPatient,
+  supabaseDeletePatient,
+  supabaseGetVisits,
+  supabaseUpsertVisit,
+  supabaseDeleteVisit,
+  supabaseGetEnquiries,
+  supabaseUpsertEnquiry,
+  supabasePushAllData,
+  supabasePullAllData
+} from "./supabaseClient";
+
+export {
+  getSupabaseConfig,
+  setSupabaseConfig,
+  isSupabaseConnected,
+  testSupabaseConnection,
+  getSupabaseSchemaSql,
+  supabasePushAllData,
+  supabasePullAllData
+};
 
 const DEFAULT_DOCTOR_EMAIL = "shivamupsc8@gmail.com";
 const DEFAULT_DOCTOR_PASS = "@Shivam0000";
-export const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxY_3u6-DyrWZYNAFTmFyAMPKGR5SHrPyRUL2oYSf21zthtOiUUzBr6_BIRcrY4SWCVNA/exec";
+export const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwlLspKu--_OMzU1loE_-PgAUm5CrN1O8r_DE_tElYP-GWun0AZR4yypjPWHoo8UOQsTA/exec";
+
 
 // Keys for localStorage
 const KEYS = {
@@ -601,6 +630,22 @@ export const api = {
 
   // 3. PATIENTS
   async getPatients(query = "") {
+    // If Supabase is connected, optionally fetch fresh records
+    if (isSupabaseConnected()) {
+      try {
+        const sbPatients = await supabaseGetPatients();
+        if (sbPatients && sbPatients.length > 0) {
+          const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
+          const activeSbPatients = sbPatients.filter(p => !deletedPatientIds.has(p.patientId) && !deletedPatientIds.has(p.phone));
+          if (activeSbPatients.length > 0) {
+            setLocal(KEYS.PATIENTS, activeSbPatients);
+          }
+        }
+      } catch (err) {
+        console.warn("Supabase live getPatients notice:", err);
+      }
+    }
+
     const patients = getLocal(KEYS.PATIENTS, []);
     if (!query) return { ok: true, patients };
 
@@ -646,6 +691,9 @@ export const api = {
           existing.firstVisitReason = payload.firstVisitReason || payload.reasonForVisit;
         }
         setLocal(KEYS.PATIENTS, patients);
+        try {
+          supabaseUpsertPatient(existing).catch(() => {});
+        } catch (_) {}
         syncToGoogleSheets("sync_patient", existing);
         return { ok: true, patient: existing };
       }
@@ -706,6 +754,11 @@ export const api = {
     } catch (e) {
       console.warn("Auto-scheduling review error on patient create:", e);
     }
+
+    // Real-time Push to Supabase PostgreSQL (Non-blocking)
+    try {
+      supabaseUpsertPatient(newPatient).catch(err => console.warn("Supabase patient create notice:", err));
+    } catch (_) {}
 
     // Real-time Push to Google Sheets (Non-blocking)
     syncToGoogleSheets("sync_patient", newPatient);
@@ -787,6 +840,12 @@ export const api = {
       }
     }
 
+    // Sync to Supabase PostgreSQL (Non-blocking)
+    try {
+      supabaseUpsertPatient(patient).catch(err => console.warn("Supabase patient update notice:", err));
+      supabaseUpsertVisit(newVisit).catch(err => console.warn("Supabase visit sync notice:", err));
+    } catch (_) {}
+
     // Sync to Google Sheets
     syncToGoogleSheets("sync_patient", patient);
     syncToGoogleSheets("sync_visit", newVisit);
@@ -833,7 +892,12 @@ export const api = {
     setLocal(KEYS.VISITS, updatedVisits);
     setLocal(KEYS.PATIENT_AUTH, updatedAuth);
 
-    // 4. Sync deletion to Google Sheets Webhook
+    // 4. Delete from Supabase PostgreSQL (Non-blocking)
+    try {
+      supabaseDeletePatient(patientId).catch(err => console.warn("Supabase patient delete notice:", err));
+    } catch (_) {}
+
+    // 5. Sync deletion to Google Sheets Webhook
     syncToGoogleSheets("delete_patient", {
       patientId,
       phone: patientToDelete?.phone || "",
@@ -886,8 +950,16 @@ export const api = {
           patient.lastVisitDate = patient.registrationDate;
         }
         setLocal(KEYS.PATIENTS, patients);
+        try {
+          supabaseUpsertPatient(patient).catch(() => {});
+        } catch (_) {}
       }
     }
+
+    // Delete from Supabase PostgreSQL
+    try {
+      supabaseDeleteVisit(visitId).catch(err => console.warn("Supabase visit delete notice:", err));
+    } catch (_) {}
 
     syncToGoogleSheets("delete_visit", { visitId });
     return { ok: true, message: `Visit ${visitId} deleted.` };
@@ -957,6 +1029,12 @@ export const api = {
       }
     } catch (e) {}
 
+    // Push to Supabase PostgreSQL (Non-blocking)
+    try {
+      supabaseUpsertPatient(patient).catch(err => console.warn("Supabase patient update notice:", err));
+      supabaseUpsertVisit(newVisit).catch(err => console.warn("Supabase visit sync notice:", err));
+    } catch (_) {}
+
     // Push to Google Sheets
     syncToGoogleSheets("sync_visit", newVisit);
 
@@ -968,6 +1046,11 @@ export const api = {
     const todayStr = new Date().toISOString().split("T")[0];
     const todayList = visits.filter(v => v.date === todayStr);
     return { ok: true, visits: todayList };
+  },
+
+  async getAllVisits() {
+    const visits = getLocal(KEYS.VISITS, []);
+    return { ok: true, visits };
   },
 
   // 1.1 AUTH HELPERS
@@ -1063,6 +1146,11 @@ export const api = {
     const enquiries = getLocal(KEYS.ENQUIRIES, []);
     enquiries.unshift(newEnquiry);
     setLocal(KEYS.ENQUIRIES, enquiries);
+
+    // Push to Supabase PostgreSQL (Non-blocking)
+    try {
+      supabaseUpsertEnquiry(newEnquiry).catch(err => console.warn("Supabase enquiry sync notice:", err));
+    } catch (_) {}
 
     // Push to Google Sheets in background
     syncToGoogleSheets("sync_enquiry", newEnquiry);

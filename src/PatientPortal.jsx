@@ -4,7 +4,6 @@ import { downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils
 import { CLINIC_LOGO_B64 } from "./pdfAssets";
 import { PatientAvatar } from "./PatientAvatar";
 import ErrorBoundary from "./ErrorBoundary";
-import PullToRefresh from "./PullToRefresh";
 import PatientVisitCalendar from "./PatientVisitCalendar";
 
 export default function PatientPortal({ onClose, themeProps }) {
@@ -43,6 +42,9 @@ export default function PatientPortal({ onClose, themeProps }) {
       nextFollowUp: null
     }
   });
+
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  const [patientRefreshToast, setPatientRefreshToast] = useState("");
 
   // Auth View Switcher: "login" or "register"
   const [authMode, setAuthMode] = useState("login");
@@ -220,6 +222,23 @@ export default function PatientPortal({ onClose, themeProps }) {
       console.error("Error loading patient records:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePatientRefresh = async () => {
+    if (isManualRefreshing) return;
+    setIsManualRefreshing(true);
+    setPatientRefreshToast("🔄 Fetching latest medical records...");
+    try {
+      await loadPatientData();
+      setPatientRefreshToast("✅ Medical records & visits updated!");
+      setTimeout(() => setPatientRefreshToast(""), 3500);
+    } catch (e) {
+      console.warn("Patient refresh error:", e);
+      setPatientRefreshToast("✅ Cache up to date");
+      setTimeout(() => setPatientRefreshToast(""), 3000);
+    } finally {
+      setIsManualRefreshing(false);
     }
   };
 
@@ -460,8 +479,30 @@ export default function PatientPortal({ onClose, themeProps }) {
   const latestVisit = sortedVisits[0] || null;
 
   return (
-    <PullToRefresh onRefresh={loadPatientData}>
-      <div className="patient-portal-root">
+    <div className="patient-portal-root">
+      {patientRefreshToast && (
+        <div
+          style={{
+            position: "fixed",
+            top: "70px",
+            right: "20px",
+            zIndex: 99999,
+            background: "#0f172a",
+            color: "#ffffff",
+            border: "1px solid #0284c7",
+            borderRadius: "10px",
+            padding: "10px 18px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+            fontSize: "13px",
+            fontWeight: "700",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
+          }}
+        >
+          {patientRefreshToast}
+        </div>
+      )}
       {/* Top Clinic Header */}
       <header className="patient-header">
         <div className="header-left">
@@ -491,23 +532,26 @@ export default function PatientPortal({ onClose, themeProps }) {
 
           <button
             className="portal-refresh-btn"
-            onClick={loadPatientData}
+            onClick={handlePatientRefresh}
+            disabled={isManualRefreshing}
             title="Refresh clinical records & visits"
             style={{
-              background: "rgba(2, 132, 199, 0.08)",
-              border: "1px solid rgba(2, 132, 199, 0.2)",
+              background: isManualRefreshing ? "rgba(2, 132, 199, 0.22)" : "rgba(2, 132, 199, 0.12)",
+              border: "1px solid rgba(2, 132, 199, 0.35)",
               color: "#0284c7",
               borderRadius: "8px",
-              padding: "6px 10px",
-              cursor: "pointer",
+              padding: "6px 12px",
+              cursor: isManualRefreshing ? "wait" : "pointer",
               display: "inline-flex",
               alignItems: "center",
-              gap: "4px",
+              gap: "6px",
               fontSize: "12px",
-              fontWeight: "700"
+              fontWeight: "700",
+              transition: "all 0.2s ease"
             }}
           >
-            🔄 Refresh
+            <span style={{ display: "inline-block", transform: isManualRefreshing ? "rotate(360deg)" : "none", transition: isManualRefreshing ? "transform 0.8s linear infinite" : "none" }}>🔄</span>
+            <span>{isManualRefreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
           <button className="portal-exit-btn" onClick={handleLogout} title="Sign Out">
             <span className="btn-icon">🚪</span>
@@ -545,8 +589,8 @@ export default function PatientPortal({ onClose, themeProps }) {
             className={`nav-tab ${activeTab === "visits" ? "active" : ""}`}
             onClick={() => setActiveTab("visits")}
           >
-            <span className="tab-icon">🩺</span>
-            <span className="tab-label">My Visits</span>
+            <span className="tab-icon">🗓️</span>
+            <span className="tab-label">Calendar &amp; Visits</span>
             <span className="tab-bubble">{recordsData?.visits?.length || 0}</span>
           </button>
 
@@ -886,6 +930,45 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <strong className="card-title">Contact Clinic</strong>
                 <span className="card-caption">Call & WhatsApp</span>
               </button>
+            </div>
+
+            {/* 3.1 PROMINENT INTERACTIVE CLINICAL REHABILITATION CALENDAR (User Dashboard Feature) */}
+            <div className="dashboard-calendar-card" style={{ marginTop: "18px", marginBottom: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "8px" }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "800", color: "#f8fafc" }}>
+                    📅 My Rehabilitation Calendar &amp; Attendance
+                  </h3>
+                  <p style={{ margin: "3px 0 0 0", fontSize: "12.5px", color: "#94a3b8" }}>
+                    Track your clinic visits, missed therapy sessions &amp; upcoming follow-ups
+                  </p>
+                </div>
+                <button
+                  className="view-all-link"
+                  onClick={() => setActiveTab("visits")}
+                  style={{
+                    background: "rgba(37, 99, 235, 0.12)",
+                    border: "1px solid rgba(37, 99, 235, 0.3)",
+                    color: "#60a5fa",
+                    padding: "5px 12px",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    cursor: "pointer"
+                  }}
+                >
+                  Full Visits Timeline →
+                </button>
+              </div>
+
+              <PatientVisitCalendar
+                visits={recordsData?.visits || []}
+                appointments={recordsData?.appointments || []}
+                patientName={patientProfile?.name}
+                patientId={patientProfile?.patientId}
+                onSelectVisit={(v) => setPreviewReceipt(makeReceiptObj(v))}
+                onScheduleAppointment={() => setActiveTab("appointments")}
+              />
             </div>
 
             {/* 4. Desktop Only: Recent Visits Timeline */}
@@ -2203,8 +2286,8 @@ export default function PatientPortal({ onClose, themeProps }) {
             className={`nav-item-4 ${activeTab === "visits" && !showMoreSheet ? "active" : ""}`}
             onClick={() => selectTab("visits")}
           >
-            <span className="nav-icon-4">🩺</span>
-            <span className="nav-label-4">Visits</span>
+            <span className="nav-icon-4">🗓️</span>
+            <span className="nav-label-4">Calendar</span>
             {(recordsData?.visits?.length || 0) > 0 && (
               <span className="bottom-nav-badge">{recordsData.visits.length}</span>
             )}
@@ -2350,6 +2433,5 @@ export default function PatientPortal({ onClose, themeProps }) {
         </div>
       )}
       </div>
-    </PullToRefresh>
   );
 }

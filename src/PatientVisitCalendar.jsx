@@ -3,9 +3,14 @@ import { cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
 
 /**
  * PatientVisitCalendar
- * High-fidelity clinical healthcare calendar component
- * Built for Vindhy Physio & Rehab Center using Stitch Design System tokens:
- * Primary Navy (#0B2A55), Action Blue (#2563EB), Healing Teal (#10B981)
+ * State-of-the-art clinical rehabilitation calendar component
+ * Built for Vindhya Physio & Rehab Center (Dr. Satyam Vishwakarma)
+ * Features:
+ *  1. Total visits count & attendance adherence metrics
+ *  2. Attended visit days highlighted with clinical badges
+ *  3. Intelligently computed missing / missed therapy session days
+ *  4. Eye-catching blinking & pulsing badge for the Next Clinical Follow-up
+ *  5. Rich Drill-down view showing Next Follow-Up details AND complete Old Visits history
  */
 export default function PatientVisitCalendar({
   visits = [],
@@ -24,29 +29,192 @@ export default function PatientVisitCalendar({
     const d = String(today.getDate()).padStart(2, "0");
     return `${d}/${m}/${y}`;
   });
-  const [filterType, setFilterType] = useState("all"); // "all", "completed", "upcoming"
+  const [filterType, setFilterType] = useState("all"); // "all", "completed", "missed", "followup"
 
-  // Standardize dates to DD/MM/YYYY
+  // Standardize any date format to "DD/MM/YYYY" key
   const parseToKey = (rawDate) => {
     if (!rawDate) return "";
-    return cleanDateOnly(rawDate);
+    const clean = cleanDateOnly(rawDate);
+    if (!clean) return "";
+    // If format is already DD/MM/YYYY, return
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(clean)) return clean;
+    // If format is YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+      const parts = clean.split("-");
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return clean;
   };
 
-  // Group visits and appointments by DD/MM/YYYY date key
+  // Convert "DD/MM/YYYY" key back to Date object for timestamp comparisons
+  const keyToDateObj = (dateKey) => {
+    if (!dateKey) return null;
+    const parts = dateKey.split("/");
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+    }
+    return new Date(dateKey);
+  };
+
+  // Today key
+  const todayKey = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${d}/${m}/${y}`;
+  }, []);
+
+  // Sorted visits (oldest to newest for clinical timeline, and newest first for display)
+  const sortedVisitsNewestFirst = useMemo(() => {
+    const list = [...(visits || [])];
+    return list.sort((a, b) => {
+      const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      const numB = parseInt(String(b.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      if (numA !== numB) return numB - numA;
+      const tA = keyToDateObj(parseToKey(a.date))?.getTime() || 0;
+      const tB = keyToDateObj(parseToKey(b.date))?.getTime() || 0;
+      return tB - tA;
+    });
+  }, [visits]);
+
+  // Set of all dates the patient attended
+  const attendedDateSet = useMemo(() => {
+    const set = new Set();
+    (visits || []).forEach((v) => {
+      const k = parseToKey(v.date);
+      if (k) set.add(k);
+    });
+    return set;
+  }, [visits]);
+
+  // Find the Next Follow-Up Date (earliest upcoming follow-up >= today, or latest assigned follow-up)
+  const nextFollowUpInfo = useMemo(() => {
+    const todayObj = keyToDateObj(todayKey);
+    const todayTime = todayObj ? todayObj.getTime() : Date.now();
+
+    const allFollowUps = [];
+    (visits || []).forEach((v) => {
+      if (v.followUpDate) {
+        const k = parseToKey(v.followUpDate);
+        const dObj = keyToDateObj(k);
+        if (dObj) {
+          allFollowUps.push({
+            dateKey: k,
+            dateObj: dObj,
+            time: v.followUpTime || "",
+            sourceVisit: v,
+            isFutureOrToday: dObj.getTime() >= todayTime - 86400000 // including today
+          });
+        }
+      }
+    });
+
+    (appointments || []).forEach((a) => {
+      const k = parseToKey(a.appointmentDate || a.date);
+      const dObj = keyToDateObj(k);
+      if (dObj) {
+        allFollowUps.push({
+          dateKey: k,
+          dateObj: dObj,
+          time: a.time || "",
+          sourceAppointment: a,
+          isFutureOrToday: dObj.getTime() >= todayTime - 86400000
+        });
+      }
+    });
+
+    if (allFollowUps.length === 0) return null;
+
+    // Sort ascending by date
+    allFollowUps.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+
+    // Prefer upcoming follow-up (today or future)
+    const upcoming = allFollowUps.find((fu) => fu.isFutureOrToday);
+    if (upcoming) return upcoming;
+
+    // If none in the future, return the most recent one
+    return allFollowUps[allFollowUps.length - 1];
+  }, [visits, appointments, todayKey]);
+
+  const nextFollowUpKey = nextFollowUpInfo ? nextFollowUpInfo.dateKey : null;
+
+  // Calculate Missing / Gap days during the patient's active treatment course
+  const missingDaysMap = useMemo(() => {
+    const missing = {};
+    if (!visits || visits.length === 0) return missing;
+
+    // Collect timestamps of all visited dates
+    const visitedTimestamps = [];
+    visits.forEach((v) => {
+      const dObj = keyToDateObj(parseToKey(v.date));
+      if (dObj && !isNaN(dObj.getTime())) {
+        visitedTimestamps.push(dObj.getTime());
+      }
+    });
+
+    if (visitedTimestamps.length === 0) return missing;
+
+    const minTime = Math.min(...visitedTimestamps);
+    const todayTime = keyToDateObj(todayKey)?.getTime() || Date.now();
+    // Scan up to either today or the latest visit + 3 days, whichever is applicable
+    const maxScanTime = Math.min(todayTime, Math.max(...visitedTimestamps) + 86400000);
+
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    // Iterate day-by-day
+    for (let t = minTime + ONE_DAY; t < maxScanTime; t += ONE_DAY) {
+      const curDate = new Date(t);
+      // Skip Sundays (clinic typically closed or elective)
+      if (curDate.getDay() === 0) continue;
+
+      const d = String(curDate.getDate()).padStart(2, "0");
+      const m = String(curDate.getMonth() + 1).padStart(2, "0");
+      const y = curDate.getFullYear();
+      const k = `${d}/${m}/${y}`;
+
+      if (!attendedDateSet.has(k)) {
+        missing[k] = {
+          dateKey: k,
+          dateObj: curDate,
+          reason: "Missed scheduled therapy session during rehabilitation course"
+        };
+      }
+    }
+
+    // Also check if any past follow-up date had no visit logged
+    visits.forEach((v) => {
+      if (v.followUpDate) {
+        const fuKey = parseToKey(v.followUpDate);
+        const fuObj = keyToDateObj(fuKey);
+        if (fuObj && fuObj.getTime() < todayTime && !attendedDateSet.has(fuKey)) {
+          missing[fuKey] = {
+            dateKey: fuKey,
+            dateObj: fuObj,
+            reason: `Missed follow-up scheduled from Visit #${v.visitNumber || 1}`
+          };
+        }
+      }
+    });
+
+    return missing;
+  }, [visits, attendedDateSet, todayKey]);
+
+  const missingDaysCount = Object.keys(missingDaysMap).length;
+
+  // Group visits, follow-ups, missing days, and appointments by DD/MM/YYYY date key
   const calendarMap = useMemo(() => {
     const map = {};
 
     (visits || []).forEach((v) => {
       const key = parseToKey(v.date);
       if (!key) return;
-      if (!map[key]) map[key] = { visits: [], followUps: [], appointments: [] };
+      if (!map[key]) map[key] = { visits: [], followUps: [], appointments: [], missed: null };
       map[key].visits.push({ ...v, itemType: "visit" });
 
-      // If this visit scheduled a follow-up, mark that follow-up date as well
       if (v.followUpDate) {
         const fuKey = parseToKey(v.followUpDate);
         if (fuKey) {
-          if (!map[fuKey]) map[fuKey] = { visits: [], followUps: [], appointments: [] };
+          if (!map[fuKey]) map[fuKey] = { visits: [], followUps: [], appointments: [], missed: null };
           map[fuKey].followUps.push({
             ...v,
             itemType: "follow-up",
@@ -60,12 +228,18 @@ export default function PatientVisitCalendar({
     (appointments || []).forEach((a) => {
       const key = parseToKey(a.appointmentDate || a.date);
       if (!key) return;
-      if (!map[key]) map[key] = { visits: [], followUps: [], appointments: [] };
+      if (!map[key]) map[key] = { visits: [], followUps: [], appointments: [], missed: null };
       map[key].appointments.push({ ...a, itemType: "appointment" });
     });
 
+    // Attach missing day markers
+    Object.keys(missingDaysMap).forEach((k) => {
+      if (!map[k]) map[k] = { visits: [], followUps: [], appointments: [], missed: null };
+      map[k].missed = missingDaysMap[k];
+    });
+
     return map;
-  }, [visits, appointments]);
+  }, [visits, appointments, missingDaysMap]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -88,10 +262,7 @@ export default function PatientVisitCalendar({
   const handleToday = () => {
     const now = new Date();
     setCurrentDate(now);
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    setSelectedDateStr(`${d}/${m}/${y}`);
+    setSelectedDateStr(todayKey);
   };
 
   // Month grid calculation
@@ -143,21 +314,28 @@ export default function PatientVisitCalendar({
   }, [year, month]);
 
   // Selected date events
-  const selectedEvents = calendarMap[selectedDateStr] || { visits: [], followUps: [], appointments: [] };
-  const allEventsForSelectedDate = [
-    ...selectedEvents.visits,
-    ...selectedEvents.followUps,
-    ...selectedEvents.appointments
-  ];
+  const selectedEvents = calendarMap[selectedDateStr] || {
+    visits: [],
+    followUps: [],
+    appointments: [],
+    missed: null
+  };
 
-  // Today key
-  const todayKey = useMemo(() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${d}/${m}/${y}`;
-  }, []);
+  const isSelectedDateNextFollowUp = selectedDateStr === nextFollowUpKey;
+
+  // Countdown text for next follow up
+  const followUpCountdownText = useMemo(() => {
+    if (!nextFollowUpInfo) return "As advised by doctor";
+    const todayObj = keyToDateObj(todayKey);
+    const fuObj = nextFollowUpInfo.dateObj;
+    if (!todayObj || !fuObj) return nextFollowUpInfo.dateKey;
+
+    const diffDays = Math.round((fuObj.getTime() - todayObj.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "Today!";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays > 1) return `In ${diffDays} days`;
+    return `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? "s" : ""}`;
+  }, [nextFollowUpInfo, todayKey]);
 
   return (
     <div className="clinical-calendar-container">
@@ -167,9 +345,12 @@ export default function PatientVisitCalendar({
           <div className="calendar-brand-badge">
             <span className="cal-icon">📅</span>
             <div>
-              <h3 className="cal-heading">Patient Visit Calendar</h3>
+              <h3 className="cal-heading">
+                {patientName ? `${patientName}'s Visit Calendar` : "Patient Rehabilitation Calendar"}
+              </h3>
               <p className="cal-subheading">
-                {patientName ? `Rehabilitation timeline for ${patientName}` : "Clinical appointments & follow-up scheduler"}
+                {patientId ? `Patient ID: ${patientId} • ` : ""}
+                Live attendance tracker, missed therapy days &amp; next follow-ups
               </p>
             </div>
           </div>
@@ -211,39 +392,126 @@ export default function PatientVisitCalendar({
               className="cal-schedule-action-btn"
               onClick={onScheduleAppointment}
             >
-              <span>+ Schedule Visit</span>
+              <span>+ {isDoctorView ? "Log Clinic Visit" : "Schedule Visit"}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* 2. Status Legend Pills */}
-      <div className="clinical-calendar-legend">
-        <div className="legend-item" onClick={() => setFilterType(filterType === "completed" ? "all" : "completed")}>
-          <span className="legend-dot completed"></span>
-          <span className="legend-text">Completed Visit</span>
-          <span className="legend-count">({visits.length})</span>
+      {/* 2. SUMMARY METRICS RIBBON (How Many Visits, When Visited, Missing Days, Next Follow-Up Blinking) */}
+      <div className="calendar-metrics-ribbon">
+        {/* Metric 1: Total Completed Visits */}
+        <div className="cal-metric-card metric-completed">
+          <div className="metric-icon-wrap green">🩺</div>
+          <div className="metric-info">
+            <span className="metric-label">Completed Visits</span>
+            <strong className="metric-value">{visits.length} Sessions</strong>
+            <span className="metric-sub">{attendedDateSet.size} Distinct Days Visited</span>
+          </div>
         </div>
-        <div className="legend-item" onClick={() => setFilterType(filterType === "upcoming" ? "all" : "upcoming")}>
-          <span className="legend-dot upcoming"></span>
-          <span className="legend-text">Scheduled / Follow-Up</span>
-          <span className="legend-count">
-            ({(appointments.length || 0) + (visits.filter(v => v.followUpDate).length || 0)})
-          </span>
+
+        {/* Metric 2: Attended Days */}
+        <div className="cal-metric-card metric-attended">
+          <div className="metric-icon-wrap blue">✅</div>
+          <div className="metric-info">
+            <span className="metric-label">Attendance Record</span>
+            <strong className="metric-value">{attendedDateSet.size} Days Logged</strong>
+            <span className="metric-sub">
+              {visits.length > 0 ? `Started ${cleanDateOnly(visits[visits.length - 1]?.date)}` : "No visits yet"}
+            </span>
+          </div>
         </div>
-        <div className="legend-item">
-          <span className="legend-dot today-indicator"></span>
-          <span className="legend-text">Today</span>
+
+        {/* Metric 3: Missing / Gap Days */}
+        <div className="cal-metric-card metric-missed">
+          <div className="metric-icon-wrap amber">⚠️</div>
+          <div className="metric-info">
+            <span className="metric-label">Missed Sessions</span>
+            <strong className="metric-value">
+              {missingDaysCount} {missingDaysCount === 1 ? "Day" : "Days"} Skipped
+            </strong>
+            <span className="metric-sub">
+              {missingDaysCount === 0 ? "Perfect 100% attendance!" : "Unattended therapy days"}
+            </span>
+          </div>
+        </div>
+
+        {/* Metric 4: Next Follow-Up (BLINKING ALERT) */}
+        <div className={`cal-metric-card metric-followup ${nextFollowUpKey ? "has-followup" : ""}`}>
+          <div className="metric-icon-wrap indigo">
+            <span className="blinking-bell-icon">🔔</span>
+          </div>
+          <div className="metric-info">
+            <div className="metric-followup-header">
+              <span className="metric-label">Next Follow-Up</span>
+              {nextFollowUpKey && (
+                <span className="followup-live-beacon" title="Next Follow-up active alert">
+                  <span className="beacon-dot"></span> BLINKING
+                </span>
+              )}
+            </div>
+            <strong className="metric-value text-indigo">
+              {nextFollowUpKey ? nextFollowUpKey : "As Advised"}
+            </strong>
+            <span className="metric-sub followup-highlight-tag">
+              {nextFollowUpKey ? `⚡ ${followUpCountdownText}` : "Schedule with Dr. Satyam"}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* 3. Main Calendar Layout: Grid + Selected Date Drill-Down */}
+      {/* 3. Status Legend Filter Pills */}
+      <div className="clinical-calendar-legend">
+        <div
+          className={`legend-item ${filterType === "all" ? "active-legend" : ""}`}
+          onClick={() => setFilterType("all")}
+        >
+          <span className="legend-dot all-indicator"></span>
+          <span className="legend-text">All Activity</span>
+        </div>
+
+        <div
+          className={`legend-item ${filterType === "completed" ? "active-legend" : ""}`}
+          onClick={() => setFilterType(filterType === "completed" ? "all" : "completed")}
+        >
+          <span className="legend-dot completed"></span>
+          <span className="legend-text">Visited Days</span>
+          <span className="legend-count">({visits.length})</span>
+        </div>
+
+        <div
+          className={`legend-item ${filterType === "missed" ? "active-legend" : ""}`}
+          onClick={() => setFilterType(filterType === "missed" ? "all" : "missed")}
+        >
+          <span className="legend-dot missed-indicator"></span>
+          <span className="legend-text">Missing Days</span>
+          <span className="legend-count">({missingDaysCount})</span>
+        </div>
+
+        <div
+          className={`legend-item ${filterType === "followup" ? "active-legend" : ""}`}
+          onClick={() => setFilterType(filterType === "followup" ? "all" : "followup")}
+        >
+          <span className="legend-dot upcoming followup-pulse-dot"></span>
+          <span className="legend-text">Next Follow-Up</span>
+          <span className="legend-count">
+            {nextFollowUpKey ? `(🔔 ${nextFollowUpKey})` : "(0)"}
+          </span>
+        </div>
+
+        <div className="legend-item" onClick={handleToday}>
+          <span className="legend-dot today-indicator"></span>
+          <span className="legend-text">Today ({todayKey})</span>
+        </div>
+      </div>
+
+      {/* 4. Main Calendar Layout: Grid + Selected Date Drill-Down */}
       <div className="clinical-calendar-layout">
         {/* Left: The Month Grid */}
         <div className="calendar-month-grid-wrapper">
           <div className="calendar-weekdays-header">
             {daysOfWeek.map((day) => (
-              <div key={day} className="calendar-weekday-cell">
+              <div key={day} className={`calendar-weekday-cell ${day === "Sun" ? "sunday-cell" : ""}`}>
                 {day}
               </div>
             ))}
@@ -255,37 +523,71 @@ export default function PatientVisitCalendar({
               const hasVisits = data && data.visits && data.visits.length > 0;
               const hasFollowUps = data && data.followUps && data.followUps.length > 0;
               const hasAppointments = data && data.appointments && data.appointments.length > 0;
+              const isMissedDay = !!(data && data.missed);
+              const isNextFollowUp = cell.dateKey === nextFollowUpKey;
               const isToday = cell.dateKey === todayKey;
               const isSelected = cell.dateKey === selectedDateStr;
+
+              // Filter hiding logic
+              if (filterType === "completed" && !hasVisits) {
+                // Dim non-matches
+              }
 
               return (
                 <div
                   key={`${cell.dateKey}-${idx}`}
-                  className={`calendar-day-cell ${cell.isCurrentMonth ? "in-month" : "out-month"} ${isSelected ? "selected" : ""} ${isToday ? "is-today" : ""}`}
+                  className={`calendar-day-cell ${cell.isCurrentMonth ? "in-month" : "out-month"} ${isSelected ? "selected" : ""} ${isToday ? "is-today" : ""} ${hasVisits ? "has-visit" : ""} ${isMissedDay ? "is-missed-day" : ""} ${isNextFollowUp ? "is-next-followup blinking-cell" : ""}`}
                   onClick={() => setSelectedDateStr(cell.dateKey)}
                   role="button"
                   tabIndex={0}
+                  title={`Date: ${cell.dateKey}${isNextFollowUp ? " (⚡ NEXT CLINICAL FOLLOW-UP)" : ""}${isMissedDay ? " (⚠️ Missed Therapy Session)" : ""}`}
                 >
                   <div className="day-cell-top">
                     <span className="day-number">{cell.dayNumber}</span>
                     {isToday && <span className="today-badge">Today</span>}
+                    {isNextFollowUp && (
+                      <span className="followup-blinking-pill" title="Next Follow-up">
+                        🔔 NEXT
+                      </span>
+                    )}
                   </div>
 
                   <div className="day-cell-badges">
+                    {/* 1. Attended Visit Pill */}
                     {hasVisits && (
-                      <div className="day-event-pill completed-pill" title={`${data.visits.length} Completed Visit(s)`}>
+                      <div
+                        className="day-event-pill completed-pill"
+                        title={`${data.visits.length} Completed Visit(s) on ${cell.dateKey}`}
+                      >
                         <span className="pill-dot">✓</span>
                         <span className="pill-text">
-                          {data.visits[0].reason ? data.visits[0].reason.slice(0, 14) : "Visit"}
+                          Visit #{data.visits[0].visitNumber || 1}
                           {data.visits.length > 1 ? ` (+${data.visits.length - 1})` : ""}
                         </span>
                       </div>
                     )}
 
+                    {/* 2. Missed Session Pill */}
+                    {isMissedDay && !hasVisits && (
+                      <div
+                        className="day-event-pill missed-pill"
+                        title={`Missed session on ${cell.dateKey}. Therapy gap detected.`}
+                      >
+                        <span className="pill-dot">⚠️</span>
+                        <span className="pill-text">Missed Day</span>
+                      </div>
+                    )}
+
+                    {/* 3. Follow-Up Pill (Blinking if next follow-up!) */}
                     {(hasFollowUps || hasAppointments) && (
-                      <div className="day-event-pill follow-up-pill" title="Upcoming Follow-Up / Appointment">
-                        <span className="pill-dot">●</span>
-                        <span className="pill-text">Follow-up</span>
+                      <div
+                        className={`day-event-pill follow-up-pill ${isNextFollowUp ? "pulsing-badge" : ""}`}
+                        title="Scheduled Clinical Follow-up"
+                      >
+                        <span className="pill-dot">{isNextFollowUp ? "🔔" : "●"}</span>
+                        <span className="pill-text">
+                          {isNextFollowUp ? "Next Follow-Up" : "Follow-Up"}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -295,25 +597,64 @@ export default function PatientVisitCalendar({
           </div>
         </div>
 
-        {/* Right: Selected Date Drill-Down Card */}
+        {/* Right: Selected Date Drill-Down Panel */}
         <div className="calendar-drilldown-panel">
+          {/* Section A: NEXT FOLLOW-UP SPOTLIGHT BANNER */}
+          {nextFollowUpKey && (
+            <div className={`drilldown-followup-spotlight ${isSelectedDateNextFollowUp ? "is-active-target" : ""}`}>
+              <div className="spotlight-header">
+                <span className="spotlight-bell-beacon">🔔</span>
+                <div>
+                  <h5 className="spotlight-title">Upcoming Clinical Follow-Up</h5>
+                  <span className="spotlight-date">
+                    {nextFollowUpKey} {nextFollowUpInfo.time ? `• ${nextFollowUpInfo.time}` : ""}
+                  </span>
+                </div>
+                <span className="spotlight-countdown-badge">
+                  {followUpCountdownText}
+                </span>
+              </div>
+              <p className="spotlight-body">
+                Dr. Satyam Vishwakarma scheduled this rehabilitation follow-up. Maintaining this milestone prevents symptom relapse.
+              </p>
+              <div className="spotlight-actions">
+                <a
+                  className="fu-whatsapp-confirm"
+                  href={`https://wa.me/919793093316?text=${encodeURIComponent(
+                    `Namaste Dr. Satyam Vishwakarma ji, I am confirming my follow-up appointment on ${nextFollowUpKey} for ${patientName || "Patient"} (Patient ID: ${patientId || "VPR"}).`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  💬 Confirm on WhatsApp (+91 9793093316)
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Section B: Selected Date Drill-Down Card */}
           <div className="drilldown-header">
             <div className="drilldown-date-display">
-              <span className="drilldown-eyebrow">Daily Clinical Log</span>
+              <span className="drilldown-eyebrow">Clinical Record For Date</span>
               <h4 className="drilldown-selected-date">{selectedDateStr}</h4>
             </div>
-            {selectedDateStr === todayKey && (
-              <span className="today-status-chip">Current Date</span>
-            )}
+            {selectedDateStr === todayKey ? (
+              <span className="today-status-chip">Today</span>
+            ) : isSelectedDateNextFollowUp ? (
+              <span className="followup-status-chip">🔔 Target Follow-Up</span>
+            ) : null}
           </div>
 
           <div className="drilldown-body">
-            {allEventsForSelectedDate.length === 0 ? (
-              <div className="calendar-empty-day">
-                <span className="empty-day-icon">🗓️</span>
-                <h5>No clinical records on this date</h5>
+            {/* If this selected day is flagged as a missed day */}
+            {selectedEvents.missed && selectedEvents.visits.length === 0 && (
+              <div className="drilldown-missed-alert-card">
+                <div className="missed-alert-header">
+                  <span>⚠️</span>
+                  <strong>Missed Rehabilitation Session</strong>
+                </div>
                 <p>
-                  Click on any highlighted date on the calendar, or tap below to schedule a new therapy appointment.
+                  No clinic visit was recorded on {selectedDateStr}. Consistent therapy is vital for full spinal &amp; joint mobility recovery.
                 </p>
                 {onScheduleAppointment && (
                   <button
@@ -321,47 +662,74 @@ export default function PatientVisitCalendar({
                     className="cal-mini-cta"
                     onClick={onScheduleAppointment}
                   >
-                    + Schedule Session on {selectedDateStr}
+                    + Schedule Make-Up Session
                   </button>
                 )}
               </div>
-            ) : (
+            )}
+
+            {/* If no records on this date */}
+            {selectedEvents.visits.length === 0 &&
+              selectedEvents.followUps.length === 0 &&
+              selectedEvents.appointments.length === 0 &&
+              !selectedEvents.missed && (
+                <div className="calendar-empty-day">
+                  <span className="empty-day-icon">🗓️</span>
+                  <h5>No clinical activity on this date</h5>
+                  <p>
+                    Tap any highlighted date on the calendar, or schedule a therapy appointment below.
+                  </p>
+                  {onScheduleAppointment && (
+                    <button
+                      type="button"
+                      className="cal-mini-cta"
+                      onClick={onScheduleAppointment}
+                    >
+                      + {isDoctorView ? `Log Visit on ${selectedDateStr}` : `Book Session on ${selectedDateStr}`}
+                    </button>
+                  )}
+                </div>
+              )}
+
+            {/* List of Visits Logged on this Selected Date */}
+            {selectedEvents.visits.length > 0 && (
               <div className="drilldown-events-list">
                 {selectedEvents.visits.map((v, i) => (
                   <div key={`visit-${i}`} className="drilldown-event-card completed-card">
                     <div className="card-status-bar completed-bar">
-                      <span className="status-label">✅ Completed Clinic Visit #{v.visitNumber || (i + 1)}</span>
+                      <span className="status-label">
+                        ✅ Completed Visit #{v.visitNumber || i + 1}
+                      </span>
                       {v.time && <span className="status-time">🕒 {cleanTimeOnly(v.time)}</span>}
                     </div>
 
                     <div className="card-detail-content">
                       <div className="detail-row">
-                        <span className="detail-label">Diagnosis / Reason:</span>
-                        <strong className="detail-value text-primary">{v.reason || v.diagnosis || "Therapy Session"}</strong>
+                        <span className="detail-label">Chief Diagnosis / Reason:</span>
+                        <strong className="detail-value text-primary">
+                          {v.reason || v.diagnosis || "Physiotherapy Rehabilitation"}
+                        </strong>
                       </div>
 
-                      {v.treatment && (
+                      {v.treatmentNotes && (
                         <div className="detail-row">
-                          <span className="detail-label">Treatment Provided:</span>
-                          <span className="detail-value">{v.treatment}</span>
+                          <span className="detail-label">Clinical Treatment / Exercises:</span>
+                          <span className="detail-value">{v.treatmentNotes}</span>
                         </div>
                       )}
 
                       {v.modalities && (
                         <div className="detail-row">
-                          <span className="detail-label">Clinical Modalities:</span>
+                          <span className="detail-label">Rehabilitation Modalities:</span>
                           <div className="modality-chips">
-                            {String(v.modalities).split(",").map((m, mi) => (
-                              <span key={mi} className="modality-chip">{m.trim()}</span>
-                            ))}
+                            {String(v.modalities)
+                              .split(",")
+                              .map((m, mi) => (
+                                <span key={mi} className="modality-chip">
+                                  {m.trim()}
+                                </span>
+                              ))}
                           </div>
-                        </div>
-                      )}
-
-                      {v.notes && (
-                        <div className="detail-row notes-row">
-                          <span className="detail-label">Doctor Notes:</span>
-                          <p className="detail-notes">{v.notes}</p>
                         </div>
                       )}
 
@@ -386,46 +754,66 @@ export default function PatientVisitCalendar({
                     )}
                   </div>
                 ))}
-
-                {selectedEvents.followUps.map((fu, i) => (
-                  <div key={`fu-${i}`} className="drilldown-event-card follow-up-card">
-                    <div className="card-status-bar follow-up-bar">
-                      <span className="status-label">🔔 Scheduled Clinical Follow-Up</span>
-                      <span className="status-badge subtle-glow">Upcoming</span>
-                    </div>
-
-                    <div className="card-detail-content">
-                      <p className="fu-explanation">
-                        Follow-up scheduled from prior <strong>Visit #{fu.sourceVisitNumber || 1}</strong> ({fu.reason || "Rehab plan"}).
-                      </p>
-                      <div className="fu-action-row">
-                        <a
-                          className="fu-whatsapp-confirm"
-                          href={`https://wa.me/919793093316?text=${encodeURIComponent(`Hello Dr. Satyam, I am confirming my follow-up appointment on ${selectedDateStr} for ${patientName || "Patient"} (ID: ${patientId}).`)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          💬 Confirm on WhatsApp
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {selectedEvents.appointments.map((a, i) => (
-                  <div key={`appt-${i}`} className="drilldown-event-card appointment-card">
-                    <div className="card-status-bar appointment-bar">
-                      <span className="status-label">📌 Booked Appointment</span>
-                      {a.time && <span className="status-time">{cleanTimeOnly(a.time)}</span>}
-                    </div>
-                    <div className="card-detail-content">
-                      <p><strong>Reason:</strong> {a.reason || "Physiotherapy Consultation"}</p>
-                      <p><small>Status: {a.status || "Confirmed"}</small></p>
-                    </div>
-                  </div>
-                ))}
               </div>
             )}
+
+            {/* Section C: COMPLETE PAST / OLD VISITS TIMELINE FOR THIS PATIENT */}
+            <div className="patient-old-visits-history-section">
+              <div className="old-visits-history-header">
+                <h5>📜 Prior Visit History ({sortedVisitsNewestFirst.length})</h5>
+                <span className="old-visits-sub">Full patient recovery timeline</span>
+              </div>
+
+              {sortedVisitsNewestFirst.length === 0 ? (
+                <p className="no-prior-visits-text">No previous visits recorded yet.</p>
+              ) : (
+                <div className="old-visits-scrollable-list">
+                  {sortedVisitsNewestFirst.map((ov, oIdx) => {
+                    const isSelectedDateVisit = parseToKey(ov.date) === selectedDateStr;
+                    return (
+                      <div
+                        key={`old-v-${ov.visitId || oIdx}`}
+                        className={`old-visit-item-compact ${isSelectedDateVisit ? "is-selected-date-item" : ""}`}
+                        onClick={() => setSelectedDateStr(parseToKey(ov.date))}
+                      >
+                        <div className="old-visit-top">
+                          <span className="old-visit-num-badge">
+                            Visit #{ov.visitNumber || sortedVisitsNewestFirst.length - oIdx}
+                          </span>
+                          <span className="old-visit-date-badge">
+                            {cleanDateOnly(ov.date)} {ov.time ? `• ${cleanTimeOnly(ov.time)}` : ""}
+                          </span>
+                        </div>
+
+                        <div className="old-visit-details">
+                          <strong className="old-visit-diag">
+                            {ov.diagnosis || ov.reason || "Rehabilitation Session"}
+                          </strong>
+                          {ov.treatmentNotes && (
+                            <p className="old-visit-notes-snippet">{ov.treatmentNotes}</p>
+                          )}
+                        </div>
+
+                        {onSelectVisit && (
+                          <div className="old-visit-actions">
+                            <button
+                              type="button"
+                              className="old-visit-receipt-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectVisit(ov);
+                              }}
+                            >
+                              🧾 View Receipt
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

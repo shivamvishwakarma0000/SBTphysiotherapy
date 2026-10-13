@@ -15,14 +15,20 @@ import {
   getReviewWhatsAppUrl,
   restoreFromGoogleSheets,
   syncToGoogleSheets,
-  clearLocalPatientsCache
+  clearLocalPatientsCache,
+  getSupabaseConfig,
+  setSupabaseConfig,
+  isSupabaseConnected,
+  testSupabaseConnection,
+  getSupabaseSchemaSql,
+  supabasePushAllData,
+  supabasePullAllData
 } from "./apiService";
 
 import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly, formatVisitDateTimeDisplay } from "./receiptUtils";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
 import { PatientAvatar } from "./PatientAvatar";
-import PullToRefresh from "./PullToRefresh";
 import PatientVisitCalendar from "./PatientVisitCalendar";
 
 
@@ -285,6 +291,9 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [patientFilter, setPatientFilter] = useState("all"); // "all", "today", "active", "waiting", "completed"
   const [patientSort, setPatientSort] = useState("newest"); // "newest", "name", "visits"
   const [todayVisits, setTodayVisits] = useState([]);
+  const [allVisits, setAllVisits] = useState([]);
+  const [isDoctorRefreshing, setIsDoctorRefreshing] = useState(false);
+  const [doctorRefreshToast, setDoctorRefreshToast] = useState("");
   const [todayViewMode, setTodayViewMode] = useState("calendar"); // "calendar" or "queue"
   const [doctorProfileVisitMode, setDoctorProfileVisitMode] = useState("calendar"); // "calendar" or "timeline"
   const [enquiries, setEnquiries] = useState([]);
@@ -301,6 +310,16 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
   const [webhookSavedMsg, setWebhookSavedMsg] = useState("");
   const [restoreLoading, setRestoreLoading] = useState(false);
+
+  // Supabase PostgreSQL Database States
+  const [supabaseConfig, setSupabaseConfigState] = useState(() => getSupabaseConfig());
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState(() => getSupabaseConfig().url);
+  const [supabaseKeyInput, setSupabaseKeyInput] = useState(() => getSupabaseConfig().anonKey);
+  const [supabaseTestMsg, setSupabaseTestMsg] = useState({ text: "", isError: false, isSuccess: false });
+  const [supabaseTesting, setSupabaseTesting] = useState(false);
+  const [supabaseSyncing, setSupabaseSyncing] = useState(false);
+  const [showSqlSchemaModal, setShowSqlSchemaModal] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   // Clinic Map Location State
   const DEFAULT_CLINIC_LOCATION = {
@@ -617,7 +636,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
         if (getWebhookUrl()) {
           await restoreFromGoogleSheets();
         }
-        await Promise.all([fetchStats(), fetchPatients(), fetchTodayVisits(), fetchEnquiries()]);
+        await Promise.all([fetchStats(), fetchPatients(), fetchTodayVisits(), fetchAllVisits(), fetchEnquiries()]);
         fetchReviewQueue();
       } catch (e) {
         // silent background sync
@@ -855,6 +874,47 @@ export default function DoctorPortal({ onClose, themeProps }) {
       if (data.ok) setTodayVisits(data.visits);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const fetchAllVisits = async () => {
+    try {
+      const data = await api.getAllVisits();
+      if (data.ok && Array.isArray(data.visits)) {
+        setAllVisits(data.visits);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDoctorFullRefresh = async () => {
+    if (isDoctorRefreshing) return;
+    setIsDoctorRefreshing(true);
+    setDoctorRefreshToast("🔄 Syncing latest data from Cloud...");
+    try {
+      if (getWebhookUrl()) {
+        try {
+          await restoreFromGoogleSheets();
+        } catch (e) {
+          console.warn("Sheets sync on refresh:", e);
+        }
+      }
+      await Promise.all([
+        fetchStats(),
+        fetchPatients(),
+        fetchTodayVisits(),
+        fetchAllVisits(),
+        fetchEnquiries()
+      ]);
+      setDoctorRefreshToast("✅ Clinic data, visits & calendar refreshed!");
+      setTimeout(() => setDoctorRefreshToast(""), 3500);
+    } catch (err) {
+      console.error("Refresh error:", err);
+      setDoctorRefreshToast("⚠️ Refreshed with active cache.");
+      setTimeout(() => setDoctorRefreshToast(""), 3500);
+    } finally {
+      setIsDoctorRefreshing(false);
     }
   };
 
@@ -1465,6 +1525,74 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
+  const handleSaveSupabaseConfig = (e) => {
+    if (e) e.preventDefault();
+    const cleanUrl = (supabaseUrlInput || "").trim();
+    const cleanKey = (supabaseKeyInput || "").trim();
+    setSupabaseConfig(cleanUrl, cleanKey);
+    setSupabaseConfigState(getSupabaseConfig());
+    setSupabaseTestMsg({ text: "✅ Supabase credentials saved successfully!", isSuccess: true, isError: false });
+    setTimeout(() => setSupabaseTestMsg({ text: "", isError: false, isSuccess: false }), 4000);
+  };
+
+  const handleTestSupabaseConnection = async () => {
+    setSupabaseTesting(true);
+    setSupabaseTestMsg({ text: "⏳ Connecting to Supabase PostgreSQL database...", isSuccess: false, isError: false });
+    try {
+      const res = await testSupabaseConnection(supabaseUrlInput, supabaseKeyInput);
+      if (res.ok) {
+        setSupabaseTestMsg({ text: `✅ ${res.message}`, isSuccess: true, isError: false });
+      } else {
+        setSupabaseTestMsg({ text: `❌ ${res.message}`, isSuccess: false, isError: true });
+      }
+    } catch (err) {
+      setSupabaseTestMsg({ text: `❌ Connection error: ${err.message}`, isSuccess: false, isError: true });
+    } finally {
+      setSupabaseTesting(false);
+    }
+  };
+
+  const handleSyncToSupabase = async () => {
+    setSupabaseSyncing(true);
+    setSupabaseTestMsg({ text: "⏳ Syncing all local patients and visits to Supabase PostgreSQL...", isSuccess: false, isError: false });
+    try {
+      setSupabaseConfig(supabaseUrlInput, supabaseKeyInput);
+      const res = await supabasePushAllData(patients, todayVisits, enquiries);
+      setSupabaseTestMsg({
+        text: `✅ Synced ${res.patientsCount} patients, ${res.visitsCount} visits, and ${res.enquiriesCount} enquiries to Supabase database!`,
+        isSuccess: true,
+        isError: false
+      });
+    } catch (err) {
+      setSupabaseTestMsg({ text: `❌ Sync error: ${err.message}`, isSuccess: false, isError: true });
+    } finally {
+      setSupabaseSyncing(false);
+    }
+  };
+
+  const handlePullFromSupabase = async () => {
+    setSupabaseSyncing(true);
+    setSupabaseTestMsg({ text: "⏳ Pulling all records from Supabase database...", isSuccess: false, isError: false });
+    try {
+      setSupabaseConfig(supabaseUrlInput, supabaseKeyInput);
+      const res = await supabasePullAllData();
+      if (res.patients && res.patients.length > 0) {
+        setPatients(res.patients);
+      }
+      setSupabaseTestMsg({
+        text: `✅ Pulled ${res.patients?.length || 0} patients and ${res.visits?.length || 0} visits from Supabase database!`,
+        isSuccess: true,
+        isError: false
+      });
+      fetchStats();
+      fetchPatients();
+    } catch (err) {
+      setSupabaseTestMsg({ text: `❌ Pull error: ${err.message}`, isSuccess: false, isError: true });
+    } finally {
+      setSupabaseSyncing(false);
+    }
+  };
+
   // Note: buildReceiptPDF and downloadReceiptPDF are imported from ./receiptUtils
 
   const handleDownloadPDF = (receipt) => {
@@ -1721,19 +1849,30 @@ _(Saved in patient clinic records)_`;
   // RENDER: DOCTOR DASHBOARD & CLINIC MANAGEMENT
   // ==========================================
   return (
-    <PullToRefresh
-      onRefresh={async () => {
-        try {
-          if (getWebhookUrl()) {
-            await restoreFromGoogleSheets();
-          }
-          await Promise.all([fetchStats(), fetchPatients(), fetchTodayVisits(), fetchEnquiries()]);
-        } catch (e) {
-          console.warn("Pull refresh:", e);
-        }
-      }}
-    >
-      <div className="doctor-portal-fullscreen">
+    <div className="doctor-portal-fullscreen">
+      {doctorRefreshToast && (
+        <div
+          style={{
+            position: "fixed",
+            top: "75px",
+            right: "20px",
+            zIndex: 99999,
+            background: "#0f172a",
+            color: "#ffffff",
+            border: "1px solid #0284c7",
+            borderRadius: "10px",
+            padding: "10px 18px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+            fontSize: "13px",
+            fontWeight: "700",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
+          }}
+        >
+          {doctorRefreshToast}
+        </div>
+      )}
       <header className="doctor-navbar">
         <div className="doctor-nav-top-row">
           <div className="doctor-nav-brand">
@@ -1781,6 +1920,28 @@ _(Saved in patient clinic records)_`;
               );
             })()}
             <button
+              className="doctor-refresh-btn"
+              onClick={handleDoctorFullRefresh}
+              disabled={isDoctorRefreshing}
+              title="Refresh clinic data from Supabase & Google Sheets"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                background: isDoctorRefreshing ? "rgba(2, 132, 199, 0.25)" : "rgba(2, 132, 199, 0.12)",
+                border: "1px solid rgba(2, 132, 199, 0.45)",
+                color: "#0284c7",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: "700",
+                cursor: isDoctorRefreshing ? "wait" : "pointer"
+              }}
+            >
+              <span style={{ display: "inline-block", transform: isDoctorRefreshing ? "rotate(360deg)" : "none", transition: isDoctorRefreshing ? "transform 0.8s linear infinite" : "none" }}>🔄</span>
+              <span>{isDoctorRefreshing ? "Refreshing..." : "Refresh"}</span>
+            </button>
+            <button
               className="sync-badge-btn"
               onClick={() => {
                 if (!getWebhookUrl()) {
@@ -1820,11 +1981,14 @@ _(Saved in patient clinic records)_`;
           <button className={activeTab === "today" ? "active" : ""} onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
             📅 4. Today's Visits ({todayVisits.length})
           </button>
+          <button className={activeTab === "calendar" ? "active" : ""} onClick={() => { setActiveTab("calendar"); fetchAllVisits(); }}>
+            🗓️ 5. Master Calendar ({allVisits.length || todayVisits.length})
+          </button>
           <button className={activeTab === "enquiries" ? "active" : ""} onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
-            📩 5. Online Bookings {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
+            📩 6. Online Bookings {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
           </button>
           <button className={activeTab === "settings" ? "active" : ""} onClick={() => setActiveTab("settings")}>
-            ⚙️ 6. Cloud Settings
+            ⚙️ 7. Cloud Settings
           </button>
         </nav>
       </header>
@@ -1981,6 +2145,12 @@ _(Saved in patient clinic records)_`;
                 <div className="card-icon-bubble green">📅</div>
                 <strong className="card-title">Today's Visits</strong>
                 <span className="card-count-badge green">{stats.todayVisitsCount || todayVisits.length}</span>
+              </div>
+
+              <div className="mobile-app-card" onClick={() => { selectDoctorTab("calendar"); fetchAllVisits(); }}>
+                <div className="card-icon-bubble blue">🗓️</div>
+                <strong className="card-title">Master Calendar</strong>
+                <span className="card-count-badge blue">{allVisits.length || todayVisits.length}</span>
               </div>
 
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
@@ -3106,7 +3276,67 @@ _(Saved in patient clinic records)_`;
           </div>
         )}
 
-        {/* ================= 5. ONLINE BOOKINGS & ENQUIRIES ================= */}
+        {/* ================= 5. MASTER CLINICAL CALENDAR ================= */}
+        {activeTab === "calendar" && (
+          <div className="calendar-master-view">
+            <div className="section-header-row">
+              <div>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+                  🗓️ Master Rehabilitation &amp; Treatment Calendar ({allVisits.length || todayVisits.length} Records)
+                </h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>
+                  Interactive physical therapy calendar, attended treatment days, missing rehab sessions, and blinking upcoming follow-up appointments.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={handleDoctorFullRefresh}
+                  disabled={isDoctorRefreshing}
+                  style={{
+                    background: "rgba(255,255,255,0.12)",
+                    color: "#ffffff",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                    borderRadius: "10px",
+                    padding: "6px 14px",
+                    fontWeight: "700",
+                    fontSize: "12.5px",
+                    cursor: "pointer"
+                  }}
+                >
+                  🔄 {isDoctorRefreshing ? "Refreshing..." : "Refresh Calendar"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() => selectDoctorTab("new-patient")}
+                  style={{
+                    background: "var(--stitch-blue, #2563EB)",
+                    color: "#ffffff",
+                    border: "1px solid #60a5fa",
+                    borderRadius: "10px",
+                    padding: "6px 14px",
+                    fontWeight: "700",
+                    fontSize: "12.5px",
+                    cursor: "pointer"
+                  }}
+                >
+                  ➕ Schedule New Visit
+                </button>
+              </div>
+            </div>
+
+            <PatientVisitCalendar
+              visits={allVisits.length > 0 ? allVisits : todayVisits}
+              isDoctorView={true}
+              onSelectVisit={(v) => openPatientProfile(v.patientId)}
+              onScheduleAppointment={() => selectDoctorTab("new-patient")}
+            />
+          </div>
+        )}
+
+        {/* ================= 6. ONLINE BOOKINGS & ENQUIRIES ================= */}
         {activeTab === "enquiries" && (
           <div className="enquiries-view">
             <div className="section-header-row">
@@ -3873,6 +4103,124 @@ _(Saved in patient clinic records)_`;
                     }}
                   >
                     ⚡ Reset to Official Google Sheets Webhook
+                  </button>
+                </div>
+              </div>
+
+              {/* 🗄️ Supabase PostgreSQL Database (Dual-Engine with Google Sheets) */}
+              <div className="settings-card" style={{ border: "1.5px solid #3b82f6", background: "linear-gradient(180deg, rgba(59, 130, 246, 0.05) 0%, var(--bg-card, #1e293b) 100%)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "22px" }}>🗄️</span>
+                    <h3 style={{ margin: 0, color: "#3b82f6" }}>Supabase PostgreSQL Database</h3>
+                  </div>
+                  <span style={{
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    padding: "3px 8px",
+                    borderRadius: "6px",
+                    background: supabaseConfig.isConfigured ? "rgba(16, 185, 129, 0.15)" : "rgba(148, 163, 184, 0.15)",
+                    color: supabaseConfig.isConfigured ? "#10b981" : "#94a3b8",
+                    border: `1px solid ${supabaseConfig.isConfigured ? "rgba(16, 185, 129, 0.4)" : "rgba(148, 163, 184, 0.3)"}`
+                  }}>
+                    {supabaseConfig.isConfigured ? "🟢 DATABASE CONFIGURED" : "⚪ NOT CONFIGURED"}
+                  </span>
+                </div>
+
+                <p style={{ fontSize: "12.5px", color: "var(--text-secondary, #94a3b8)", margin: "0 0 12px 0", lineHeight: "1.5" }}>
+                  Connect your live PostgreSQL database on Supabase (supabase.com). Runs 100% serverless on Netlify, syncs alongside your Google Sheets, and keeps clinical records persistent across all doctors &amp; patient devices.
+                </p>
+
+                <form onSubmit={handleSaveSupabaseConfig}>
+                  <label>
+                    Supabase Project URL
+                    <input
+                      type="url"
+                      placeholder="https://xyzcompany.supabase.co"
+                      value={supabaseUrlInput}
+                      onChange={(e) => setSupabaseUrlInput(e.target.value)}
+                      style={{ fontSize: "12px", fontFamily: "monospace" }}
+                    />
+                  </label>
+                  <label style={{ marginTop: "8px" }}>
+                    Supabase Anon Public API Key
+                    <input
+                      type="password"
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      value={supabaseKeyInput}
+                      onChange={(e) => setSupabaseKeyInput(e.target.value)}
+                      style={{ fontSize: "12px", fontFamily: "monospace" }}
+                    />
+                  </label>
+
+                  {supabaseTestMsg.text && (
+                    <div style={{
+                      marginTop: "10px",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      background: supabaseTestMsg.isError ? "rgba(239, 68, 68, 0.12)" : supabaseTestMsg.isSuccess ? "rgba(16, 185, 129, 0.12)" : "rgba(59, 130, 246, 0.12)",
+                      color: supabaseTestMsg.isError ? "#ef4444" : supabaseTestMsg.isSuccess ? "#10b981" : "#38bdf8",
+                      border: `1px solid ${supabaseTestMsg.isError ? "rgba(239, 68, 68, 0.3)" : supabaseTestMsg.isSuccess ? "rgba(16, 185, 129, 0.3)" : "rgba(59, 130, 246, 0.3)"}`
+                    }}>
+                      {supabaseTestMsg.text}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "12px" }}>
+                    <button type="submit" className="primary-btn" style={{ flex: 1, minHeight: "40px", fontSize: "13px" }}>
+                      💾 Save Supabase Credentials
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      onClick={handleTestSupabaseConnection}
+                      disabled={supabaseTesting}
+                      style={{ minHeight: "40px", fontSize: "13px" }}
+                    >
+                      {supabaseTesting ? "⏳ Testing..." : "⚡ Test Database Connection"}
+                    </button>
+                  </div>
+                </form>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "12px" }}>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={handleSyncToSupabase}
+                    disabled={supabaseSyncing}
+                    title="Export all local patients and visits into your Supabase database"
+                    style={{ fontSize: "12px", padding: "8px" }}
+                  >
+                    {supabaseSyncing ? "⏳ Syncing..." : "🔄 Sync All Records to Supabase"}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={handlePullFromSupabase}
+                    disabled={supabaseSyncing}
+                    title="Pull latest patients and visits from Supabase into website"
+                    style={{ fontSize: "12px", padding: "8px" }}
+                  >
+                    {supabaseSyncing ? "⏳ Pulling..." : "📥 Pull Records from Supabase"}
+                  </button>
+                </div>
+
+                <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    className="secondary-btn full-btn"
+                    onClick={() => setShowSqlSchemaModal(true)}
+                    style={{
+                      background: "rgba(37, 99, 235, 0.08)",
+                      borderColor: "rgba(37, 99, 235, 0.3)",
+                      color: "#3b82f6",
+                      fontSize: "12px",
+                      fontWeight: "700"
+                    }}
+                  >
+                    📋 View &amp; Copy 1-Click SQL Schema for Supabase
                   </button>
                 </div>
               </div>
@@ -5626,12 +5974,12 @@ _(Saved in patient clinic records)_`;
         </button>
 
         <button 
-          className={`nav-item-4 ${activeTab === "today" && !showDoctorMore ? "active" : ""}`}
-          onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}
+          className={`nav-item-4 ${(activeTab === "calendar" || activeTab === "today") && !showDoctorMore ? "active" : ""}`}
+          onClick={() => { selectDoctorTab("calendar"); fetchAllVisits(); }}
         >
-          <span className="nav-icon-4">📅</span>
-          <span className="nav-label-4">Visits</span>
-          {todayVisits.length > 0 && <span className="bottom-nav-badge green">{todayVisits.length}</span>}
+          <span className="nav-icon-4">🗓️</span>
+          <span className="nav-label-4">Calendar</span>
+          {(allVisits.length || todayVisits.length) > 0 && <span className="bottom-nav-badge green">{allVisits.length || todayVisits.length}</span>}
         </button>
 
         <button 
@@ -5657,6 +6005,15 @@ _(Saved in patient clinic records)_`;
               <button className="close-sheet-btn" onClick={() => setShowDoctorMore(false)}>✕</button>
             </div>
             <div className="more-sheet-grid">
+              <button className="more-sheet-item" onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}>
+                <span className="sheet-icon green">📅</span>
+                <div className="sheet-info">
+                  <strong>Today's Queue ({todayVisits.length})</strong>
+                  <span>Today's active consultations & visits</span>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
               <button className="more-sheet-item" onClick={() => selectDoctorTab("waiting")}>
                 <span className="sheet-icon amber">⏳</span>
                 <div className="sheet-info">
@@ -5733,7 +6090,126 @@ _(Saved in patient clinic records)_`;
           </div>
         </div>
       )}
+
+      {/* ================= SUPABASE SQL SCHEMA MODAL ================= */}
+      {showSqlSchemaModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowSqlSchemaModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            padding: "16px"
+          }}
+        >
+          <div
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "var(--bg-card, #1e293b)",
+              border: "1px solid var(--border, #334155)",
+              borderRadius: "16px",
+              padding: "24px",
+              maxWidth: "720px",
+              width: "100%",
+              maxHeight: "85vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.5)"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "24px" }}>🗄️</span>
+                <div>
+                  <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "18px", fontWeight: "800" }}>
+                    Supabase PostgreSQL 1-Click Schema
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                    Tables: patients, visits, enquiries, clinic_settings
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSqlSchemaModal(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  padding: "4px 8px"
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: "13px", color: "var(--text, #e2e8f0)", margin: "0 0 12px 0", lineHeight: "1.5" }}>
+              1. Open your <strong>Supabase Dashboard</strong> (supabase.com) &rarr; Go to your project &rarr; Click <strong>SQL Editor</strong> in the left sidebar.<br />
+              2. Paste the SQL code below and click <strong>Run</strong>. All tables and index policies will be created immediately!
+            </p>
+
+            <div style={{ position: "relative", flex: 1, minHeight: "220px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <pre
+                style={{
+                  flex: 1,
+                  background: "#0b1329",
+                  border: "1px solid #1e293b",
+                  borderRadius: "10px",
+                  padding: "14px",
+                  margin: 0,
+                  overflowY: "auto",
+                  fontSize: "12px",
+                  fontFamily: "monospace",
+                  color: "#38bdf8",
+                  lineHeight: "1.5"
+                }}
+              >
+                {getSupabaseSchemaSql()}
+              </pre>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", flexWrap: "wrap", gap: "10px" }}>
+              <span style={{ fontSize: "12px", color: "#10b981", fontWeight: "700" }}>
+                {copiedSql ? "✅ Copied to clipboard!" : "Ready to copy & paste"}
+              </span>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(getSupabaseSchemaSql());
+                    setCopiedSql(true);
+                    setTimeout(() => setCopiedSql(false), 3000);
+                  }}
+                  style={{
+                    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                    padding: "8px 18px",
+                    fontSize: "13px"
+                  }}
+                >
+                  📋 {copiedSql ? "Copied!" : "Copy SQL Code"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() => setShowSqlSchemaModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
-    </PullToRefresh>
   );
 }

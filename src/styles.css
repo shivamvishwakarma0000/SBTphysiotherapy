@@ -11559,5 +11559,457 @@ img, video, canvas, svg {
   }
 }
 
+/* =============================================================================
+   PATIENT VISIT CALENDAR — ADVANCED CLINICAL UPGRADE STYLES
+   Metrics Ribbon, Missed Days, Blinking Follow-Up Beacon & Drilldown History
+   ============================================================================= */
+
+/* 1. Metrics Ribbon */
+.calendar-metrics-ribbon {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 18px 0 14px 0;
+}
+
+.cal-metric-card {
+  background: var(--stitch-bg, #f8fafc);
+  border: 1px solid var(--stitch-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.cal-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.metric-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.metric-icon-wrap.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.metric-icon-wrap.blue {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.metric-icon-wrap.amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.metric-icon-wrap.indigo {
+  background: rgba(99, 102, 241, 0.15);
+  color: #4f46e5;
+}
+
+.metric-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--stitch-text-muted, #64748b);
+}
+
+.metric-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--stitch-text, #0f172a);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.metric-sub {
+  font-size: 11.5px;
+  color: var(--stitch-text-muted, #64748b);
+}
+
+.metric-followup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* 2. BLINKING BEACON ANIMATIONS FOR NEXT FOLLOW-UP */
+@keyframes beaconBlinkGlow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.03);
+    box-shadow: 0 0 14px 4px rgba(37, 99, 235, 0.45);
+  }
+}
+
+@keyframes bellRattle {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(8deg); }
+}
+
+@keyframes liveDotPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.blinking-bell-icon {
+  display: inline-block;
+  animation: bellRattle 2.2s infinite ease-in-out;
+}
+
+.followup-live-beacon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+  letter-spacing: 0.04em;
+}
+
+.beacon-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2563eb;
+  animation: liveDotPulse 1.2s infinite;
+}
+
+/* 3. CALENDAR DAY CELL ENHANCEMENTS */
+.calendar-day-cell.is-next-followup {
+  border: 2px solid #2563eb !important;
+  background: #f0f7ff !important;
+  animation: beaconBlinkGlow 2.5s infinite ease-in-out;
+  z-index: 3;
+}
+
+.dark .calendar-day-cell.is-next-followup,
+[data-theme="dark"] .calendar-day-cell.is-next-followup {
+  background: rgba(37, 99, 235, 0.15) !important;
+  border-color: #60a5fa !important;
+}
+
+.followup-blinking-pill {
+  font-size: 8.5px;
+  font-weight: 800;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  animation: liveDotPulse 1.5s infinite;
+}
+
+.calendar-day-cell.is-missed-day {
+  background: #fffbeb !important;
+  border: 1px dashed #f59e0b !important;
+}
+
+.dark .calendar-day-cell.is-missed-day,
+[data-theme="dark"] .calendar-day-cell.is-missed-day {
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+.missed-pill {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.legend-dot.missed-indicator {
+  background: #f59e0b;
+}
+
+.legend-dot.all-indicator {
+  background: #64748b;
+}
+
+.legend-item.active-legend {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.sunday-cell {
+  color: #ef4444 !important;
+}
+
+/* 4. DRILLDOWN NEXT FOLLOW-UP SPOTLIGHT CARD */
+.drilldown-followup-spotlight {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1.5px solid #3b82f6;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+  margin-bottom: 12px;
+}
+
+.dark .drilldown-followup-spotlight,
+[data-theme="dark"] .drilldown-followup-spotlight {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(30, 64, 175, 0.25) 100%);
+  border-color: #60a5fa;
+}
+
+.spotlight-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.spotlight-bell-beacon {
+  font-size: 24px;
+  animation: bellRattle 2.4s infinite ease-in-out;
+}
+
+.spotlight-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #1e40af;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.dark .spotlight-title,
+[data-theme="dark"] .spotlight-title {
+  color: #93c5fd;
+}
+
+.spotlight-date {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.spotlight-countdown-badge {
+  margin-left: auto;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.spotlight-body {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #1e3a8a;
+}
+
+.dark .spotlight-body,
+[data-theme="dark"] .spotlight-body {
+  color: #bfdbfe;
+}
+
+.drilldown-missed-alert-card {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.dark .drilldown-missed-alert-card,
+[data-theme="dark"] .drilldown-missed-alert-card {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.missed-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.dark .missed-alert-header,
+[data-theme="dark"] .missed-alert-header {
+  color: #fbbf24;
+}
+
+.drilldown-missed-alert-card p {
+  font-size: 12px;
+  color: #92400e;
+  margin: 0 0 10px 0;
+  line-height: 1.45;
+}
+
+.dark .drilldown-missed-alert-card p,
+[data-theme="dark"] .drilldown-missed-alert-card p {
+  color: #fde68a;
+}
+
+/* 5. COMPLETE OLD VISITS TIMELINE IN DRILLDOWN */
+.patient-old-visits-history-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--stitch-border, #e2e8f0);
+}
+
+.old-visits-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.old-visits-history-header h5 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--stitch-text, #0f172a);
+}
+
+.old-visits-sub {
+  font-size: 11px;
+  color: var(--stitch-text-muted, #64748b);
+}
+
+.old-visits-scrollable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.old-visit-item-compact {
+  background: var(--stitch-card-bg, #ffffff);
+  border: 1px solid var(--stitch-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.old-visit-item-compact:hover {
+  border-color: #2563eb;
+  background: var(--stitch-blue-light, #eff6ff);
+}
+
+.old-visit-item-compact.is-selected-date-item {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+}
+
+.old-visit-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.old-visit-num-badge {
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.old-visit-date-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--stitch-text-muted, #64748b);
+}
+
+.old-visit-diag {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--stitch-text, #0f172a);
+  display: block;
+}
+
+.old-visit-notes-snippet {
+  margin: 2px 0 0 0;
+  font-size: 11px;
+  color: var(--stitch-text-muted, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.old-visit-actions {
+  margin-top: 4px;
+  text-align: right;
+}
+
+.old-visit-receipt-btn {
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.old-visit-receipt-btn:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .calendar-metrics-ribbon {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .cal-metric-card {
+    padding: 10px 12px;
+  }
+  .metric-icon-wrap {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+  .metric-value {
+    font-size: 14.5px;
+  }
+}
+
+
 
 

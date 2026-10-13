@@ -1549,19 +1549,17 @@ export default function DoctorPortal({ onClose, themeProps }) {
     setSyncLoading(true);
     try {
       const webhookUrl = getWebhookUrl();
-      if (!webhookUrl) {
-        alert("Please configure your Google Sheets Webhook URL below in settings first.");
-        return;
-      }
-      // Trigger sync for all current patients and visits
+      if (!webhookUrl) return;
+      // Trigger sync for all current patients and visits in background
       patients.forEach(p => syncToGoogleSheets("sync_patient", p));
       todayVisits.forEach(v => syncToGoogleSheets("sync_visit", v));
-      alert("All records sent to Google Sheets!");
-      fetchStats();
-      fetchPatients();
-      fetchEnquiries();
+      await Promise.all([
+        fetchStats(),
+        fetchPatients(),
+        fetchEnquiries()
+      ]);
     } catch (err) {
-      alert("Sync failed. Check network or webhook settings.");
+      console.warn("Sync error:", err);
     } finally {
       setSyncLoading(false);
     }
@@ -1994,20 +1992,6 @@ _(Saved in patient clinic records)_`;
               </span>
               <span>{isDoctorRefreshing ? "Refreshing..." : (doctorRefreshDone ? "Done!" : "Refresh")}</span>
             </button>
-            <button
-              className="sync-badge-btn"
-              onClick={() => {
-                if (!getWebhookUrl()) {
-                  setActiveTab("settings");
-                } else {
-                  handleManualSync();
-                }
-              }}
-              title={getWebhookUrl() ? "Google Sheets Connected (Click to sync)" : "Click to connect Google Sheets Webhook"}
-            >
-              <span className={`sync-dot ${getWebhookUrl() ? "green" : "orange"}`}></span>
-              {syncLoading ? "Syncing..." : "Sync"}
-            </button>
             <button className="logout-btn" onClick={handleLogout} title="Logout">
               Logout
             </button>
@@ -2018,27 +2002,35 @@ _(Saved in patient clinic records)_`;
         </div>
 
         <nav className="doctor-nav-tabs">
-          <button className={activeTab === "new-patient" ? "active" : ""} onClick={() => setActiveTab("new-patient")}>
-            ➕ 1. Intake Patient
+          <button className={activeTab === "dashboard" ? "active" : ""} onClick={() => selectDoctorTab("dashboard")}>
+            <span className="nav-tab-desktop">🏠 1. Dashboard</span>
+            <span className="nav-tab-mobile">🏠 Dashboard</span>
           </button>
-          <button className={activeTab === "waiting" ? "active" : ""} onClick={() => setActiveTab("waiting")}>
-            ⏳ 2. Waiting Queue {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length > 0 && (
+          <button className={activeTab === "new-patient" ? "active" : ""} onClick={() => selectDoctorTab("new-patient")}>
+            <span className="nav-tab-desktop">➕ 2. Intake Patient</span>
+            <span className="nav-tab-mobile">➕ Intake</span>
+          </button>
+          <button className={activeTab === "waiting" ? "active" : ""} onClick={() => selectDoctorTab("waiting")}>
+            <span className="nav-tab-desktop">⏳ 3. Waiting Queue</span>
+            <span className="nav-tab-mobile">⏳ Waiting</span>
+            {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length > 0 && (
               <span className="enq-badge" style={{ background: "#f59e0b" }}>
                 {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length}
               </span>
             )}
           </button>
-          <button className={activeTab === "patients" ? "active" : ""} onClick={() => { setActiveTab("patients"); fetchPatients(); }}>
-            👥 3. Enrolled Patients ({patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length})
+          <button className={activeTab === "patients" ? "active" : ""} onClick={() => { selectDoctorTab("patients"); fetchPatients(); }}>
+            <span className="nav-tab-desktop">👥 4. Enrolled Patients ({patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length})</span>
+            <span className="nav-tab-mobile">👥 Enrolled ({patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length})</span>
           </button>
-          <button className={activeTab === "today" ? "active" : ""} onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
-            📅 4. Today's Visits ({todayVisits.length})
+          <button className={activeTab === "today" ? "active" : ""} onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}>
+            <span className="nav-tab-desktop">📅 5. Today's Visits ({todayVisits.length})</span>
+            <span className="nav-tab-mobile">📅 Today ({todayVisits.length})</span>
           </button>
-          <button className={activeTab === "enquiries" ? "active" : ""} onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
-            📩 5. Online Bookings {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
-          </button>
-          <button className={activeTab === "settings" ? "active" : ""} onClick={() => setActiveTab("settings")}>
-            ⚙️ 6. Cloud Settings
+          <button className={activeTab === "enquiries" ? "active" : ""} onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
+            <span className="nav-tab-desktop">📩 6. Online Bookings</span>
+            <span className="nav-tab-mobile">📩 Bookings</span>
+            {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
           </button>
         </nav>
       </header>
@@ -2203,31 +2195,14 @@ _(Saved in patient clinic records)_`;
                 <span className="card-count-badge purple">{stats.totalEnquiriesCount || enquiries.length}</span>
               </div>
 
-              <div className="mobile-app-card" onClick={() => selectDoctorTab("settings")}>
-                <div className="card-icon-bubble cyan">⚙️</div>
-                <strong className="card-title">Cloud Settings</strong>
+              <div className="mobile-app-card" onClick={() => { selectDoctorTab("patients"); fetchPatients(); }}>
+                <div className="card-icon-bubble cyan">📋</div>
+                <strong className="card-title">Treatment Records</strong>
                 <span className="card-count-badge cyan" style={{ fontSize: "11px", fontWeight: "800", padding: "2px 8px" }}>
-                  {getWebhookUrl() ? "Active" : "Setup"}
+                  {stats.totalVisits || (patients.length > 0 ? `${patients.length} Pts` : "History")}
                 </span>
               </div>
             </div>
-
-            {!getWebhookUrl() && (
-              <div className="cloud-sync-banner-card desktop-only-widget">
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <span style={{ fontSize: "24px" }}>☁️</span>
-                  <div>
-                    <h4 style={{ margin: "0 0 4px 0", color: "#f59e0b", fontSize: "14px", fontWeight: "700" }}>Enable Multi-Device Cloud Sync</h4>
-                    <p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)" }}>
-                      Connect Google Sheets Webhook to sync patient records across phone & desktop.
-                    </p>
-                  </div>
-                </div>
-                <button className="primary-btn" onClick={() => setActiveTab("settings")} style={{ padding: "6px 14px", fontSize: "12px", whiteSpace: "nowrap" }}>
-                  Connect
-                </button>
-              </div>
-            )}
 
             {/* Split view: Today's Queue & Recent Patients */}
             <div className="dashboard-split desktop-only-widget">
@@ -4492,8 +4467,8 @@ _(Saved in patient clinic records)_`;
 
       {/* ================= PATIENT PROFILE MODAL (BOXY CLINICAL DESIGN WITH AVATAR) ================= */}
       {selectedPatient && (
-        <div className="patient-profile-modal-overlay">
-          <div className="patient-profile-card boxy-profile-card" style={{ maxWidth: "920px", width: "95%", maxHeight: "92vh", overflowY: "auto", overflowX: "hidden", borderRadius: "16px", boxSizing: "border-box" }}>
+        <div className="patient-profile-modal-overlay" style={{ overflowX: "hidden", boxSizing: "border-box" }}>
+          <div className="patient-profile-card boxy-profile-card" style={{ maxWidth: "920px", width: "100%", maxHeight: "92vh", overflowY: "auto", overflowX: "hidden", borderRadius: "16px", boxSizing: "border-box" }}>
             
             {/* 1. MASTER TOP HEADER BOX (Vector Avatar + Info + 1-Tap Daily Session Action) */}
             <div className="profile-master-header-box" style={{

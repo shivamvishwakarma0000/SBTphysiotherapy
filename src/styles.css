@@ -2483,30 +2483,48 @@ textarea:focus {
 
 .doctor-nav-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
   width: 100%;
-  max-width: 660px;
+  max-width: 980px;
+  overflow-x: hidden !important;
+  box-sizing: border-box;
   order: 2;
 }
 
 .doctor-nav-tabs button {
-  padding: 8px 12px;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 8px 6px;
   background: var(--bg-card);
   border: 1.5px solid var(--line);
   border-radius: 8px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
   transition: all 160ms ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   box-shadow: var(--shadow-sm);
   text-align: center;
+}
+
+.doctor-nav-tabs .nav-tab-desktop {
+  display: inline !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doctor-nav-tabs .nav-tab-mobile {
+  display: none !important;
 }
 
 .doctor-nav-tabs button:hover {
@@ -4206,31 +4224,48 @@ textarea:focus {
 
   .doctor-nav-tabs {
     display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 6px !important;
     width: 100% !important;
-    overflow-x: visible !important;
+    overflow-x: hidden !important;
     padding: 2px 0 6px !important;
+    box-sizing: border-box !important;
   }
 
   .doctor-nav-tabs button {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
     font-size: 11px !important;
     font-weight: 700 !important;
-    padding: 8px 4px !important;
+    padding: 7px 3px !important;
     border: 1.5px solid var(--line) !important;
     background: var(--bg-card) !important;
     border-radius: 8px !important;
     color: var(--text) !important;
     text-align: center !important;
-    white-space: normal !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     line-height: 1.2 !important;
-    display: flex !important;
-    flex-direction: column !important;
+    display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 3px !important;
     min-height: 40px !important;
     box-shadow: var(--shadow-sm) !important;
+    box-sizing: border-box !important;
+  }
+
+  .doctor-nav-tabs .nav-tab-desktop {
+    display: none !important;
+  }
+
+  .doctor-nav-tabs .nav-tab-mobile {
+    display: inline !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
   .doctor-nav-tabs button.active {
@@ -5157,29 +5192,46 @@ textarea:focus {
   /* Row 2 on mobile: 6 Boxes directly below in a clean 3x2 Grid */
   .doctor-nav-tabs {
     display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 5px !important;
     width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
     box-sizing: border-box !important;
   }
 
   .doctor-nav-tabs button {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
     font-size: 10.5px !important;
     font-weight: 700 !important;
-    padding: 6px 3px !important;
+    padding: 6px 2px !important;
     min-height: 38px !important;
     text-align: center !important;
-    display: flex !important;
-    flex-direction: column !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     line-height: 1.15 !important;
     border-radius: 8px !important;
-    white-space: normal !important;
-    word-break: break-word !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     box-sizing: border-box !important;
+  }
+
+  .doctor-nav-tabs .nav-tab-desktop {
+    display: none !important;
+  }
+
+  .doctor-nav-tabs .nav-tab-mobile {
+    display: inline !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
   /* 4 Boxes directly below: Exactly Equal and Short */
@@ -7513,9 +7565,8 @@ textarea:focus {
     font-size: 20px;
   }
 
-  /* On mobile phones, hide the multi-tab scrolling navbar in favor of 4-item bottom nav */
-  .patient-navbar,
-  .doctor-nav-tabs {
+  /* On mobile phones, hide the patient multi-tab scrolling navbar in favor of 4-item bottom nav */
+  .patient-navbar {
     display: none !important;
   }
 
@@ -11171,9 +11222,25 @@ img, video, canvas, svg {
   overflow: hidden;
 }
 
+.cal-weekday-desktop {
+  display: inline;
+}
+
+.cal-weekday-mobile {
+  display: none;
+}
+
+.cal-pill-desktop {
+  display: inline;
+}
+
+.cal-pill-mobile {
+  display: none;
+}
+
 .calendar-weekdays-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
   background: var(--stitch-bg);
   border-bottom: 1px solid var(--stitch-border);
   text-align: center;
@@ -11183,13 +11250,28 @@ img, video, canvas, svg {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 10px 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.calendar-weekday-cell {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 .calendar-days-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
   background: var(--stitch-border);
   gap: 1px;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .calendar-day-cell {
@@ -11201,6 +11283,10 @@ img, video, canvas, svg {
   flex-direction: column;
   transition: all 0.15s ease;
   position: relative;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
 .calendar-day-cell:hover {
@@ -12604,32 +12690,97 @@ img, video, canvas, svg {
 }
 
 @media (max-width: 640px) {
+  .cal-weekday-desktop {
+    display: none !important;
+  }
+  .cal-weekday-mobile {
+    display: inline !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+  }
+  .cal-pill-desktop {
+    display: none !important;
+  }
+  .cal-pill-mobile {
+    display: inline !important;
+    font-size: 8px !important;
+    font-weight: 800 !important;
+  }
+
+  .patient-profile-modal-overlay {
+    padding: 0 !important;
+    align-items: flex-end !important;
+    overflow-x: hidden !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
   .patient-profile-card {
-    padding: 12px 8px !important;
+    padding: 12px 6px !important;
     width: 100% !important;
-    border-radius: 16px 16px 0 0 !important;
+    max-width: 100% !important;
+    border-radius: 18px 18px 0 0 !important;
+    overflow-x: hidden !important;
+    margin: 0 !important;
   }
 
   .patient-profile-card .profile-master-header-box {
-    padding: 14px 12px !important;
+    padding: 12px 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .patient-profile-card .clinical-calendar-container {
-    padding: 8px 6px !important;
+    padding: 8px 4px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .patient-profile-card .calendar-month-grid-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .patient-profile-card .calendar-weekdays-header {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    padding: 6px 0 !important;
+  }
+
+  .patient-profile-card .calendar-days-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    gap: 1px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
   }
 
   .patient-profile-card .calendar-day-cell {
-    min-height: 48px !important;
+    min-height: 44px !important;
     padding: 2px 1px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
   }
 
   .patient-profile-card .day-number {
-    font-size: 11px !important;
+    font-size: 10.5px !important;
+  }
+
+  .patient-profile-card .day-cell-badges {
+    max-width: 100% !important;
+    overflow: hidden !important;
   }
 
   .patient-profile-card .day-event-pill {
-    font-size: 8.5px !important;
+    font-size: 7.5px !important;
     padding: 1px 2px !important;
+    margin-top: 1px !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
   .patient-profile-card .pill-dot {
@@ -12637,8 +12788,25 @@ img, video, canvas, svg {
   }
 
   .patient-profile-card .followup-blinking-pill {
-    font-size: 8px !important;
-    padding: 1px 3px !important;
+    font-size: 7.5px !important;
+    padding: 1px 2px !important;
+  }
+
+  .patient-profile-card .calendar-metrics-ribbon {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .patient-profile-card .cal-metric-card {
+    padding: 8px 6px !important;
+    gap: 6px !important;
+  }
+
+  .patient-profile-card .cal-quick-followup-bar {
+    padding: 8px 6px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
   }
 }
 

@@ -17,6 +17,7 @@ import {
   supabaseDeleteVisit,
   supabaseGetEnquiries,
   supabaseUpsertEnquiry,
+  supabaseDeleteEnquiry,
   supabasePushAllData,
   supabasePullAllData
 } from "./supabaseClient";
@@ -1088,6 +1089,21 @@ export const api = {
   },
 
   async getTodayVisits() {
+    if (isSupabaseConnected()) {
+      try {
+        const sbVisits = await supabaseGetVisits();
+        if (sbVisits && sbVisits.length > 0) {
+          const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+          const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
+          const activeVisits = sbVisits.filter(v => !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId));
+          if (activeVisits.length > 0) {
+            setLocal(KEYS.VISITS, activeVisits);
+          }
+        }
+      } catch (e) {
+        console.warn("Supabase live getTodayVisits notice:", e);
+      }
+    }
     const visits = getLocal(KEYS.VISITS, []);
     const todayStr = new Date().toISOString().split("T")[0];
     const todayList = visits.filter(v => v.date === todayStr);
@@ -1095,6 +1111,21 @@ export const api = {
   },
 
   async getAllVisits() {
+    if (isSupabaseConnected()) {
+      try {
+        const sbVisits = await supabaseGetVisits();
+        if (sbVisits && sbVisits.length > 0) {
+          const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+          const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
+          const activeVisits = sbVisits.filter(v => !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId));
+          if (activeVisits.length > 0) {
+            setLocal(KEYS.VISITS, activeVisits);
+          }
+        }
+      } catch (e) {
+        console.warn("Supabase live getAllVisits notice:", e);
+      }
+    }
     const visits = getLocal(KEYS.VISITS, []);
     return { ok: true, visits };
   },
@@ -1111,6 +1142,19 @@ export const api = {
   // 5. ENQUIRIES
   async getEnquiries() {
     const deletedEnquiryIds = new Set(getLocal(KEYS.DELETED_ENQUIRY_IDS, []));
+    if (isSupabaseConnected()) {
+      try {
+        const sbEnqs = await supabaseGetEnquiries();
+        if (sbEnqs && sbEnqs.length > 0) {
+          const activeEnqs = sbEnqs.filter(e => !deletedEnquiryIds.has(String(e.id)));
+          if (activeEnqs.length > 0) {
+            setLocal(KEYS.ENQUIRIES, activeEnqs);
+          }
+        }
+      } catch (e) {
+        console.warn("Supabase live getEnquiries notice:", e);
+      }
+    }
     const token = this.getToken();
     if (token) {
       try {
@@ -1224,6 +1268,11 @@ export const api = {
     const enquiries = getLocal(KEYS.ENQUIRIES, []);
     const updated = enquiries.filter(e => String(e.id) !== String(enquiryId));
     setLocal(KEYS.ENQUIRIES, updated);
+
+    // Delete from Supabase PostgreSQL
+    try {
+      supabaseDeleteEnquiry(enquiryId).catch(err => console.warn("Supabase enquiry delete notice:", err));
+    } catch (_) {}
 
     syncToGoogleSheets("delete_enquiry", { enquiryId });
     return { ok: true, message: "Enquiry deleted successfully." };
@@ -1632,7 +1681,20 @@ export const patientApi = {
 
     localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
 
-    const allVisits = getLocal(KEYS.VISITS, []);
+    let allVisits = getLocal(KEYS.VISITS, []);
+    if (isSupabaseConnected()) {
+      try {
+        const sbVisits = await supabaseGetVisits();
+        if (sbVisits && sbVisits.length > 0) {
+          const map = new Map();
+          [...allVisits, ...sbVisits].forEach(v => {
+            if (v && v.visitId) map.set(v.visitId, v);
+          });
+          allVisits = Array.from(map.values());
+          setLocal(KEYS.VISITS, allVisits);
+        }
+      } catch (_) {}
+    }
     const visits = allVisits.filter(v => 
       v.patientId === p.patientId || 
       (v.phone && p.phone && String(v.phone).replace(/\D/g, "").slice(-10) === String(p.phone).replace(/\D/g, "").slice(-10))

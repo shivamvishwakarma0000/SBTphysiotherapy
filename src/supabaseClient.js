@@ -128,8 +128,11 @@ let cachedClient = null;
 let lastUsedUrl = "";
 let lastUsedKey = "";
 
+export const DEFAULT_SUPABASE_URL = "https://uydaispejnvbepyklfqf.supabase.co";
+export const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_nRsNlZjjNdx88YKhnTxmhw_c15cv2iV";
+
 /**
- * Get active Supabase configuration (from localStorage or Vite .env)
+ * Get active Supabase configuration (from localStorage or Vite .env or default project)
  */
 export function getSupabaseConfig() {
   const localUrl = typeof window !== "undefined" ? localStorage.getItem(SUPABASE_KEYS.URL) : null;
@@ -138,8 +141,8 @@ export function getSupabaseConfig() {
   const envUrl = typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL) : null;
   const envKey = typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY) : null;
 
-  const url = (localUrl && localUrl.trim()) || (envUrl && envUrl.trim()) || "";
-  const anonKey = (localKey && localKey.trim()) || (envKey && envKey.trim()) || "";
+  const url = (localUrl && localUrl.trim()) || (envUrl && envUrl.trim()) || DEFAULT_SUPABASE_URL;
+  const anonKey = (localKey && localKey.trim()) || (envKey && envKey.trim()) || DEFAULT_SUPABASE_ANON_KEY;
 
   return {
     url,
@@ -562,6 +565,24 @@ export async function supabaseUpsertEnquiry(enquiry) {
   } catch (err) {
     console.warn("supabaseUpsertEnquiry error:", err);
     return null;
+  }
+}
+
+export async function supabaseDeleteEnquiry(enquiryId) {
+  const sb = getSupabaseClient();
+  if (!sb || !enquiryId) return false;
+
+  try {
+    const { error } = await sb
+      .from("enquiries")
+      .delete()
+      .eq("enquiry_id", String(enquiryId));
+
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.warn("supabaseDeleteEnquiry error:", err);
+    return false;
   }
 }
 

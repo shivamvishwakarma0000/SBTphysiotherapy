@@ -3,7 +3,7 @@ import React from "react";
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, autoRecovered: false };
   }
 
   static getDerivedStateFromError(error) {
@@ -11,11 +11,17 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    console.warn("ErrorBoundary caught error, attempting auto-recovery:", error, errorInfo);
+    // Auto-recover immediately on refresh without displaying blocking screen
+    if (!this.state.autoRecovered) {
+      setTimeout(() => {
+        this.setState({ hasError: false, error: null, autoRecovered: true });
+      }, 50);
+    }
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, autoRecovered: false });
     if (this.props.onReset) {
       this.props.onReset();
     }

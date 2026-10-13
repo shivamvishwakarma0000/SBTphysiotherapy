@@ -746,7 +746,8 @@ export default function PatientVisitCalendar({
           <div className="calendar-weekdays-header">
             {daysOfWeek.map((day) => (
               <div key={day} className={`calendar-weekday-cell ${day === "Sun" ? "sunday-cell" : ""}`}>
-                {day}
+                <span className="cal-weekday-desktop">{day}</span>
+                <span className="cal-weekday-mobile">{day[0]}</span>
               </div>
             ))}
           </div>
@@ -762,11 +763,6 @@ export default function PatientVisitCalendar({
               const isToday = cell.dateKey === todayKey;
               const isSelected = cell.dateKey === selectedDateStr;
 
-              // Filter hiding logic
-              if (filterType === "completed" && !hasVisits) {
-                // Dim non-matches
-              }
-
               return (
                 <div
                   key={`${cell.dateKey}-${idx}`}
@@ -781,7 +777,8 @@ export default function PatientVisitCalendar({
                     {isToday && <span className="today-badge">Today</span>}
                     {isNextFollowUp && (
                       <span className="followup-blinking-pill" title="Next Follow-up">
-                        🔔 NEXT
+                        <span className="cal-pill-desktop">🔔 NEXT</span>
+                        <span className="cal-pill-mobile">🔔</span>
                       </span>
                     )}
                   </div>
@@ -795,8 +792,13 @@ export default function PatientVisitCalendar({
                       >
                         <span className="pill-dot">✓</span>
                         <span className="pill-text">
-                          Visit #{data.visits[0].visitNumber || 1}
-                          {data.visits.length > 1 ? ` (+${data.visits.length - 1})` : ""}
+                          <span className="cal-pill-desktop">
+                            Visit #{data.visits[0].visitNumber || 1}
+                            {data.visits.length > 1 ? ` (+${data.visits.length - 1})` : ""}
+                          </span>
+                          <span className="cal-pill-mobile">
+                            #{data.visits[0].visitNumber || 1}
+                          </span>
                         </span>
                       </div>
                     )}
@@ -809,7 +811,12 @@ export default function PatientVisitCalendar({
                       >
                         <span className="pill-dot">⚠️</span>
                         <span className="pill-text">
-                          {data.missed?.missedIndex ? `Missed #${data.missed.missedIndex}` : "Missed Day"}
+                          <span className="cal-pill-desktop">
+                            {data.missed?.missedIndex ? `Missed #${data.missed.missedIndex}` : "Missed Day"}
+                          </span>
+                          <span className="cal-pill-mobile">
+                            M{data.missed?.missedIndex || ""}
+                          </span>
                         </span>
                       </div>
                     )}
@@ -822,7 +829,12 @@ export default function PatientVisitCalendar({
                       >
                         <span className="pill-dot">{isNextFollowUp ? "🔔" : "●"}</span>
                         <span className="pill-text">
-                          {isNextFollowUp ? "Next Follow-Up" : "Scheduled Visit"}
+                          <span className="cal-pill-desktop">
+                            {isNextFollowUp ? "Next Follow-Up" : "Scheduled Visit"}
+                          </span>
+                          <span className="cal-pill-mobile">
+                            {isNextFollowUp ? "Next" : "Appt"}
+                          </span>
                         </span>
                       </div>
                     )}

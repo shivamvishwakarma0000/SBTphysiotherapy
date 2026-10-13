@@ -82,6 +82,16 @@ export const formatVisitDateTimeDisplay = (dateStr, timeStr) => {
   return new Date().toISOString().slice(0, 10);
 };
 
+export const cleanFeeAmount = (val, defaultVal = "500") => {
+  if (val === undefined || val === null || val === "") return defaultVal;
+  const s = String(val).trim();
+  if (s === "0" || s.toLowerCase().includes("pkg") || s.toLowerCase().includes("package") || s.toLowerCase().includes("free")) {
+    return "0";
+  }
+  const num = s.replace(/[^0-9]/g, "");
+  return num || defaultVal;
+};
+
 export const buildReceiptPDF = (receipt) => {
   const { patient, visit } = receipt;
   const doc = new jsPDF({
@@ -128,10 +138,16 @@ export const buildReceiptPDF = (receipt) => {
   doc.text("Regd. Clinical Practitioner", 196, 31, { align: "right" });
 
   // Document Title
+  const isPackage = String(visit.reason || "").toLowerCase().includes("package") || String(visit.treatmentNotes || "").toLowerCase().includes("package");
+  const isPerDay = (visit.visitNumber || 1) > 1;
+  const receiptDocTitle = isPackage 
+    ? "OFFICIAL CLINICAL REHABILITATION PACKAGE RECEIPT"
+    : (isPerDay ? `OFFICIAL CLINICAL SESSION RECEIPT (VISIT #${visit.visitNumber || 1})` : "OFFICIAL PATIENT REGISTRATION & CONSULTATION RECEIPT");
+
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
+  doc.setFontSize(12.5);
   doc.setTextColor(7, 25, 39);
-  doc.text("OFFICIAL PATIENT REGISTRATION & CONSULTATION RECEIPT", 105, 56, { align: "center" });
+  doc.text(receiptDocTitle, 105, 56, { align: "center" });
 
   // Summary Box
   doc.setFillColor(241, 245, 249);
@@ -141,8 +157,8 @@ export const buildReceiptPDF = (receipt) => {
   doc.setFontSize(9.5);
   doc.setTextColor(7, 25, 39);
   doc.text(`Patient ID: ${patient.patientId}`, 22, 72);
-  doc.text(`Visit No: #${visit.visitNumber || 1}`, 85, 72);
-  doc.text(`Date & Time: ${cleanDateOnly(visit.date)} ${visit.time || ""}`, 130, 72);
+  doc.text(`Visit No: #${visit.visitNumber || 1} (Day ${visit.visitNumber || 1})`, 82, 72);
+  doc.text(`Date & Time: ${cleanDateOnly(visit.date)} ${visit.time || ""}`, 134, 72);
 
   // Demographics Section Box
   doc.roundedRect(15, 86, 180, 130, 2, 2, "D");
@@ -195,7 +211,7 @@ export const buildReceiptPDF = (receipt) => {
   doc.setFontSize(9);
   doc.setTextColor(30, 41, 59);
 
-  doc.text("Reason for Visit:", 20, 141);
+  doc.text("Session Reason:", 20, 141);
   doc.setFont("helvetica", "bold");
   doc.text(visit.reason || "Physiotherapy Rehabilitation", 60, 141);
   doc.setFont("helvetica", "normal");
@@ -208,27 +224,32 @@ export const buildReceiptPDF = (receipt) => {
   doc.text(visit.diagnosis || "Under Active Physiotherapy Management", 60, 157);
   doc.setFont("helvetica", "normal");
 
-  doc.text("Therapy Provided:", 20, 165);
+  doc.text("Therapy Administered:", 20, 165);
   const splitNotes = doc.splitTextToSize(visit.treatmentNotes || "Mobilization, targeted stretches, strengthening exercises, and home care protocol.", 125);
   doc.text(splitNotes, 60, 165);
 
   const feeY = 165 + (splitNotes.length * 5.2);
   
   // Fee Box inside Section 2
-  const cleanFeeNum = String(visit.fee || "500").replace(/[^0-9]/g, "");
+  const rawFee = String(visit.fee || "500").trim();
+  const cleanFeeNum = cleanFeeAmount(rawFee);
+  const isPrepaid = cleanFeeNum === "0" || rawFee.toLowerCase().includes("pkg") || rawFee.toLowerCase().includes("package");
+  const feeDisplayStr = isPrepaid ? "Rs. 0 (Prepaid in Package)" : `Rs. ${cleanFeeNum}`;
+  const feeStatusStr = isPrepaid ? "Status: Covered under Active Package Plan" : "Status: Paid & Settled (Cash / UPI)";
+
   doc.setFillColor(240, 249, 255);
   doc.roundedRect(20, feeY, 170, 14, 1.5, 1.5, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(3, 105, 161);
-  doc.text("Consultation & Treatment Fee:", 25, feeY + 9);
+  doc.text("Session Fee / Settlement:", 25, feeY + 9);
   doc.setFontSize(10.5);
   doc.setTextColor(5, 150, 105);
-  doc.text(`Rs. ${cleanFeeNum}`, 78, feeY + 9);
+  doc.text(feeDisplayStr, 78, feeY + 9);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(71, 85, 105);
-  doc.text("Status: Paid & Settled (Cash / UPI)", 118, feeY + 9);
+  doc.text(feeStatusStr, 126, feeY + 9);
 
   const nextY = feeY + 20;
   doc.setFont("helvetica", "normal");
@@ -238,10 +259,10 @@ export const buildReceiptPDF = (receipt) => {
   doc.setFont("helvetica", "bold");
   if (visit.followUpDate) {
     doc.setTextColor(16, 185, 129);
-    doc.text(`${visit.followUpDate} ${visit.followUpTime ? `(${visit.followUpTime})` : "(Regular Session)"}`, 60, nextY);
+    doc.text(`${cleanDateOnly(visit.followUpDate)} ${visit.followUpTime ? `(${cleanTimeOnly(visit.followUpTime)})` : "(Regular Session)"}`, 60, nextY);
   } else {
     doc.setTextColor(100, 116, 139);
-    doc.text("None Required / SOS (Only Today Consultation Completed)", 60, nextY);
+    doc.text("None Required / SOS (Session Completed)", 60, nextY);
   }
 
   // Doctor Official Signature & Sign-off Box
@@ -280,7 +301,10 @@ export const buildReceiptPDF = (receipt) => {
 export const downloadReceiptPDF = (receipt) => {
   if (!receipt || !receipt.patient || !receipt.visit) return false;
   const doc = buildReceiptPDF(receipt);
-  const fileName = `Vindhy_Receipt_${receipt.patient.name.replace(/\s+/g, "_")}_${receipt.patient.patientId}_Visit${receipt.visit.visitNumber || 1}.pdf`;
+  const patientNameClean = (receipt.patient.name || "Patient").replace(/\s+/g, "_");
+  const visitNum = receipt.visit.visitNumber || 1;
+  const visitDateClean = cleanDateOnly(receipt.visit.date).replace(/\//g, "-");
+  const fileName = `Vindhy_Receipt_${patientNameClean}_Visit${visitNum}_${visitDateClean}.pdf`;
   doc.save(fileName);
   return fileName;
 };

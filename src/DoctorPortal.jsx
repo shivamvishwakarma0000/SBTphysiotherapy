@@ -25,7 +25,7 @@ import {
   supabasePullAllData
 } from "./apiService";
 
-import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly, formatVisitDateTimeDisplay } from "./receiptUtils";
+import { buildReceiptPDF, downloadReceiptPDF, cleanDateOnly, cleanTimeOnly, formatVisitDateTimeDisplay, cleanFeeAmount } from "./receiptUtils";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
 import { PatientAvatar } from "./PatientAvatar";
@@ -305,6 +305,9 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [shareFeedback, setShareFeedback] = useState("");
   const [showDoctorMore, setShowDoctorMore] = useState(false);
+  const [manualFollowUpDate, setManualFollowUpDate] = useState("");
+  const [manualFollowUpTime, setManualFollowUpTime] = useState("10:30 AM");
+  const [billingPlanType, setBillingPlanType] = useState("daily"); // "daily", "package", "prepaid"
 
   // Custom Webhook Settings State
   const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
@@ -4675,100 +4678,180 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              {/* 3. PRESCRIPTION & OFFICIAL RECEIPT HUB BOX */}
+              {/* 3. OFFICIAL CLINICAL RECEIPTS & INVOICING HUB */}
               <div style={{
                 background: "linear-gradient(135deg, rgba(37, 211, 102, 0.08), rgba(2, 132, 199, 0.08))",
                 border: "1.5px solid rgba(37, 211, 102, 0.35)",
-                borderRadius: "12px",
-                padding: "14px 16px",
+                borderRadius: "14px",
+                padding: "16px",
                 marginBottom: "16px"
               }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
-                  <strong style={{ color: "#15803d", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px", fontWeight: "800" }}>
-                    📄 Patient Official Receipt & Prescription Slip
-                  </strong>
-                  <span style={{ fontSize: "12px", color: "#64748b" }}>
-                    Patient: +91 {selectedPatient.phone}
-                  </span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+                  <div>
+                    <strong style={{ color: "#15803d", fontSize: "14.5px", display: "flex", alignItems: "center", gap: "6px", fontWeight: "800" }}>
+                      📄 Official Clinical Receipts &amp; Session Slips Hub
+                    </strong>
+                    <span style={{ fontSize: "12px", color: "#64748b" }}>
+                      All daily visits &amp; packages generate authenticated receipts with Dr. Satyam Vishwakarma's signature.
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "12px", fontWeight: "800", background: "#dcfce7", color: "#15803d", padding: "3px 10px", borderRadius: "999px", border: "1px solid #86efac" }}>
+                      {patientVisits.length} Recorded Receipt(s)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openQuickDailyVisitModal(selectedPatient)}
+                      style={{
+                        background: "#059669",
+                        color: "#ffffff",
+                        border: "none",
+                        padding: "5px 12px",
+                        borderRadius: "7px",
+                        fontSize: "12px",
+                        fontWeight: "800",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}
+                    >
+                      ⚡ +1 New Receipt
+                    </button>
+                  </div>
                 </div>
-                
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  <button
-                    className="whatsapp-share-btn"
-                    style={{ flex: "1 1 180px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", fontWeight: "800" }}
-                    onClick={() => {
-                      const latestVisit = patientVisits[0] || {
-                        visitId: `VST-${selectedPatient.patientId}-1`,
-                        patientId: selectedPatient.patientId,
-                        patientName: selectedPatient.name,
-                        phone: selectedPatient.phone,
-                        visitNumber: 1,
-                        date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
-                        time: "10:00 AM",
-                        reason: selectedPatient.firstVisitReason || "Initial Consultation & Assessment",
-                        complaint: selectedPatient.firstVisitReason || "Initial Consultation",
-                        diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
-                        treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
-                        followUpDate: "As advised by doctor",
-                        status: "Completed",
-                        doctor: "Dr. Satyam Vishwakarma"
-                      };
-                      handleWhatsAppDirectShare({ patient: selectedPatient, visit: latestVisit });
-                    }}
-                  >
-                    💬 Send PDF on WhatsApp
-                  </button>
-                  <button
-                    className="primary-btn"
-                    style={{ flex: "1 1 130px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", fontWeight: "700" }}
-                    onClick={() => {
-                      const latestVisit = patientVisits[0] || {
-                        visitId: `VST-${selectedPatient.patientId}-1`,
-                        patientId: selectedPatient.patientId,
-                        patientName: selectedPatient.name,
-                        phone: selectedPatient.phone,
-                        visitNumber: 1,
-                        date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
-                        time: "10:00 AM",
-                        reason: selectedPatient.firstVisitReason || "Initial Consultation & Assessment",
-                        complaint: selectedPatient.firstVisitReason || "Initial Consultation",
-                        diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
-                        treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
-                        followUpDate: "As advised by doctor",
-                        status: "Completed",
-                        doctor: "Dr. Satyam Vishwakarma"
-                      };
-                      handleDownloadPDF({ patient: selectedPatient, visit: latestVisit });
-                    }}
-                  >
-                    📥 Download PDF
-                  </button>
-                  <button
-                    className="secondary-btn"
-                    style={{ flex: "1 1 100px", minHeight: "42px", fontSize: "13px", padding: "10px 14px", borderRadius: "8px", fontWeight: "700" }}
-                    onClick={() => {
-                      const latestVisit = patientVisits[0] || {
-                        visitId: `VST-${selectedPatient.patientId}-1`,
-                        patientId: selectedPatient.patientId,
-                        patientName: selectedPatient.name,
-                        phone: selectedPatient.phone,
-                        visitNumber: 1,
-                        date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
-                        time: "10:00 AM",
-                        reason: selectedPatient.firstVisitReason || "Initial Consultation & Assessment",
-                        complaint: selectedPatient.firstVisitReason || "Initial Consultation",
-                        diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
-                        treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
-                        followUpDate: "As advised by doctor",
-                        status: "Completed",
-                        doctor: "Dr. Satyam Vishwakarma"
-                      };
-                      handleFinalizeAndIssueReceipt(selectedPatient, latestVisit);
-                    }}
-                  >
-                    👁️ View Slip
-                  </button>
-                </div>
+
+                {patientVisits.length === 0 ? (
+                  <div style={{ background: "#ffffff", border: "1px dashed #cbd5e1", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                    <p style={{ margin: "0 0 10px 0", color: "#475569", fontSize: "13px" }}>
+                      Initial patient registration completed. Click below to view the official intake registration slip.
+                    </p>
+                    <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+                      <button
+                        className="whatsapp-share-btn"
+                        style={{ minHeight: "38px", fontSize: "12.5px", padding: "8px 14px", borderRadius: "8px", fontWeight: "700" }}
+                        onClick={() => {
+                          const intakeVisit = {
+                            visitId: `VST-${selectedPatient.patientId}-1`,
+                            patientId: selectedPatient.patientId,
+                            patientName: selectedPatient.name,
+                            phone: selectedPatient.phone,
+                            visitNumber: 1,
+                            date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                            time: "10:00 AM",
+                            reason: selectedPatient.firstVisitReason || "Initial Consultation & Intake Registration",
+                            complaint: selectedPatient.firstVisitReason || "Initial Consultation",
+                            diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
+                            treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
+                            followUpDate: selectedPatient.followUpDate || "As advised by doctor",
+                            fee: selectedPatient.lastFee || "500",
+                            status: "Completed",
+                            doctor: "Dr. Satyam Vishwakarma"
+                          };
+                          handleWhatsAppDirectShare({ patient: selectedPatient, visit: intakeVisit });
+                        }}
+                      >
+                        💬 WhatsApp Intake Slip
+                      </button>
+                      <button
+                        className="primary-btn"
+                        style={{ minHeight: "38px", fontSize: "12.5px", padding: "8px 14px", borderRadius: "8px", fontWeight: "700" }}
+                        onClick={() => {
+                          const intakeVisit = {
+                            visitId: `VST-${selectedPatient.patientId}-1`,
+                            patientId: selectedPatient.patientId,
+                            patientName: selectedPatient.name,
+                            phone: selectedPatient.phone,
+                            visitNumber: 1,
+                            date: selectedPatient.registrationDate ? String(selectedPatient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                            time: "10:00 AM",
+                            reason: selectedPatient.firstVisitReason || "Initial Consultation & Intake Registration",
+                            complaint: selectedPatient.firstVisitReason || "Initial Consultation",
+                            diagnosis: selectedPatient.firstVisitReason || "Under Evaluation",
+                            treatmentNotes: "Comprehensive physical evaluation & physiotherapy management.",
+                            followUpDate: selectedPatient.followUpDate || "As advised by doctor",
+                            fee: selectedPatient.lastFee || "500",
+                            status: "Completed",
+                            doctor: "Dr. Satyam Vishwakarma"
+                          };
+                          handleDownloadPDF({ patient: selectedPatient, visit: intakeVisit });
+                        }}
+                      >
+                        📥 Download Intake PDF
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "260px", overflowY: "auto", paddingRight: "4px" }}>
+                    {patientVisits.map((v) => {
+                      const cleanFee = cleanFeeAmount(v.fee, "500");
+                      const isPrepaid = cleanFee === "0" || String(v.fee || "").toLowerCase().includes("pkg") || String(v.fee || "").toLowerCase().includes("package");
+
+                      return (
+                        <div
+                          key={v.visitId}
+                          style={{
+                            background: "#ffffff",
+                            border: "1.5px solid #cbd5e1",
+                            borderRadius: "10px",
+                            padding: "10px 14px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "8px",
+                            boxShadow: "0 1px 4px rgba(0,0,0,0.03)"
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                            <span style={{ fontWeight: "800", fontSize: "12px", background: "#0284c7", color: "#ffffff", padding: "2px 8px", borderRadius: "6px" }}>
+                              Visit #{v.visitNumber || 1}
+                            </span>
+                            <span style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
+                              📅 {cleanDateOnly(v.date)}
+                            </span>
+                            <span style={{ fontWeight: "800", fontSize: "12px", color: isPrepaid ? "#0284c7" : "#16a34a", background: isPrepaid ? "#e0f2fe" : "#dcfce7", padding: "2px 8px", borderRadius: "6px" }}>
+                              {isPrepaid ? "₹0 (Package Plan)" : `₹${cleanFee}`}
+                            </span>
+                            <span style={{ fontSize: "12px", color: "#64748b" }}>
+                              {v.reason || "Physiotherapy Treatment"}
+                            </span>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                            <button
+                              type="button"
+                              className="receipt-btn finalize-action-btn"
+                              style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700" }}
+                              onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
+                              title="Preview official slip & WhatsApp"
+                            >
+                              📄 View Slip
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary-btn"
+                              style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700" }}
+                              onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
+                              title="Download PDF"
+                            >
+                              📥 PDF
+                            </button>
+                            <button
+                              type="button"
+                              className="whatsapp-share-btn"
+                              style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700" }}
+                              onClick={() => handleWhatsAppDirectShare({ patient: selectedPatient, visit: v })}
+                              title="Send WhatsApp"
+                            >
+                              💬 WhatsApp
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* 4. DAILY REHABILITATION COURSE PROTOCOL CARD */}
@@ -4876,9 +4959,9 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              {/* 5. CHRONOLOGICAL VISITS TIMELINE & CALENDAR */}
+              {/* 5. CHRONOLOGICAL VISITS TIMELINE, CALENDAR & QUICK FOLLOW-UP FORM */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
-                <div style={{ display: "flex", gap: "8px" }}>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   <button
                     type="button"
                     style={{
@@ -4895,6 +4978,23 @@ _(Saved in patient clinic records)_`;
                     onClick={() => setDoctorProfileVisitMode("calendar")}
                   >
                     📅 Visit Calendar
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      background: doctorProfileVisitMode === "form" ? "var(--stitch-blue, #2563EB)" : "rgba(15, 23, 42, 0.06)",
+                      color: doctorProfileVisitMode === "form" ? "#ffffff" : "#0f172a",
+                      border: "none",
+                      padding: "6px 14px",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      boxShadow: doctorProfileVisitMode === "form" ? "0 2px 8px rgba(37,99,235,0.3)" : "none"
+                    }}
+                    onClick={() => setDoctorProfileVisitMode("form")}
+                  >
+                    ✍️ Quick Follow-Up Form
                   </button>
                   <button
                     type="button"
@@ -4946,6 +5046,159 @@ _(Saved in patient clinic records)_`;
                   onSelectVisit={(v) => handleFinalizeAndIssueReceipt(selectedPatient, v)}
                   onScheduleAppointment={() => openQuickDailyVisitModal(selectedPatient)}
                 />
+              )}
+
+              {doctorProfileVisitMode === "form" && (
+                <div
+                  className="quick-followup-form-card"
+                  style={{
+                    background: "#ffffff",
+                    border: "1.5px solid #cbd5e1",
+                    borderRadius: "14px",
+                    padding: "18px 20px",
+                    boxShadow: "0 4px 14px rgba(0,0,0,0.05)",
+                    marginBottom: "16px"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "800", color: "#0f172a" }}>
+                        ✍️ Schedule Next Follow-Up Milestone
+                      </h4>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "12.5px", color: "#64748b" }}>
+                        Easily schedule the next rehabilitation session date for {selectedPatient.name}.
+                      </p>
+                    </div>
+                    {selectedPatient.followUpDate ? (
+                      <span style={{ fontSize: "12px", fontWeight: "800", background: "#dcfce7", color: "#15803d", padding: "4px 10px", borderRadius: "999px", border: "1px solid #86efac" }}>
+                        🔔 Active Milestone: {cleanDateOnly(selectedPatient.followUpDate)}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: "12px", fontWeight: "700", background: "#f1f5f9", color: "#64748b", padding: "4px 10px", borderRadius: "999px" }}>
+                        No Upcoming Milestone Set
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 1-Tap Presets */}
+                  <div style={{ marginBottom: "16px", background: "#f8fafc", padding: "12px 14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <span style={{ fontSize: "12px", fontWeight: "800", color: "#0284c7", display: "block", marginBottom: "8px" }}>
+                      ⚡ 1-Tap Preset Milestones (Click to set immediately):
+                    </span>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {[
+                        { label: "⚡ Tomorrow (Daily)", days: 1 },
+                        { label: "📅 In 2 Days", days: 2 },
+                        { label: "🗓️ In 1 Week (7 Days)", days: 7 },
+                        { label: "📆 In 15 Days", days: 15 },
+                        { label: "🗓️ 1 Month (30 Days)", days: 30 }
+                      ].map((item) => {
+                        const targetDt = new Date();
+                        targetDt.setDate(targetDt.getDate() + item.days);
+                        if (targetDt.getDay() === 0 && item.days === 1) targetDt.setDate(targetDt.getDate() + 1); // skip Sunday
+                        const y = targetDt.getFullYear();
+                        const m = String(targetDt.getMonth() + 1).padStart(2, "0");
+                        const d = String(targetDt.getDate()).padStart(2, "0");
+                        const dateKey = `${d}/${m}/${y}`;
+                        const isCurrent = cleanDateOnly(selectedPatient.followUpDate) === dateKey;
+
+                        return (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => handleSetPatientFollowUp(dateKey)}
+                            style={{
+                              padding: "7px 12px",
+                              borderRadius: "7px",
+                              fontSize: "12px",
+                              fontWeight: "800",
+                              cursor: "pointer",
+                              border: isCurrent ? "1.5px solid #10b981" : "1px solid #cbd5e1",
+                              background: isCurrent ? "#ecfdf5" : "#ffffff",
+                              color: isCurrent ? "#059669" : "#0f172a",
+                              boxShadow: isCurrent ? "0 2px 6px rgba(16, 185, 129, 0.2)" : "0 1px 3px rgba(0,0,0,0.03)"
+                            }}
+                          >
+                            {item.label} ({dateKey})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Manual Date Input & WhatsApp Confirm */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", alignItems: "flex-end" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12.5px", fontWeight: "700", color: "#0f172a", marginBottom: "4px" }}>
+                        Or Pick Specific Date
+                      </label>
+                      <input
+                        type="date"
+                        value={manualFollowUpDate}
+                        onChange={(e) => setManualFollowUpDate(e.target.value)}
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", boxSizing: "border-box" }}
+                      />
+                    </div>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!manualFollowUpDate) {
+                            alert("Please select a date first");
+                            return;
+                          }
+                          handleSetPatientFollowUp(cleanDateOnly(manualFollowUpDate));
+                          setManualFollowUpDate("");
+                        }}
+                        style={{
+                          width: "100%",
+                          minHeight: "42px",
+                          padding: "10px 16px",
+                          background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: "8px",
+                          fontWeight: "800",
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          boxShadow: "0 2px 8px rgba(2, 132, 199, 0.3)"
+                        }}
+                      >
+                        🔔 Save Custom Follow-Up Date
+                      </button>
+                    </div>
+                    <div>
+                      <a
+                        href={`https://wa.me/91${String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
+                          `Namaste ${selectedPatient.name} ji, Dr. Satyam Vishwakarma has scheduled your next physiotherapy follow-up on ${cleanDateOnly(selectedPatient.followUpDate || "upcoming date")}. Please arrive at Vindhy Physio & Rehab Center on time for optimal recovery.`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          width: "100%",
+                          minHeight: "42px",
+                          padding: "10px 16px",
+                          background: "#25d366",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: "8px",
+                          fontWeight: "800",
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          textDecoration: "none",
+                          boxSizing: "border-box",
+                          boxShadow: "0 2px 8px rgba(37, 211, 102, 0.3)"
+                        }}
+                      >
+                        💬 Confirm on WhatsApp
+                      </a>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {doctorProfileVisitMode === "timeline" && (
@@ -5332,44 +5585,89 @@ _(Saved in patient clinic records)_`;
                   />
                 </div>
 
-                {/* Fee Entry with Quick 1-Tap Chips */}
+                {/* Fee Entry with Per-Day, Package & Prepaid 1-Tap Chips */}
                 <div style={{
                   marginTop: "14px",
                   background: "rgba(16, 185, 129, 0.08)",
                   border: "1.5px solid rgba(16, 185, 129, 0.3)",
-                  borderRadius: "8px",
-                  padding: "12px 14px"
+                  borderRadius: "10px",
+                  padding: "14px"
                 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
                     <label style={{ margin: 0, color: "#065f46", fontWeight: "800", fontSize: "13.5px" }}>
-                      Today's Session Fee (₹) *
+                      Session Billing &amp; Plan Settlement (₹) *
                     </label>
                     <span style={{ fontSize: "12px", color: "#047857", fontWeight: "600" }}>
-                      Tap amount to change in 1 tap
+                      Supports per-day billing, advance packages, &amp; prepaid visits
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
-                    {["200", "300", "500", "700", "1000", "0"].map((amt) => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => setNewVisitForm({ ...newVisitForm, fee: amt })}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "6px",
-                          fontSize: "12.5px",
-                          fontWeight: "800",
-                          cursor: "pointer",
-                          border: String(newVisitForm.fee) === amt ? "2px solid #10b981" : "1px solid #cbd5e1",
-                          background: String(newVisitForm.fee) === amt ? "#10b981" : "#ffffff",
-                          color: String(newVisitForm.fee) === amt ? "#ffffff" : "#0f172a"
-                        }}
-                      >
-                        {amt === "0" ? "₹0 (Pkg / Free)" : `₹${amt}`}
-                      </button>
-                    ))}
+
+                  {/* Mode 1: Daily Pay-As-You-Go Chips */}
+                  <div style={{ marginBottom: "8px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: "800", color: "#0284c7", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>
+                      ⚡ Per-Day Session Amounts:
+                    </span>
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                      {["200", "300", "500", "700", "1000"].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setNewVisitForm({ ...newVisitForm, fee: amt })}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            cursor: "pointer",
+                            border: String(newVisitForm.fee) === amt ? "2px solid #10b981" : "1px solid #cbd5e1",
+                            background: String(newVisitForm.fee) === amt ? "#10b981" : "#ffffff",
+                            color: String(newVisitForm.fee) === amt ? "#ffffff" : "#0f172a"
+                          }}
+                        >
+                          ₹{amt}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="phone-prefix-input" style={{ maxWidth: "180px", background: "#ffffff", border: "1.5px solid #cbd5e1", borderRadius: "8px" }}>
+
+                  {/* Mode 2: Multi-Day & Monthly Package Plans */}
+                  <div style={{ marginBottom: "8px", paddingTop: "6px", borderTop: "1px dashed rgba(16, 185, 129, 0.25)" }}>
+                    <span style={{ fontSize: "11px", fontWeight: "800", color: "#059669", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>
+                      📦 Multi-Session / Monthly Packages:
+                    </span>
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                      {[
+                        { label: "7-Day Pkg (₹2,500)", amt: "2500", reason: "7-Day Rehabilitation Package" },
+                        { label: "15-Day Pkg (₹5,000)", amt: "5000", reason: "15-Day Rehabilitation Package" },
+                        { label: "1-Month / 30-Day Pkg (₹9,000)", amt: "9000", reason: "30-Day Monthly Rehabilitation Plan" },
+                        { label: "✓ Prepaid Session (₹0)", amt: "0", reason: "Daily Rehab Session (Prepaid Package)" }
+                      ].map((pkg) => (
+                        <button
+                          key={pkg.label}
+                          type="button"
+                          onClick={() => setNewVisitForm({
+                            ...newVisitForm,
+                            fee: pkg.amt,
+                            reasonForVisit: pkg.reason
+                          })}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            cursor: "pointer",
+                            border: String(newVisitForm.fee) === pkg.amt ? "2px solid #0284c7" : "1px solid #94a3b8",
+                            background: String(newVisitForm.fee) === pkg.amt ? "#e0f2fe" : "#ffffff",
+                            color: String(newVisitForm.fee) === pkg.amt ? "#0284c7" : "#334155"
+                          }}
+                        >
+                          {pkg.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="phone-prefix-input" style={{ maxWidth: "200px", background: "#ffffff", border: "1.5px solid #cbd5e1", borderRadius: "8px", marginTop: "4px" }}>
                     <span style={{ color: "#0f172a", fontWeight: "700" }}>₹</span>
                     <input
                       type="number"
@@ -5538,6 +5836,57 @@ _(Saved in patient clinic records)_`;
               <div className="share-feedback-notice">{shareFeedback}</div>
             )}
 
+            {/* Session Receipt Switcher Dropdown (Allows toggling between any visit day) */}
+            {patientVisits && patientVisits.length > 1 && (
+              <div
+                className="receipt-switcher-bar"
+                style={{
+                  background: "#f0f9ff",
+                  border: "1.5px solid #bae6fd",
+                  borderRadius: "10px",
+                  padding: "10px 14px",
+                  margin: "10px 0 16px 0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "10px"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "16px" }}>📑</span>
+                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#0369a1" }}>
+                    Select Session / Day Receipt to View &amp; Send:
+                  </span>
+                </div>
+                <select
+                  value={activeReceipt.visit.visitId}
+                  onChange={(e) => {
+                    const found = patientVisits.find(v => v.visitId === e.target.value);
+                    if (found) {
+                      setActiveReceipt({ patient: selectedPatient || activeReceipt.patient, visit: found });
+                    }
+                  }}
+                  style={{
+                    padding: "7px 12px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #0284c7",
+                    fontWeight: "800",
+                    color: "#0369a1",
+                    background: "#ffffff",
+                    fontSize: "13px",
+                    cursor: "pointer"
+                  }}
+                >
+                  {patientVisits.map((v) => (
+                    <option key={v.visitId} value={v.visitId}>
+                      Visit #{v.visitNumber || 1} ({cleanDateOnly(v.date)}) — ₹{cleanFeeAmount(v.fee)} ({v.reason || "Rehab"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Official Registration Slip with Deep Navy Header and Transparent Logo */}
             <div className="printable-receipt" ref={receiptPrintRef}>
               <div className="receipt-header-banner">
@@ -5637,11 +5986,21 @@ _(Saved in patient clinic records)_`;
                 <h4 className="receipt-sec-header">3. CONSULTATION & TREATMENT CHARGES</h4>
                 <div className="receipt-table-grid single-col">
                   <div className="receipt-cell highlight-fee">
-                    <span className="cell-label">Consultation & Treatment Fee:</span>
-                    <strong className="cell-value fee-amount">
-                      {activeReceipt.visit.fee || "₹500"}
-                    </strong>
-                    <span className="payment-status-badge">Status: Paid & Settled (Cash / UPI)</span>
+                    <span className="cell-label">Session Fee &amp; Settlement:</span>
+                    {(() => {
+                      const cleanFee = cleanFeeAmount(activeReceipt.visit.fee, "500");
+                      const isPrepaid = cleanFee === "0" || String(activeReceipt.visit.fee || "").toLowerCase().includes("pkg") || String(activeReceipt.visit.fee || "").toLowerCase().includes("package");
+                      return (
+                        <>
+                          <strong className="cell-value fee-amount" style={{ color: isPrepaid ? "#0284c7" : "#059669" }}>
+                            {isPrepaid ? "₹0 (Prepaid in Active Package)" : `₹${cleanFee}`}
+                          </strong>
+                          <span className="payment-status-badge" style={{ background: isPrepaid ? "#e0f2fe" : "#ecfdf5", color: isPrepaid ? "#0284c7" : "#15803d", border: isPrepaid ? "1px solid #bae6fd" : "1px solid #86efac" }}>
+                            {isPrepaid ? "Status: Covered under Active Package Plan" : "Status: Paid & Settled (Cash / UPI)"}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

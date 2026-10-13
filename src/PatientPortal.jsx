@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { patientApi } from "./apiService";
-import { downloadReceiptPDF, cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
+import { downloadReceiptPDF, cleanDateOnly, cleanTimeOnly, cleanFeeAmount } from "./receiptUtils";
 import { CLINIC_LOGO_B64 } from "./pdfAssets";
 import { PatientAvatar } from "./PatientAvatar";
 import ErrorBoundary from "./ErrorBoundary";
@@ -888,7 +888,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                   <span>🧾</span>
                 </div>
                 <strong className="card-title">My Receipts</strong>
-                <span className="card-caption">View receipts</span>
+                <span className="card-caption">
+                  {(recordsData?.visits?.length || 0) > 0
+                    ? `${recordsData.visits.length} Official Slips`
+                    : "Official slips"}
+                </span>
               </button>
 
               <button className="mobile-app-card" onClick={() => selectTab("exercises")}>
@@ -1629,6 +1633,44 @@ export default function PatientPortal({ onClose, themeProps }) {
               <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Download and print clinic-authenticated receipts featuring official registration, clinic header, and Dr. Satyam Vishwakarma's signature.</p>
             </div>
 
+            {/* Official Billing Portfolio Summary Banner */}
+            {sortedVisits.length > 0 && (
+              <div
+                className="patient-billing-summary-banner"
+                style={{
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(2, 132, 199, 0.14))",
+                  border: "1.5px solid rgba(16, 185, 129, 0.4)",
+                  borderRadius: "16px",
+                  padding: "16px 20px",
+                  marginBottom: "20px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.15)"
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: "11px", fontWeight: "800", color: "#10b981", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    ⭐ Official Billing & Treatment Portfolio
+                  </span>
+                  <h3 style={{ margin: "2px 0 4px 0", fontSize: "17.5px", fontWeight: "800", color: "#f8fafc" }}>
+                    {patientProfile?.name || "Patient"} • {sortedVisits.length} Official Session Receipt(s)
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "12.5px", color: "#cbd5e1" }}>
+                    Active Plan: <strong style={{ color: "#38bdf8" }}>{patientProfile?.isDailyCourse ? (patientProfile?.dailyCourseDuration || "Daily Rehabilitation Course") : "Per-Day Pay-As-You-Go"}</strong>
+                  </p>
+                </div>
+                <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "8px 16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.1)", textAlign: "right" }}>
+                  <span style={{ fontSize: "11px", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Total Settled</span>
+                  <strong style={{ fontSize: "19px", fontWeight: "800", color: "#34d399" }}>
+                    ₹{sortedVisits.reduce((acc, v) => acc + parseInt(cleanFeeAmount(v.fee, "0"), 10), 0)}
+                  </strong>
+                </div>
+              </div>
+            )}
+
             {sortedVisits.length === 0 ? (
               <div className="empty-state-box">
                 <span>🧾</span>
@@ -1638,6 +1680,9 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="receipts-grid">
                 {sortedVisits.map((v) => {
                   const receiptObj = makeReceiptObj(v);
+                  const cleanFeeNum = cleanFeeAmount(v.fee, "500");
+                  const isPrepaid = cleanFeeNum === "0" || String(v.fee || "").toLowerCase().includes("pkg") || String(v.fee || "").toLowerCase().includes("package");
+
                   return (
                     <div
                       className="receipt-summary-card"
@@ -1651,7 +1696,9 @@ export default function PatientPortal({ onClose, themeProps }) {
                       }}
                     >
                       <div className="receipt-card-top">
-                        <span className="receipt-badge">OFFICIAL CLINIC SLIP</span>
+                        <span className="receipt-badge" style={{ background: isPrepaid ? "#e0f2fe" : "#dcfce7", color: isPrepaid ? "#0284c7" : "#15803d", border: isPrepaid ? "1px solid #bae6fd" : "1px solid #86efac" }}>
+                          {isPrepaid ? "PACKAGE SESSION SLIP" : "OFFICIAL CLINIC SLIP"}
+                        </span>
                         <span className="receipt-no" style={{ fontWeight: "800", color: "#0f172a" }}>{receiptObj.receiptNumber}</span>
                       </div>
 
@@ -1669,9 +1716,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                       >
                         <div className="amount-display">
                           <span className="currency">₹</span>
-                          <strong className="amount">{receiptObj.fee || 300}</strong>
+                          <strong className="amount">{cleanFeeNum}</strong>
                         </div>
-                        <span className="payment-mode">Paid via {receiptObj.paymentMode || "Cash"} • Status: Verified</span>
+                        <span className="payment-mode" style={{ color: isPrepaid ? "#0284c7" : "#059669", fontWeight: "700" }}>
+                          {isPrepaid ? "Covered under Active Rehabilitation Package" : `Paid via ${receiptObj.paymentMode || "Cash / UPI"} • Status: Verified`}
+                        </span>
                       </div>
 
                       <div className="receipt-card-meta">
@@ -2192,8 +2241,16 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
 
               <div className="slip-fee-box">
-                <span>Total Consultation & Therapy Fee:</span>
-                <strong>₹{previewReceipt.fee || 500} ({previewReceipt.paymentMode || "Paid via Cash / UPI"})</strong>
+                <span>Session Fee & Settlement:</span>
+                {(() => {
+                  const amt = cleanFeeAmount(previewReceipt.fee, "500");
+                  const isPrepaid = amt === "0" || String(previewReceipt.fee || "").toLowerCase().includes("pkg") || String(previewReceipt.fee || "").toLowerCase().includes("package");
+                  return (
+                    <strong style={{ color: isPrepaid ? "#0284c7" : "#059669" }}>
+                      {isPrepaid ? "₹0 (Prepaid in Active Package)" : `₹${amt} (${previewReceipt.paymentMode || "Paid via Cash / UPI"})`}
+                    </strong>
+                  );
+                })()}
               </div>
 
               <div className="slip-footer">

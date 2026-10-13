@@ -8599,15 +8599,15 @@ textarea:focus {
     line-height: 1.25 !important;
   }
 
-  /* 2. Six Prominent Touch Boxes (All 6 boxes fully visible without being cut off by bottom nav) */
+  /* 2. Six Prominent Touch Boxes (Full frame fit, rich proportions, captions visible) */
   .mobile-app-grid-6 {
     flex: 1 1 auto !important;
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     grid-template-rows: repeat(3, auto) !important;
-    gap: 8px !important;
-    padding: 0 12px calc(95px + env(safe-area-inset-bottom, 0px)) 12px !important;
-    margin-top: -10px !important;
+    gap: clamp(10px, 2.8vw, 14px) !important;
+    padding: 0 14px calc(95px + env(safe-area-inset-bottom, 0px)) 14px !important;
+    margin-top: -6px !important;
     position: relative !important;
     z-index: 10 !important;
     margin-bottom: 0 !important;
@@ -8617,18 +8617,18 @@ textarea:focus {
 
   .mobile-app-card {
     height: auto !important;
-    min-height: 72px !important;
+    min-height: clamp(98px, 13.5vh, 112px) !important;
     background: #ffffff !important;
     border: 1.5px solid #cbd5e1 !important;
-    border-radius: 14px !important;
-    padding: 8px 6px !important;
+    border-radius: 16px !important;
+    padding: 12px 10px 10px 10px !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    gap: 2px !important;
-    box-shadow: 0 4px 14px rgba(0, 30, 60, 0.07) !important;
+    gap: 3px !important;
+    box-shadow: 0 4px 14px rgba(0, 30, 60, 0.08) !important;
     cursor: pointer !important;
     user-select: none !important;
     transition: transform 120ms ease, box-shadow 120ms ease !important;
@@ -8640,21 +8640,21 @@ textarea:focus {
   }
 
   .card-icon-bubble {
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 10px !important;
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 19px !important;
-    margin-bottom: 1px !important;
+    font-size: 21px !important;
+    margin-bottom: 2px !important;
     flex-shrink: 0 !important;
   }
 
   .card-title,
   .mobile-app-card .card-title,
   .mobile-app-card strong {
-    font-size: 12px !important;
+    font-size: 13px !important;
     font-weight: 800 !important;
     color: #0B1F2A !important;
     line-height: 1.25 !important;
@@ -8665,7 +8665,13 @@ textarea:focus {
 
   .card-caption,
   .card-desc {
-    display: none !important;
+    display: block !important;
+    font-size: 11px !important;
+    color: #64748b !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+    text-align: center !important;
   }
 }
 

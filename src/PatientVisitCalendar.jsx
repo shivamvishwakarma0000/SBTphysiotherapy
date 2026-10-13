@@ -40,6 +40,16 @@ export default function PatientVisitCalendar({
 
   const [overrideFollowUpKey, setOverrideFollowUpKey] = useState(null);
 
+  const getCalPresetKey = (daysToAdd) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysToAdd);
+    if (d.getDay() === 0 && daysToAdd === 1) d.setDate(d.getDate() + 1); // skip Sunday if daily
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${day}/${m}/${y}`;
+  };
+
   const handleSetDoctorFollowUp = async (targetDateKey) => {
     if (!targetDateKey) return;
     setOverrideFollowUpKey(targetDateKey);
@@ -851,41 +861,82 @@ export default function PatientVisitCalendar({
               className="cal-quick-followup-bar"
               style={{
                 marginTop: "12px",
-                padding: "10px 14px",
+                padding: "12px 14px",
                 background: "#f0f9ff",
-                border: "1px solid #bae6fd",
-                borderRadius: "10px",
+                border: "1.5px solid #bae6fd",
+                borderRadius: "12px",
                 display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
+                flexDirection: "column",
                 gap: "10px"
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "16px" }}>👆</span>
-                <span style={{ fontSize: "12.5px", color: "#0369a1", fontWeight: "700" }}>
-                  Selected Date: <strong>{selectedDateStr}</strong>
-                  {isSelectedDateNextFollowUp ? " (⚡ Current Target Follow-Up)" : ""}
-                </span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "16px" }}>👆</span>
+                  <span style={{ fontSize: "13px", color: "#0369a1", fontWeight: "700" }}>
+                    Selected Calendar Date: <strong style={{ fontSize: "14px", color: "#0c4a6e" }}>{selectedDateStr}</strong>
+                    {isSelectedDateNextFollowUp ? " (⚡ Current Target Follow-Up)" : ""}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSetDoctorFollowUp(selectedDateStr)}
+                  style={{
+                    padding: "7px 16px",
+                    background: isSelectedDateNextFollowUp ? "#dcfce7" : "linear-gradient(135deg, #10b981, #059669)",
+                    color: isSelectedDateNextFollowUp ? "#15803d" : "#ffffff",
+                    border: isSelectedDateNextFollowUp ? "1.5px solid #86efac" : "none",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "12.5px",
+                    cursor: "pointer",
+                    boxShadow: isSelectedDateNextFollowUp ? "none" : "0 2px 8px rgba(16, 185, 129, 0.35)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  🔔 {isSelectedDateNextFollowUp ? `✓ Follow-Up Active on ${selectedDateStr}` : `1-Tap: Set ${selectedDateStr} as Next Follow-Up`}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => handleSetDoctorFollowUp(selectedDateStr)}
-                style={{
-                  padding: "6px 14px",
-                  background: isSelectedDateNextFollowUp ? "#e0f2fe" : "linear-gradient(135deg, #0284c7, #0369a1)",
-                  color: isSelectedDateNextFollowUp ? "#0369a1" : "#ffffff",
-                  border: isSelectedDateNextFollowUp ? "1px solid #38bdf8" : "none",
-                  borderRadius: "7px",
-                  fontWeight: "800",
-                  fontSize: "12px",
-                  cursor: "pointer",
-                  boxShadow: isSelectedDateNextFollowUp ? "none" : "0 2px 6px rgba(2, 132, 199, 0.25)"
-                }}
-              >
-                🔔 {isSelectedDateNextFollowUp ? "Current Follow-Up Active" : `Set ${selectedDateStr} as Next Follow-Up`}
-              </button>
+
+              {/* Quick Presets Row: 1-Tap Milestone Setting */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", paddingTop: "8px", borderTop: "1px dashed #bae6fd" }}>
+                <span style={{ fontSize: "11.5px", fontWeight: "800", color: "#0369a1" }}>⚡ Quick Milestones:</span>
+                {[
+                  { label: "Tomorrow", days: 1 },
+                  { label: "In 2 Days", days: 2 },
+                  { label: "In 1 Week", days: 7 },
+                  { label: "In 15 Days", days: 15 },
+                  { label: "1 Month (30 Days)", days: 30 }
+                ].map((item) => {
+                  const targetKey = getCalPresetKey(item.days);
+                  const isCurrent = targetKey === nextFollowUpKey;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDateStr(targetKey);
+                        handleSetDoctorFollowUp(targetKey);
+                      }}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        fontSize: "11.5px",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        border: isCurrent ? "1.5px solid #10b981" : "1px solid #93c5fd",
+                        background: isCurrent ? "#ecfdf5" : "#ffffff",
+                        color: isCurrent ? "#059669" : "#0284c7"
+                      }}
+                      title={`Set follow-up milestone for ${targetKey}`}
+                    >
+                      {item.label} ({targetKey})
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

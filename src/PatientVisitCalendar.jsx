@@ -25,6 +25,7 @@ export default function PatientVisitCalendar({
   onSetFollowUpDate = null,
   isDailyCourse = false,
   dailyCourseDuration = "",
+  dailyCourseStartDate = "",
   isDoctorView = false
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -311,26 +312,32 @@ export default function PatientVisitCalendar({
   // Calculate Missing / Gap days during the patient's active treatment course
   const missingDaysMap = useMemo(() => {
     const missing = {};
-    if (!visits || visits.length === 0) return missing;
 
-    // Collect timestamps of all visited dates
-    const visitedTimestamps = [];
-    visits.forEach((v) => {
+    // Collect timestamps of all visited dates and potential course start dates
+    const startTimestamps = [];
+    (visits || []).forEach((v) => {
       const dObj = keyToDateObj(parseToKey(v.date));
       if (dObj && !isNaN(dObj.getTime())) {
-        visitedTimestamps.push(dObj.getTime());
+        startTimestamps.push(dObj.getTime());
       }
     });
 
-    if (visitedTimestamps.length === 0) return missing;
+    if (isDailyCourse && dailyCourseStartDate) {
+      const sObj = keyToDateObj(parseToKey(dailyCourseStartDate));
+      if (sObj && !isNaN(sObj.getTime())) {
+        startTimestamps.push(sObj.getTime());
+      }
+    }
 
-    const minTime = Math.min(...visitedTimestamps);
+    if (startTimestamps.length === 0) return missing;
+
+    const minTime = Math.min(...startTimestamps);
     const todayTime = keyToDateObj(todayKey)?.getTime() || Date.now();
-    // Scan up to either today or the latest visit + 3 days, whichever is applicable
-    const maxScanTime = Math.min(todayTime, Math.max(...visitedTimestamps) + 86400000);
+    // Scan up to today (only past days are considered missed)
+    const maxScanTime = todayTime;
 
     const ONE_DAY = 24 * 60 * 60 * 1000;
-    // Iterate day-by-day
+    // Iterate day-by-day from the day after start up to today
     for (let t = minTime + ONE_DAY; t < maxScanTime; t += ONE_DAY) {
       const curDate = new Date(t);
       // Skip Sundays (clinic typically closed or elective)
@@ -351,7 +358,7 @@ export default function PatientVisitCalendar({
     }
 
     // Also check if any past follow-up date had no visit logged
-    visits.forEach((v) => {
+    (visits || []).forEach((v) => {
       if (v.followUpDate) {
         const fuKey = parseToKey(v.followUpDate);
         const fuObj = keyToDateObj(fuKey);
@@ -379,8 +386,19 @@ export default function PatientVisitCalendar({
       }
     });
 
+    // Assign chronological missed index (e.g., Missed #1, Missed #2)
+    const sortedMissingKeys = Object.keys(missing).sort((ka, kb) => {
+      const ta = missing[ka].dateObj?.getTime() || 0;
+      const tb = missing[kb].dateObj?.getTime() || 0;
+      return ta - tb;
+    });
+
+    sortedMissingKeys.forEach((key, idx) => {
+      missing[key].missedIndex = idx + 1;
+    });
+
     return missing;
-  }, [visits, allMergedAppointments, attendedDateSet, todayKey]);
+  }, [visits, allMergedAppointments, attendedDateSet, todayKey, isDailyCourse, dailyCourseStartDate]);
 
   const missingDaysCount = Object.keys(missingDaysMap).length;
 
@@ -644,10 +662,10 @@ export default function PatientVisitCalendar({
           <div className="metric-info">
             <span className="metric-label">Missed Sessions</span>
             <strong className="metric-value">
-              {missingDaysCount} {missingDaysCount === 1 ? "Day" : "Days"} Skipped
+              {missingDaysCount > 0 ? `Missing ${missingDaysCount}` : "0 Missed"}
             </strong>
             <span className="metric-sub">
-              {missingDaysCount === 0 ? "Perfect 100% attendance!" : "Unattended therapy days"}
+              {missingDaysCount === 0 ? "Perfect 100% attendance!" : `${missingDaysCount} Unattended therapy ${missingDaysCount === 1 ? "day" : "days"}`}
             </span>
           </div>
         </div>
@@ -787,10 +805,12 @@ export default function PatientVisitCalendar({
                     {isMissedDay && !hasVisits && (
                       <div
                         className="day-event-pill missed-pill"
-                        title={`Missed session on ${cell.dateKey}. Therapy gap detected.`}
+                        title={`Missed session #${data.missed?.missedIndex || ""} on ${cell.dateKey}. Therapy gap detected.`}
                       >
                         <span className="pill-dot">⚠️</span>
-                        <span className="pill-text">Missed Day</span>
+                        <span className="pill-text">
+                          {data.missed?.missedIndex ? `Missed #${data.missed.missedIndex}` : "Missed Day"}
+                        </span>
                       </div>
                     )}
 
@@ -811,6 +831,50 @@ export default function PatientVisitCalendar({
               );
             })}
           </div>
+
+          {/* Quick Doctor Milestone Setting Bar Right Below Calendar Grid */}
+          {isDoctorView && onSetFollowUpDate && (
+            <div
+              className="cal-quick-followup-bar"
+              style={{
+                marginTop: "12px",
+                padding: "10px 14px",
+                background: "#f0f9ff",
+                border: "1px solid #bae6fd",
+                borderRadius: "10px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "10px"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "16px" }}>👆</span>
+                <span style={{ fontSize: "12.5px", color: "#0369a1", fontWeight: "700" }}>
+                  Selected Date: <strong>{selectedDateStr}</strong>
+                  {isSelectedDateNextFollowUp ? " (⚡ Current Target Follow-Up)" : ""}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSetDoctorFollowUp(selectedDateStr)}
+                style={{
+                  padding: "6px 14px",
+                  background: isSelectedDateNextFollowUp ? "#e0f2fe" : "linear-gradient(135deg, #0284c7, #0369a1)",
+                  color: isSelectedDateNextFollowUp ? "#0369a1" : "#ffffff",
+                  border: isSelectedDateNextFollowUp ? "1px solid #38bdf8" : "none",
+                  borderRadius: "7px",
+                  fontWeight: "800",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  boxShadow: isSelectedDateNextFollowUp ? "none" : "0 2px 6px rgba(2, 132, 199, 0.25)"
+                }}
+              >
+                🔔 {isSelectedDateNextFollowUp ? "Current Follow-Up Active" : `Set ${selectedDateStr} as Next Follow-Up`}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right: Selected Date Drill-Down Panel */}
@@ -917,10 +981,12 @@ export default function PatientVisitCalendar({
               <div className="drilldown-missed-alert-card">
                 <div className="missed-alert-header">
                   <span>⚠️</span>
-                  <strong>Missed Rehabilitation Session</strong>
+                  <strong>
+                    Missed Session {selectedEvents.missed?.missedIndex ? `#${selectedEvents.missed.missedIndex}` : ""} ({selectedDateStr})
+                  </strong>
                 </div>
                 <p>
-                  No clinic visit was recorded on {selectedDateStr}. Consistent therapy is vital for full spinal &amp; joint mobility recovery.
+                  No clinic visit was recorded on {selectedDateStr}. {missingDaysCount > 1 ? `(Total ${missingDaysCount} sessions missed in rehabilitation protocol).` : ""} Consistent therapy is vital for full spinal &amp; joint mobility recovery.
                 </p>
                 <button
                   type="button"

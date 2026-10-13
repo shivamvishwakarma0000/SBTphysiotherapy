@@ -1007,6 +1007,22 @@ export const api = {
     const visitTimeStr = payload.visitTime || payload.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
     const feeStr = payload.fee ? (String(payload.fee).startsWith("₹") ? String(payload.fee) : `₹${String(payload.fee).replace(/[^0-9]/g, "")}`) : (patient.lastFee || "₹500");
 
+    let finalFollowUpDate = payload.followUpDate || "";
+    let finalFollowUpTime = payload.followUpTime || (payload.followUpDate ? "10:30 AM" : "");
+
+    // If patient is enrolled in Daily Rehabilitation Course, automatically calculate next clinic day follow-up (skipping Sunday)
+    if (patient.isDailyCourse && !payload.followUpDate) {
+      const visitDateObj = new Date(todayStr);
+      const nextDt = !isNaN(visitDateObj.getTime()) ? new Date(visitDateObj) : new Date();
+      nextDt.setDate(nextDt.getDate() + 1);
+      if (nextDt.getDay() === 0) nextDt.setDate(nextDt.getDate() + 1); // skip Sunday
+      const ny = nextDt.getFullYear();
+      const nm = String(nextDt.getMonth() + 1).padStart(2, "0");
+      const nd = String(nextDt.getDate()).padStart(2, "0");
+      finalFollowUpDate = `${nd}/${nm}/${ny}`;
+      finalFollowUpTime = "10:30 AM";
+    }
+
     const newVisit = {
       visitId: `VST-${patientId.replace("VPR-2026-", "")}-${visitNumber}`,
       patientId,
@@ -1020,8 +1036,8 @@ export const api = {
       diagnosis: payload.diagnosis || patient.lastDiagnosis || patient.firstVisitReason || "Under Active Physiotherapy Management",
       treatmentNotes: payload.treatmentNotes || "Targeted physiotherapy mobilization & exercises.",
       fee: feeStr,
-      followUpDate: payload.followUpDate || "",
-      followUpTime: payload.followUpTime || "",
+      followUpDate: finalFollowUpDate,
+      followUpTime: finalFollowUpTime,
       status: "Completed",
       doctor: "Dr. Satyam Vishwakarma"
     };

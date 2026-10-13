@@ -1463,10 +1463,15 @@ export default function DoctorPortal({ onClose, themeProps }) {
       if (!data.ok) throw new Error("Failed to add visit");
       
       setShowAddVisitModal(false);
-      openPatientProfile(selectedPatient.patientId);
-      fetchStats();
-      fetchPatients();
-      fetchTodayVisits();
+      await openPatientProfile(selectedPatient.patientId);
+      await fetchStats();
+      await fetchPatients();
+      await fetchTodayVisits();
+
+      // Automatically issue official receipt slip immediately
+      if (data.visit) {
+        setActiveReceipt({ patient: selectedPatient, visit: data.visit });
+      }
     } catch (err) {
       alert(err.message);
     }
@@ -4977,6 +4982,7 @@ _(Saved in patient clinic records)_`;
                   isDoctorView={true}
                   isDailyCourse={!!selectedPatient.isDailyCourse}
                   dailyCourseDuration={selectedPatient.dailyCourseDuration || ""}
+                  dailyCourseStartDate={selectedPatient.dailyCourseStartDate || selectedPatient.enrollmentDate || ""}
                   onSetFollowUpDate={handleSetPatientFollowUp}
                   onSelectVisit={(v) => handleFinalizeAndIssueReceipt(selectedPatient, v)}
                   onScheduleAppointment={() => openQuickDailyVisitModal(selectedPatient)}

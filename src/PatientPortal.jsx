@@ -969,6 +969,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 phone={patientProfile?.phone}
                 isDailyCourse={!!patientProfile?.isDailyCourse}
                 dailyCourseDuration={patientProfile?.dailyCourseDuration || ""}
+                dailyCourseStartDate={patientProfile?.dailyCourseStartDate || patientProfile?.enrollmentDate || ""}
                 onSelectVisit={(v) => setPreviewReceipt(makeReceiptObj(v))}
                 onScheduleAppointment={() => setActiveTab("appointments")}
                 onSaveAppointment={async (payload) => {
@@ -1213,6 +1214,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 phone={patientProfile?.phone}
                 isDailyCourse={!!patientProfile?.isDailyCourse}
                 dailyCourseDuration={patientProfile?.dailyCourseDuration || ""}
+                dailyCourseStartDate={patientProfile?.dailyCourseStartDate || patientProfile?.enrollmentDate || ""}
                 onSelectVisit={(v) => setPreviewReceipt(makeReceiptObj(v))}
                 onScheduleAppointment={() => setActiveTab("appointments")}
                 onSaveAppointment={async (payload) => {

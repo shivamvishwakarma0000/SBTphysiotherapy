@@ -293,7 +293,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [todayVisits, setTodayVisits] = useState([]);
   const [allVisits, setAllVisits] = useState([]);
   const [isDoctorRefreshing, setIsDoctorRefreshing] = useState(false);
-  const [doctorRefreshToast, setDoctorRefreshToast] = useState("");
+  const [doctorRefreshDone, setDoctorRefreshDone] = useState(false);
   const [todayViewMode, setTodayViewMode] = useState("calendar"); // "calendar" or "queue"
   const [doctorProfileVisitMode, setDoctorProfileVisitMode] = useState("calendar"); // "calendar" or "timeline"
   const [enquiries, setEnquiries] = useState([]);
@@ -891,7 +891,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const handleDoctorFullRefresh = async () => {
     if (isDoctorRefreshing) return;
     setIsDoctorRefreshing(true);
-    setDoctorRefreshToast("🔄 Syncing latest data from Cloud...");
+    setDoctorRefreshDone(false);
     try {
       if (getWebhookUrl()) {
         try {
@@ -907,12 +907,12 @@ export default function DoctorPortal({ onClose, themeProps }) {
         fetchAllVisits(),
         fetchEnquiries()
       ]);
-      setDoctorRefreshToast("✅ Clinic data, visits & calendar refreshed!");
-      setTimeout(() => setDoctorRefreshToast(""), 3500);
+      setDoctorRefreshDone(true);
+      setTimeout(() => setDoctorRefreshDone(false), 2000);
     } catch (err) {
       console.error("Refresh error:", err);
-      setDoctorRefreshToast("⚠️ Refreshed with active cache.");
-      setTimeout(() => setDoctorRefreshToast(""), 3500);
+      setDoctorRefreshDone(true);
+      setTimeout(() => setDoctorRefreshDone(false), 2000);
     } finally {
       setIsDoctorRefreshing(false);
     }
@@ -1919,29 +1919,6 @@ _(Saved in patient clinic records)_`;
   // ==========================================
   return (
     <div className="doctor-portal-fullscreen">
-      {doctorRefreshToast && (
-        <div
-          style={{
-            position: "fixed",
-            top: "75px",
-            right: "20px",
-            zIndex: 99999,
-            background: "#0f172a",
-            color: "#ffffff",
-            border: "1px solid #0284c7",
-            borderRadius: "10px",
-            padding: "10px 18px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            fontSize: "13px",
-            fontWeight: "700",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px"
-          }}
-        >
-          {doctorRefreshToast}
-        </div>
-      )}
       <header className="doctor-navbar">
         <div className="doctor-nav-top-row">
           <div className="doctor-nav-brand">
@@ -1997,18 +1974,25 @@ _(Saved in patient clinic records)_`;
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
-                background: isDoctorRefreshing ? "rgba(2, 132, 199, 0.25)" : "rgba(2, 132, 199, 0.12)",
-                border: "1px solid rgba(2, 132, 199, 0.45)",
-                color: "#0284c7",
+                background: isDoctorRefreshing 
+                  ? "rgba(2, 132, 199, 0.25)" 
+                  : doctorRefreshDone 
+                    ? "rgba(16, 185, 129, 0.2)" 
+                    : "rgba(2, 132, 199, 0.12)",
+                border: doctorRefreshDone ? "1px solid #10b981" : "1px solid rgba(2, 132, 199, 0.45)",
+                color: doctorRefreshDone ? "#10b981" : "#0284c7",
                 padding: "6px 12px",
                 borderRadius: "8px",
                 fontSize: "12px",
                 fontWeight: "700",
-                cursor: isDoctorRefreshing ? "wait" : "pointer"
+                cursor: isDoctorRefreshing ? "wait" : "pointer",
+                transition: "all 0.2s ease"
               }}
             >
-              <span style={{ display: "inline-block", transform: isDoctorRefreshing ? "rotate(360deg)" : "none", transition: isDoctorRefreshing ? "transform 0.8s linear infinite" : "none" }}>🔄</span>
-              <span>{isDoctorRefreshing ? "Refreshing..." : "Refresh"}</span>
+              <span style={{ display: "inline-block", transform: isDoctorRefreshing ? "rotate(360deg)" : "none", transition: isDoctorRefreshing ? "transform 0.8s linear infinite" : "none" }}>
+                {doctorRefreshDone ? "✅" : "🔄"}
+              </span>
+              <span>{isDoctorRefreshing ? "Refreshing..." : (doctorRefreshDone ? "Done!" : "Refresh")}</span>
             </button>
             <button
               className="sync-badge-btn"
@@ -4509,7 +4493,7 @@ _(Saved in patient clinic records)_`;
       {/* ================= PATIENT PROFILE MODAL (BOXY CLINICAL DESIGN WITH AVATAR) ================= */}
       {selectedPatient && (
         <div className="patient-profile-modal-overlay">
-          <div className="patient-profile-card boxy-profile-card" style={{ maxWidth: "820px", width: "95%", maxHeight: "92vh", overflowY: "auto", borderRadius: "16px" }}>
+          <div className="patient-profile-card boxy-profile-card" style={{ maxWidth: "920px", width: "95%", maxHeight: "92vh", overflowY: "auto", overflowX: "hidden", borderRadius: "16px", boxSizing: "border-box" }}>
             
             {/* 1. MASTER TOP HEADER BOX (Vector Avatar + Info + 1-Tap Daily Session Action) */}
             <div className="profile-master-header-box" style={{

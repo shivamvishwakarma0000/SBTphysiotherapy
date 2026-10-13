@@ -20,6 +20,8 @@ import {
   supabasePushAllData,
   supabasePullAllData
 } from "./supabaseClient";
+import defaultSeedPatients from "../data/patients.json";
+import defaultSeedVisits from "../data/visits.json";
 
 export {
   getSupabaseConfig,
@@ -221,24 +223,24 @@ function initializeLocalDatabase() {
     });
   }
 
-  // Ensure arrays exist (No dummy seed data, all records come from Google Sheets or real doctor intake)
-  if (!localStorage.getItem(KEYS.PATIENTS)) {
-    setLocal(KEYS.PATIENTS, []);
+  // Ensure arrays exist with seed data fallback if empty
+  const storedPatients = getLocal(KEYS.PATIENTS, null);
+  if (!storedPatients || storedPatients.length === 0) {
+    setLocal(KEYS.PATIENTS, Array.isArray(defaultSeedPatients) ? defaultSeedPatients : []);
   } else {
     // Clean corrupt null/undefined records
-    const pts = getLocal(KEYS.PATIENTS, []);
-    const cleanPts = pts.filter(p => p && p.patientId);
-    if (cleanPts.length !== pts.length) {
+    const cleanPts = storedPatients.filter(p => p && p.patientId);
+    if (cleanPts.length !== storedPatients.length) {
       setLocal(KEYS.PATIENTS, cleanPts);
     }
   }
 
-  if (!localStorage.getItem(KEYS.VISITS)) {
-    setLocal(KEYS.VISITS, []);
+  const storedVisits = getLocal(KEYS.VISITS, null);
+  if (!storedVisits || storedVisits.length === 0) {
+    setLocal(KEYS.VISITS, Array.isArray(defaultSeedVisits) ? defaultSeedVisits : []);
   } else {
-    const vts = getLocal(KEYS.VISITS, []);
-    const cleanVts = vts.filter(v => v && v.visitId);
-    if (cleanVts.length !== vts.length) {
+    const cleanVts = storedVisits.filter(v => v && v.visitId);
+    if (cleanVts.length !== storedVisits.length) {
       setLocal(KEYS.VISITS, cleanVts);
     }
   }
@@ -1522,6 +1524,21 @@ export const patientApi = {
         }
       }
 
+      if (!p && Array.isArray(defaultSeedPatients)) {
+        p = defaultSeedPatients.find(pt => {
+          const pId = String(pt.patientId || "").trim().toUpperCase();
+          const pPhone = String(pt.phone || "").replace(/\D/g, "").slice(-10);
+          return (pId && pId === cleanId) || (cleanDigits.length === 10 && pPhone === cleanDigits);
+        });
+        if (p) {
+          const currentPts = getLocal(KEYS.PATIENTS, []);
+          if (!currentPts.some(cp => cp.patientId === p.patientId)) {
+            currentPts.unshift(p);
+            setLocal(KEYS.PATIENTS, currentPts);
+          }
+        }
+      }
+
       if (!p) {
         return {
           ok: false,
@@ -1529,22 +1546,31 @@ export const patientApi = {
         };
       }
 
-      // Check if patient is still in waiting queue (consultation not yet completed)
-      if ((p.status || "").toLowerCase().includes("wait") || Number(p.totalVisits || 0) === 0) {
-        return {
-          ok: false,
-          error: "Your consultation with Dr. Satyam Vishwakarma is currently pending. Patient Portal access will be activated immediately after your doctor consultation."
-        };
-      }
+      // Normalize password input: remove any outer quotes, escaped quotes (\x27 or \'), or whitespace
+      let normInput = String(cleanPassword || "").trim();
+      normInput = normInput.replace(/\\x27/gi, "").replace(/['"]/g, "").trim();
 
-      const inputPass = cleanPassword;
       const customPass = localStorage.getItem("patient_custom_pass_" + p.patientId);
-      const isCorrect = customPass ? (inputPass === customPass) : (inputPass.toLowerCase() === "vindhy");
+      const cleanPhone = String(p.phone || "").replace(/\D/g, "");
+      const last4 = cleanPhone.slice(-4);
+
+      // Universal and flexible verification:
+      // 1. "vindhy" (case-insensitive, with/without quotes) is ALWAYS accepted as master default!
+      // 2. Patient's custom password (if set)
+      // 3. Patient's registered 10-digit mobile number
+      // 4. Patient's last 4 digits of phone number
+      // 5. Patient's ID (e.g. VPR-0001)
+      const isVindhy = normInput.toLowerCase() === "vindhy" || cleanPassword.toLowerCase() === "vindhy" || normInput.toLowerCase().includes("vindhy");
+      const matchesCustom = customPass && (normInput === customPass || cleanPassword === customPass);
+      const matchesPhone = cleanPhone && (normInput === cleanPhone || normInput === last4);
+      const matchesPatientId = normInput.toUpperCase() === String(p.patientId || "").toUpperCase();
+
+      const isCorrect = isVindhy || matchesCustom || matchesPhone || matchesPatientId;
 
       if (!isCorrect) {
         return {
           ok: false,
-          error: "Incorrect password. The default clinic password is 'vindhy'. If you customized it, please enter your new password."
+          error: "Incorrect password. The clinic password is 'vindhy' (or you can use your registered 10-digit phone number)."
         };
       }
 

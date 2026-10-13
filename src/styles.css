@@ -12475,3 +12475,170 @@ img, video, canvas, svg {
     font-size: 8px !important;
   }
 }
+
+/* =============================================================================
+   PATIENT PROFILE MODAL & EMBEDDED CALENDAR FIT (ZERO HORIZONTAL SCROLL)
+   ============================================================================= */
+
+.patient-profile-modal-overlay {
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.patient-profile-card {
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+}
+
+.patient-profile-card * {
+  box-sizing: border-box !important;
+}
+
+/* Ensure embedded calendar fits cleanly inside patient profile */
+.patient-profile-card .clinical-calendar-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  padding: 16px !important;
+  margin-top: 8px !important;
+  margin-bottom: 16px !important;
+  border-radius: 14px !important;
+}
+
+.patient-profile-card .clinical-calendar-header {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+}
+
+.patient-profile-card .calendar-actions-cluster {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+.patient-profile-card .calendar-metrics-ribbon {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+  gap: 10px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.patient-profile-card .cal-metric-card {
+  padding: 10px 12px !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.patient-profile-card .metric-icon-wrap {
+  width: 36px !important;
+  height: 36px !important;
+  font-size: 18px !important;
+}
+
+.patient-profile-card .metric-label {
+  font-size: 11px !important;
+}
+
+.patient-profile-card .metric-value {
+  font-size: 14px !important;
+}
+
+.patient-profile-card .metric-sub {
+  font-size: 10px !important;
+}
+
+/* Stack Calendar and Drill-Down Panel to prevent 2-column horizontal squeeze inside modal */
+.patient-profile-card .clinical-calendar-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.patient-profile-card .calendar-month-grid-wrapper,
+.patient-profile-card .calendar-drilldown-panel,
+.patient-profile-card .calendar-days-grid {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+.patient-profile-card .calendar-day-cell {
+  min-height: 64px !important;
+  padding: 5px 3px !important;
+  min-width: 0 !important;
+}
+
+.patient-profile-card .day-cell-top {
+  margin-bottom: 2px !important;
+}
+
+.patient-profile-card .day-number {
+  font-size: 12px !important;
+}
+
+.patient-profile-card .day-event-pill {
+  font-size: 9.5px !important;
+  padding: 2px 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.patient-profile-card .pill-text {
+  font-size: 9.5px !important;
+}
+
+.patient-profile-card .cal-quick-followup-bar {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 640px) {
+  .patient-profile-card {
+    padding: 12px 8px !important;
+    width: 100% !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  .patient-profile-card .profile-master-header-box {
+    padding: 14px 12px !important;
+  }
+
+  .patient-profile-card .clinical-calendar-container {
+    padding: 8px 6px !important;
+  }
+
+  .patient-profile-card .calendar-day-cell {
+    min-height: 48px !important;
+    padding: 2px 1px !important;
+  }
+
+  .patient-profile-card .day-number {
+    font-size: 11px !important;
+  }
+
+  .patient-profile-card .day-event-pill {
+    font-size: 8.5px !important;
+    padding: 1px 2px !important;
+  }
+
+  .patient-profile-card .pill-dot {
+    font-size: 7px !important;
+  }
+
+  .patient-profile-card .followup-blinking-pill {
+    font-size: 8px !important;
+    padding: 1px 3px !important;
+  }
+}
+

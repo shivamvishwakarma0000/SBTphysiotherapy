@@ -44,7 +44,7 @@ export default function PatientPortal({ onClose, themeProps }) {
   });
 
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
-  const [patientRefreshToast, setPatientRefreshToast] = useState("");
+  const [patientRefreshDone, setPatientRefreshDone] = useState(false);
 
   // Auth View Switcher: "login" or "register"
   const [authMode, setAuthMode] = useState("login");
@@ -228,15 +228,15 @@ export default function PatientPortal({ onClose, themeProps }) {
   const handlePatientRefresh = async () => {
     if (isManualRefreshing) return;
     setIsManualRefreshing(true);
-    setPatientRefreshToast("🔄 Fetching latest medical records...");
+    setPatientRefreshDone(false);
     try {
       await loadPatientData();
-      setPatientRefreshToast("✅ Medical records & visits updated!");
-      setTimeout(() => setPatientRefreshToast(""), 3500);
+      setPatientRefreshDone(true);
+      setTimeout(() => setPatientRefreshDone(false), 2000);
     } catch (e) {
       console.warn("Patient refresh error:", e);
-      setPatientRefreshToast("✅ Cache up to date");
-      setTimeout(() => setPatientRefreshToast(""), 3000);
+      setPatientRefreshDone(true);
+      setTimeout(() => setPatientRefreshDone(false), 2000);
     } finally {
       setIsManualRefreshing(false);
     }
@@ -416,7 +416,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               </label>
 
               <label>
-                Password (Default is \x27vindhy\x27)
+                Password (Default: vindhy)
                 <input
                   type="password"
                   required
@@ -480,29 +480,7 @@ export default function PatientPortal({ onClose, themeProps }) {
 
   return (
     <div className="patient-portal-root">
-      {patientRefreshToast && (
-        <div
-          style={{
-            position: "fixed",
-            top: "70px",
-            right: "20px",
-            zIndex: 99999,
-            background: "#0f172a",
-            color: "#ffffff",
-            border: "1px solid #0284c7",
-            borderRadius: "10px",
-            padding: "10px 18px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            fontSize: "13px",
-            fontWeight: "700",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px"
-          }}
-        >
-          {patientRefreshToast}
-        </div>
-      )}
+
       {/* Top Clinic Header */}
       <header className="patient-header">
         <div className="header-left">
@@ -536,9 +514,13 @@ export default function PatientPortal({ onClose, themeProps }) {
             disabled={isManualRefreshing}
             title="Refresh clinical records & visits"
             style={{
-              background: isManualRefreshing ? "rgba(2, 132, 199, 0.22)" : "rgba(2, 132, 199, 0.12)",
-              border: "1px solid rgba(2, 132, 199, 0.35)",
-              color: "#0284c7",
+              background: isManualRefreshing 
+                ? "rgba(2, 132, 199, 0.22)" 
+                : patientRefreshDone 
+                  ? "rgba(16, 185, 129, 0.2)" 
+                  : "rgba(2, 132, 199, 0.12)",
+              border: patientRefreshDone ? "1px solid #10b981" : "1px solid rgba(2, 132, 199, 0.35)",
+              color: patientRefreshDone ? "#10b981" : "#0284c7",
               borderRadius: "8px",
               padding: "6px 12px",
               cursor: isManualRefreshing ? "wait" : "pointer",
@@ -550,8 +532,10 @@ export default function PatientPortal({ onClose, themeProps }) {
               transition: "all 0.2s ease"
             }}
           >
-            <span style={{ display: "inline-block", transform: isManualRefreshing ? "rotate(360deg)" : "none", transition: isManualRefreshing ? "transform 0.8s linear infinite" : "none" }}>🔄</span>
-            <span>{isManualRefreshing ? "Refreshing..." : "Refresh"}</span>
+            <span style={{ display: "inline-block", transform: isManualRefreshing ? "rotate(360deg)" : "none", transition: isManualRefreshing ? "transform 0.8s linear infinite" : "none" }}>
+              {patientRefreshDone ? "✅" : "🔄"}
+            </span>
+            <span>{isManualRefreshing ? "Refreshing..." : (patientRefreshDone ? "Done!" : "Refresh")}</span>
           </button>
           <button className="portal-exit-btn" onClick={handleLogout} title="Sign Out">
             <span className="btn-icon">🚪</span>

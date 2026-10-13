@@ -1463,9 +1463,25 @@ export const patientApi = {
       });
 
       if (!p) {
+        try {
+          const cloudPatients = await supabaseGetPatients();
+          if (Array.isArray(cloudPatients) && cloudPatients.length > 0) {
+            setLocal(KEYS.PATIENTS, cloudPatients);
+            p = cloudPatients.find(pt => {
+              const pId = String(pt.patientId || "").trim().toUpperCase();
+              const pPhone = String(pt.phone || "").replace(/\D/g, "").slice(-10);
+              return pId === cleanId || (cleanDigits.length === 10 && pPhone === cleanDigits);
+            });
+          }
+        } catch (e) {
+          console.warn("Cloud patient lookup:", e);
+        }
+      }
+
+      if (!p) {
         return {
           ok: false,
-          error: "No registered patient account found with this phone number or ID. Please register at the clinic reception or consult Dr. Satyam Vishwakarma."
+          error: "No registered patient account found with this phone number or ID. Only enrolled clinic patients can log in. Please register at the clinic reception or consult Dr. Satyam Vishwakarma."
         };
       }
 
@@ -1585,6 +1601,67 @@ export const patientApi = {
       visits,
       appointments: enquiries
     };
+  },
+
+  async scheduleAppointment(payload) {
+    const p = this.getStoredPatient();
+    if (!p) return { ok: false, error: "Patient session not found" };
+
+    const aptId = `APT-${Date.now()}`;
+    const cleanDate = cleanDateOnly(payload.date);
+    const cleanTime = cleanTimeOnly(payload.time) || "10:00 AM";
+
+    const appointment = {
+      id: aptId,
+      enquiryId: aptId,
+      patientId: p.patientId,
+      linkedPatientId: p.patientId,
+      name: p.name,
+      phone: p.phone,
+      service: payload.reason || "Follow-up Physiotherapy Session",
+      message: payload.notes || "Follow-up appointment booked via Patient Recovery Calendar.",
+      date: cleanDate,
+      time: cleanTime,
+      appointmentDate: cleanDate,
+      status: "Scheduled",
+      type: "Follow-up",
+      createdAt: new Date().toISOString()
+    };
+
+    // 1. Save locally to enquiries
+    const enquiries = getLocal(KEYS.ENQUIRIES, []);
+    enquiries.unshift(appointment);
+    setLocal(KEYS.ENQUIRIES, enquiries);
+
+    // 2. Update patient's followUpDate to this new date
+    const patients = getLocal(KEYS.PATIENTS, []);
+    const pIdx = patients.findIndex(item => item.patientId === p.patientId);
+    if (pIdx >= 0) {
+      patients[pIdx].followUpDate = cleanDate;
+      patients[pIdx].followUpTime = cleanTime;
+      setLocal(KEYS.PATIENTS, patients);
+      localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(patients[pIdx]));
+    }
+
+    // 3. Dual sync to Supabase & Google Sheets
+    try {
+      await supabaseUpsertEnquiry(appointment);
+      if (pIdx >= 0) {
+        await supabaseUpsertPatient(patients[pIdx]);
+      }
+    } catch (e) {
+      console.warn("Supabase appointment sync warning:", e);
+    }
+
+    if (getWebhookUrl()) {
+      syncWithGoogleSheets({
+        action: "createEnquiry",
+        enquiry: appointment,
+        timestamp: new Date().toISOString()
+      }).catch(err => console.warn("Google Sheets appointment sync warning:", err));
+    }
+
+    return { ok: true, appointment, patient: pIdx >= 0 ? patients[pIdx] : p };
   },
 
   async changePassword(currentPassword, newPassword) {

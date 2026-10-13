@@ -1873,7 +1873,7 @@ function App() {
 
         {/* Patient Recovery Portal Modal / View */}
         {showPatientPortal && (
-          <ErrorBoundary fallbackMessage="Patient Health Portal session is ready. Tap to reload.">
+          <ErrorBoundary fallbackMessage="Patient Health Portal session is ready. Tap to enter.">
             <PatientPortal
               onClose={closePatientPortal}
               themeProps={themeProps}

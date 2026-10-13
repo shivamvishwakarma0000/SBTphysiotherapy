@@ -966,8 +966,13 @@ export default function PatientPortal({ onClose, themeProps }) {
                 appointments={recordsData?.appointments || []}
                 patientName={patientProfile?.name}
                 patientId={patientProfile?.patientId}
+                phone={patientProfile?.phone}
                 onSelectVisit={(v) => setPreviewReceipt(makeReceiptObj(v))}
                 onScheduleAppointment={() => setActiveTab("appointments")}
+                onSaveAppointment={async (payload) => {
+                  await patientApi.scheduleAppointment(payload);
+                  await loadPatientData();
+                }}
               />
             </div>
 
@@ -1203,8 +1208,13 @@ export default function PatientPortal({ onClose, themeProps }) {
                 appointments={recordsData?.appointments || []}
                 patientName={patientProfile?.name}
                 patientId={patientProfile?.patientId}
+                phone={patientProfile?.phone}
                 onSelectVisit={(v) => setPreviewReceipt(makeReceiptObj(v))}
                 onScheduleAppointment={() => setActiveTab("appointments")}
+                onSaveAppointment={async (payload) => {
+                  await patientApi.scheduleAppointment(payload);
+                  await loadPatientData();
+                }}
               />
             ) : (
               (recordsData?.visits?.length || 0) === 0 ? (

@@ -3329,6 +3329,7 @@ _(Saved in patient clinic records)_`;
 
             <PatientVisitCalendar
               visits={allVisits.length > 0 ? allVisits : todayVisits}
+              appointments={enquiries}
               isDoctorView={true}
               onSelectVisit={(v) => openPatientProfile(v.patientId)}
               onScheduleAppointment={() => selectDoctorTab("new-patient")}
@@ -3648,6 +3649,44 @@ _(Saved in patient clinic records)_`;
 
                         {/* Action Buttons Toolbar */}
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "auto", paddingTop: "10px", borderTop: "1px solid var(--border-color, #f1f5f9)" }}>
+                          {(() => {
+                            const matchedPatient = patients.find(
+                              (p) =>
+                                (e.patientId && p.patientId === e.patientId) ||
+                                (cleanPhone && p.phone && String(p.phone).replace(/\D/g, "").slice(-10) === cleanPhone) ||
+                                (p.name && patientName && p.name.trim().toLowerCase() === patientName.trim().toLowerCase())
+                            );
+                            if (matchedPatient) {
+                              const nextVNum = (matchedPatient.totalVisits || 1) + 1;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => openQuickDailyVisitModal(matchedPatient)}
+                                  style={{
+                                    flex: "1 1 auto",
+                                    padding: "8px 12px",
+                                    borderRadius: "8px",
+                                    border: "none",
+                                    background: "linear-gradient(135deg, #16a34a, #059669)",
+                                    color: "#ffffff",
+                                    fontWeight: "800",
+                                    fontSize: "12.5px",
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "5px",
+                                    boxShadow: "0 2px 8px rgba(22, 163, 74, 0.3)"
+                                  }}
+                                  title={`Log session for enrolled patient ${matchedPatient.name}`}
+                                >
+                                  🩺 Record Visit (Visit #{nextVNum})
+                                </button>
+                              );
+                            }
+                            return null;
+                          })()}
+
                           {!isConverted && (
                             <button
                               type="button"

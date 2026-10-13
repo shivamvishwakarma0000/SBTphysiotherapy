@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
+import { patientApi } from "./apiService";
 
 /**
  * PatientVisitCalendar
@@ -17,8 +18,10 @@ export default function PatientVisitCalendar({
   appointments = [],
   patientName = "",
   patientId = "",
+  phone = "",
   onSelectVisit = null,
   onScheduleAppointment = null,
+  onSaveAppointment = null,
   isDoctorView = false
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -30,6 +33,117 @@ export default function PatientVisitCalendar({
     return `${d}/${m}/${y}`;
   });
   const [filterType, setFilterType] = useState("all"); // "all", "completed", "missed", "followup"
+
+  // Internal Schedule Visit Modal State
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [schedDate, setSchedDate] = useState(() => {
+    const tmrw = new Date();
+    tmrw.setDate(tmrw.getDate() + 1);
+    return tmrw.toISOString().split("T")[0];
+  });
+  const [schedTime, setSchedTime] = useState("10:00 AM");
+  const [schedReason, setSchedReason] = useState("Follow-up Rehabilitation Session");
+  const [schedNotes, setSchedNotes] = useState("");
+  const [schedSubmitting, setSchedSubmitting] = useState(false);
+  const [schedSuccessMsg, setSchedSuccessMsg] = useState("");
+  const [internalAppointments, setInternalAppointments] = useState([]);
+
+  const allMergedAppointments = useMemo(() => {
+    return [...(appointments || []), ...internalAppointments];
+  }, [appointments, internalAppointments]);
+
+  const minDateStr = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, []);
+
+  const quickDateOptions = useMemo(() => {
+    const list = [];
+    const now = new Date();
+    const addDays = (num) => {
+      const dt = new Date(now);
+      dt.setDate(dt.getDate() + num);
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const d = String(dt.getDate()).padStart(2, "0");
+      const dayName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getDay()];
+      const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()];
+      return {
+        iso: `${y}-${m}-${d}`,
+        display: `${d}/${m}/${y}`,
+        sub: `${d} ${monthShort} (${dayName})`
+      };
+    };
+
+    list.push({ label: "Tomorrow", ...addDays(1) });
+    list.push({ label: "In 2 Days", ...addDays(2) });
+    list.push({ label: "In 3 Days", ...addDays(3) });
+    list.push({ label: "Next Week", ...addDays(7) });
+    return list;
+  }, []);
+
+  const timeSlots = [
+    "09:30 AM", "10:30 AM", "11:30 AM", "12:30 PM",
+    "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM"
+  ];
+
+  const openSchedulerForDate = (dateKeyOrISO) => {
+    if (dateKeyOrISO) {
+      if (typeof dateKeyOrISO === "string" && dateKeyOrISO.includes("/")) {
+        const parts = dateKeyOrISO.split("/");
+        if (parts.length === 3) {
+          setSchedDate(`${parts[2]}-${parts[1]}-${parts[0]}`);
+        }
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateKeyOrISO)) {
+        setSchedDate(dateKeyOrISO);
+      }
+    }
+    setShowScheduleModal(true);
+  };
+
+  const handleScheduleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!schedDate) return;
+    setSchedSubmitting(true);
+    try {
+      const parts = schedDate.split("-");
+      const ddmmyyyy = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : schedDate;
+      const payload = {
+        patientId,
+        patientName,
+        phone,
+        appointmentDate: ddmmyyyy,
+        time: schedTime,
+        reason: schedReason,
+        notes: schedNotes,
+        status: "Confirmed",
+        requestedBy: isDoctorView ? "Doctor" : "Patient",
+        createdAt: new Date().toISOString()
+      };
+
+      if (onSaveAppointment) {
+        await onSaveAppointment(payload);
+      } else {
+        await patientApi.scheduleAppointment(payload);
+      }
+
+      setInternalAppointments((prev) => [...prev, payload]);
+      setSelectedDateStr(ddmmyyyy);
+      setSchedSuccessMsg(`Appointment booked for ${ddmmyyyy} at ${schedTime}! Dr. Satyam Vishwakarma has been alerted.`);
+      setTimeout(() => {
+        setShowScheduleModal(false);
+        setSchedSuccessMsg("");
+      }, 2500);
+    } catch (err) {
+      console.error("Failed to book appointment:", err);
+      alert("Error scheduling appointment: " + (err.message || "Please try again."));
+    } finally {
+      setSchedSubmitting(false);
+    }
+  };
 
   // Standardize any date format to "DD/MM/YYYY" key
   const parseToKey = (rawDate) => {
@@ -69,11 +183,11 @@ export default function PatientVisitCalendar({
   const sortedVisitsNewestFirst = useMemo(() => {
     const list = [...(visits || [])];
     return list.sort((a, b) => {
-      const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);
-      const numB = parseInt(String(b.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      const numA = parseInt(String(a?.visitNumber || 0).replace(/\D/g, "") || 0, 10);
+      const numB = parseInt(String(b?.visitNumber || 0).replace(/\D/g, "") || 0, 10);
       if (numA !== numB) return numB - numA;
-      const tA = keyToDateObj(parseToKey(a.date))?.getTime() || 0;
-      const tB = keyToDateObj(parseToKey(b.date))?.getTime() || 0;
+      const tA = keyToDateObj(parseToKey(a?.date))?.getTime() || 0;
+      const tB = keyToDateObj(parseToKey(b?.date))?.getTime() || 0;
       return tB - tA;
     });
   }, [visits]);
@@ -82,20 +196,20 @@ export default function PatientVisitCalendar({
   const attendedDateSet = useMemo(() => {
     const set = new Set();
     (visits || []).forEach((v) => {
-      const k = parseToKey(v.date);
+      const k = parseToKey(v?.date);
       if (k) set.add(k);
     });
     return set;
   }, [visits]);
 
-  // Find the Next Follow-Up Date (earliest upcoming follow-up >= today, or latest assigned follow-up)
+  // Find the Next Follow-Up Date (ONLY upcoming follow-up >= today, never in past!)
   const nextFollowUpInfo = useMemo(() => {
     const todayObj = keyToDateObj(todayKey);
     const todayTime = todayObj ? todayObj.getTime() : Date.now();
 
     const allFollowUps = [];
     (visits || []).forEach((v) => {
-      if (v.followUpDate) {
+      if (v?.followUpDate) {
         const k = parseToKey(v.followUpDate);
         const dObj = keyToDateObj(k);
         if (dObj) {
@@ -104,13 +218,14 @@ export default function PatientVisitCalendar({
             dateObj: dObj,
             time: v.followUpTime || "",
             sourceVisit: v,
-            isFutureOrToday: dObj.getTime() >= todayTime - 86400000 // including today
+            isFutureOrToday: dObj.getTime() >= todayTime // strictly today or in future
           });
         }
       }
     });
 
-    (appointments || []).forEach((a) => {
+    (allMergedAppointments || []).forEach((a) => {
+      if (!a) return;
       const k = parseToKey(a.appointmentDate || a.date);
       const dObj = keyToDateObj(k);
       if (dObj) {
@@ -119,23 +234,27 @@ export default function PatientVisitCalendar({
           dateObj: dObj,
           time: a.time || "",
           sourceAppointment: a,
-          isFutureOrToday: dObj.getTime() >= todayTime - 86400000
+          isFutureOrToday: dObj.getTime() >= todayTime
         });
       }
     });
 
     if (allFollowUps.length === 0) return null;
 
-    // Sort ascending by date
-    allFollowUps.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+    // Filter to ONLY genuine upcoming follow-ups that have NOT already been attended!
+    const upcomingFollowUps = allFollowUps.filter(
+      (fu) => fu.isFutureOrToday && !attendedDateSet.has(fu.dateKey)
+    );
 
-    // Prefer upcoming follow-up (today or future)
-    const upcoming = allFollowUps.find((fu) => fu.isFutureOrToday);
-    if (upcoming) return upcoming;
+    if (upcomingFollowUps.length > 0) {
+      upcomingFollowUps.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+      return upcomingFollowUps[0];
+    }
 
-    // If none in the future, return the most recent one
-    return allFollowUps[allFollowUps.length - 1];
-  }, [visits, appointments, todayKey]);
+    // If there is NO upcoming follow-up (all are in past or already attended): return null!
+    // A past date should NEVER blink and should NEVER have the blinking beacon!
+    return null;
+  }, [visits, allMergedAppointments, todayKey, attendedDateSet]);
 
   const nextFollowUpKey = nextFollowUpInfo ? nextFollowUpInfo.dateKey : null;
 
@@ -196,8 +315,22 @@ export default function PatientVisitCalendar({
       }
     });
 
+    // Also check if any past appointment had no clinic visit logged
+    (allMergedAppointments || []).forEach((a) => {
+      if (!a) return;
+      const apptKey = parseToKey(a.appointmentDate || a.date);
+      const apptObj = keyToDateObj(apptKey);
+      if (apptObj && apptObj.getTime() < todayTime && !attendedDateSet.has(apptKey)) {
+        missing[apptKey] = {
+          dateKey: apptKey,
+          dateObj: apptObj,
+          reason: `Missed scheduled appointment on ${apptKey}`
+        };
+      }
+    });
+
     return missing;
-  }, [visits, attendedDateSet, todayKey]);
+  }, [visits, allMergedAppointments, attendedDateSet, todayKey]);
 
   const missingDaysCount = Object.keys(missingDaysMap).length;
 
@@ -386,15 +519,19 @@ export default function PatientVisitCalendar({
             </button>
           </div>
 
-          {onScheduleAppointment && (
-            <button
-              type="button"
-              className="cal-schedule-action-btn"
-              onClick={onScheduleAppointment}
-            >
-              <span>+ {isDoctorView ? "Log Clinic Visit" : "Schedule Visit"}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className="cal-schedule-action-btn"
+            onClick={() => {
+              if (isDoctorView && onScheduleAppointment) {
+                onScheduleAppointment();
+              } else {
+                openSchedulerForDate(selectedDateStr);
+              }
+            }}
+          >
+            <span>+ {isDoctorView ? "Log Clinic Visit" : "Schedule Visit"}</span>
+          </button>
         </div>
       </div>
 
@@ -536,11 +673,11 @@ export default function PatientVisitCalendar({
               return (
                 <div
                   key={`${cell.dateKey}-${idx}`}
-                  className={`calendar-day-cell ${cell.isCurrentMonth ? "in-month" : "out-month"} ${isSelected ? "selected" : ""} ${isToday ? "is-today" : ""} ${hasVisits ? "has-visit" : ""} ${isMissedDay ? "is-missed-day" : ""} ${isNextFollowUp ? "is-next-followup blinking-cell" : ""}`}
+                  className={`calendar-day-cell ${cell.isCurrentMonth ? "in-month" : "out-month"} ${isSelected ? "selected" : ""} ${isToday ? "is-today" : ""} ${hasVisits ? "has-visit" : ""} ${isMissedDay && !hasVisits ? "is-missed-day" : ""} ${isNextFollowUp ? "is-next-followup blinking-cell" : ""}`}
                   onClick={() => setSelectedDateStr(cell.dateKey)}
                   role="button"
                   tabIndex={0}
-                  title={`Date: ${cell.dateKey}${isNextFollowUp ? " (⚡ NEXT CLINICAL FOLLOW-UP)" : ""}${isMissedDay ? " (⚠️ Missed Therapy Session)" : ""}`}
+                  title={`Date: ${cell.dateKey}${isNextFollowUp ? " (⚡ NEXT CLINICAL FOLLOW-UP)" : ""}${isMissedDay && !hasVisits ? " (⚠️ Missed Therapy Session)" : ""}`}
                 >
                   <div className="day-cell-top">
                     <span className="day-number">{cell.dayNumber}</span>
@@ -567,7 +704,7 @@ export default function PatientVisitCalendar({
                       </div>
                     )}
 
-                    {/* 2. Missed Session Pill */}
+                    {/* 2. Missed Session Pill: If missed and not visited, written missed ONLY! */}
                     {isMissedDay && !hasVisits && (
                       <div
                         className="day-event-pill missed-pill"
@@ -578,15 +715,15 @@ export default function PatientVisitCalendar({
                       </div>
                     )}
 
-                    {/* 3. Follow-Up Pill (Blinking if next follow-up!) */}
-                    {(hasFollowUps || hasAppointments) && (
+                    {/* 3. Follow-Up / Scheduled Pill: ONLY if NOT visited and NOT missed! */}
+                    {!hasVisits && !isMissedDay && (hasFollowUps || hasAppointments) && (
                       <div
                         className={`day-event-pill follow-up-pill ${isNextFollowUp ? "pulsing-badge" : ""}`}
                         title="Scheduled Clinical Follow-up"
                       >
                         <span className="pill-dot">{isNextFollowUp ? "🔔" : "●"}</span>
                         <span className="pill-text">
-                          {isNextFollowUp ? "Next Follow-Up" : "Follow-Up"}
+                          {isNextFollowUp ? "Next Follow-Up" : "Scheduled Visit"}
                         </span>
                       </div>
                     )}
@@ -656,15 +793,13 @@ export default function PatientVisitCalendar({
                 <p>
                   No clinic visit was recorded on {selectedDateStr}. Consistent therapy is vital for full spinal &amp; joint mobility recovery.
                 </p>
-                {onScheduleAppointment && (
-                  <button
-                    type="button"
-                    className="cal-mini-cta"
-                    onClick={onScheduleAppointment}
-                  >
-                    + Schedule Make-Up Session
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="cal-mini-cta"
+                  onClick={() => openSchedulerForDate(selectedDateStr)}
+                >
+                  + Schedule Make-Up Session
+                </button>
               </div>
             )}
 
@@ -679,15 +814,19 @@ export default function PatientVisitCalendar({
                   <p>
                     Tap any highlighted date on the calendar, or schedule a therapy appointment below.
                   </p>
-                  {onScheduleAppointment && (
-                    <button
-                      type="button"
-                      className="cal-mini-cta"
-                      onClick={onScheduleAppointment}
-                    >
-                      + {isDoctorView ? `Log Visit on ${selectedDateStr}` : `Book Session on ${selectedDateStr}`}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="cal-mini-cta"
+                    onClick={() => {
+                      if (isDoctorView && onScheduleAppointment) {
+                        onScheduleAppointment();
+                      } else {
+                        openSchedulerForDate(selectedDateStr);
+                      }
+                    }}
+                  >
+                    + {isDoctorView ? `Log Visit on ${selectedDateStr}` : `Book Session on ${selectedDateStr}`}
+                  </button>
                 </div>
               )}
 
@@ -817,6 +956,165 @@ export default function PatientVisitCalendar({
           </div>
         </div>
       </div>
+
+      {/* 5. INTERACTIVE SCHEDULE VISIT & DATE PICKER MODAL */}
+      {showScheduleModal && (
+        <div className="cal-modal-overlay" onClick={() => setShowScheduleModal(false)}>
+          <div className="cal-schedule-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="cal-modal-header">
+              <div className="cal-modal-title-group">
+                <span className="cal-modal-badge">🗓️ Clinical Appointment</span>
+                <h3 className="cal-modal-title">Schedule Physical Therapy Visit</h3>
+                <p className="cal-modal-subtitle">
+                  {patientName ? `Patient: ${patientName} (${patientId || "Enrolled"})` : "Select your rehabilitation appointment date & time"}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="cal-modal-close-btn"
+                onClick={() => setShowScheduleModal(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {schedSuccessMsg ? (
+              <div className="cal-modal-success-state">
+                <div className="cal-modal-success-icon">🎉</div>
+                <h4 style={{ margin: "6px 0", color: "#15803d", fontSize: "18px", fontWeight: "800" }}>Appointment Confirmed!</h4>
+                <p style={{ margin: "4px 0 14px 0", color: "#334155", fontSize: "14px" }}>{schedSuccessMsg}</p>
+                <div className="cal-modal-success-note">
+                  Dr. Satyam Vishwakarma has received your appointment notification. When you arrive at the clinic, the doctor will check you in and record Visit #{(visits?.length || 0) + 1}.
+                </div>
+                <button
+                  type="button"
+                  className="cal-modal-primary-btn"
+                  onClick={() => {
+                    setShowScheduleModal(false);
+                    setSchedSuccessMsg("");
+                  }}
+                  style={{ marginTop: "16px", width: "100%" }}
+                >
+                  Done &amp; View on Calendar
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleScheduleSubmit} className="cal-modal-form">
+                {/* Quick Date Presets */}
+                <div className="cal-form-group">
+                  <label className="cal-form-label">
+                    <span>Quick Date Presets</span>
+                  </label>
+                  <div className="cal-quick-dates-row">
+                    {quickDateOptions.map((opt) => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        className={`cal-quick-date-chip ${schedDate === opt.iso ? "active" : ""}`}
+                        onClick={() => setSchedDate(opt.iso)}
+                      >
+                        <span className="quick-label">{opt.label}</span>
+                        <span className="quick-sub">{opt.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Date Picker Input */}
+                <div className="cal-form-group">
+                  <label className="cal-form-label" htmlFor="cal-date-input">
+                    <span>Select Specific Date</span>
+                    <span className="cal-label-hint">Pick on Calendar (Min: Today)</span>
+                  </label>
+                  <input
+                    id="cal-date-input"
+                    type="date"
+                    className="cal-form-input"
+                    min={minDateStr}
+                    value={schedDate}
+                    onChange={(e) => setSchedDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Preferred Time Slot */}
+                <div className="cal-form-group">
+                  <label className="cal-form-label">
+                    <span>Preferred Consultation / Therapy Time</span>
+                  </label>
+                  <div className="cal-time-slots-grid">
+                    {timeSlots.map((ts) => (
+                      <button
+                        key={ts}
+                        type="button"
+                        className={`cal-time-slot-chip ${schedTime === ts ? "active" : ""}`}
+                        onClick={() => setSchedTime(ts)}
+                      >
+                        {ts}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Clinical Focus / Reason */}
+                <div className="cal-form-group">
+                  <label className="cal-form-label" htmlFor="cal-reason-select">
+                    <span>Reason / Treatment Focus</span>
+                  </label>
+                  <select
+                    id="cal-reason-select"
+                    className="cal-form-select"
+                    value={schedReason}
+                    onChange={(e) => setSchedReason(e.target.value)}
+                  >
+                    <option value="Follow-up Rehabilitation Session">Follow-up Rehabilitation Session</option>
+                    <option value="Spine / Lower Back Decompression (L4-L5)">Spine / Lower Back Decompression (L4-L5)</option>
+                    <option value="Cervical Spine / Neck Pain &amp; Stiffness">Cervical Spine / Neck Pain &amp; Stiffness</option>
+                    <option value="Knee Joint Mobilization &amp; Strengthening">Knee Joint Mobilization &amp; Strengthening</option>
+                    <option value="Frozen Shoulder Rehabilitation">Frozen Shoulder Rehabilitation</option>
+                    <option value="Electrotherapy &amp; IFT Modality">Electrotherapy &amp; IFT Modality</option>
+                    <option value="General Physiotherapy Progress Review">General Physiotherapy Progress Review</option>
+                  </select>
+                </div>
+
+                {/* Patient Symptoms / Notes */}
+                <div className="cal-form-group">
+                  <label className="cal-form-label" htmlFor="cal-notes-input">
+                    <span>Symptom Updates / Specific Note (Optional)</span>
+                  </label>
+                  <input
+                    id="cal-notes-input"
+                    type="text"
+                    className="cal-form-input"
+                    placeholder="e.g. Mild morning stiffness, feeling better..."
+                    value={schedNotes}
+                    onChange={(e) => setSchedNotes(e.target.value)}
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="cal-modal-actions">
+                  <button
+                    type="button"
+                    className="cal-modal-cancel-btn"
+                    onClick={() => setShowScheduleModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="cal-modal-submit-btn"
+                    disabled={schedSubmitting}
+                  >
+                    {schedSubmitting ? "Booking & Alerting Doctor..." : "📅 Confirm & Schedule Visit"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

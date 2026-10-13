@@ -56,7 +56,7 @@ export class ErrorBoundary extends React.Component {
               Vindhy Physio & Rehab Center
             </h2>
             <p style={{ fontSize: "14px", color: "#93c5fd", margin: "0 0 20px 0", lineHeight: "1.5" }}>
-              {this.props.fallbackMessage || "Your health portal session is ready. Tap below to continue smoothly."}
+              {this.props.fallbackMessage || "Your health portal session is ready. Tap below to enter."}
             </p>
             <button
               onClick={this.handleReset}
@@ -70,10 +70,15 @@ export class ErrorBoundary extends React.Component {
                 fontSize: "15px",
                 fontWeight: "700",
                 cursor: "pointer",
-                boxShadow: "0 4px 16px rgba(8, 120, 201, 0.4)"
+                boxShadow: "0 4px 16px rgba(8, 120, 201, 0.4)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px"
               }}
             >
-              🔄 Reload Portal
+              <span>🚀</span>
+              <span>Click to Enter</span>
             </button>
           </div>
         </div>

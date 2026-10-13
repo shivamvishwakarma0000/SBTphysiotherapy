@@ -10940,4 +10940,624 @@ img, video, canvas, svg {
   }
 }
 
+/* ==========================================================================
+   GOOGLE STITCH UI/UX DESIGN SYSTEM — CLINICAL HEALTHCARE COMPONENTS
+   Brand Palette: Deep Navy #0B2A55, Electric Blue #2563EB, Teal Green #10B981,
+   Slate #F7FAFC, Card 12px, Inter & Plus Jakarta Sans
+   ========================================================================== */
+
+:root {
+  --stitch-navy: #0B2A55;
+  --stitch-navy-hover: #071a35;
+  --stitch-blue: #2563EB;
+  --stitch-blue-light: #eff6ff;
+  --stitch-teal: #10B981;
+  --stitch-teal-light: #ecfdf5;
+  --stitch-bg: #F7FAFC;
+  --stitch-card-bg: #FFFFFF;
+  --stitch-border: #DCE5F0;
+  --stitch-text: #0F172A;
+  --stitch-text-muted: #64748B;
+  --stitch-radius: 12px;
+}
+
+[data-theme="dark"] {
+  --stitch-navy: #0B2A55;
+  --stitch-navy-hover: #163666;
+  --stitch-blue: #3b82f6;
+  --stitch-blue-light: rgba(59, 130, 246, 0.15);
+  --stitch-teal: #10B981;
+  --stitch-teal-light: rgba(16, 185, 129, 0.15);
+  --stitch-bg: #0b1320;
+  --stitch-card-bg: #111c2e;
+  --stitch-border: #1e293b;
+  --stitch-text: #f8fafc;
+  --stitch-text-muted: #94a3b8;
+}
+
+/* --- Patient Visit Calendar --- */
+.clinical-calendar-container {
+  background: var(--stitch-card-bg);
+  border: 1px solid var(--stitch-border);
+  border-radius: var(--stitch-radius);
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(11, 42, 85, 0.05);
+  margin-top: 16px;
+  margin-bottom: 24px;
+  font-family: 'Inter', sans-serif;
+  color: var(--stitch-text);
+}
+
+.clinical-calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--stitch-border);
+}
+
+.calendar-brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cal-icon {
+  font-size: 26px;
+  background: var(--stitch-blue-light);
+  padding: 8px 12px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-heading {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--stitch-text);
+  letter-spacing: -0.02em;
+}
+
+.cal-subheading {
+  margin: 3px 0 0 0;
+  font-size: 12.5px;
+  color: var(--stitch-text-muted);
+}
+
+.calendar-actions-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.calendar-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--stitch-bg);
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--stitch-border);
+}
+
+.cal-nav-btn {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: var(--stitch-text);
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.cal-nav-btn:hover {
+  background: var(--stitch-card-bg);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.cal-current-month-label {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--stitch-text);
+  min-width: 130px;
+  text-align: center;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.cal-today-btn {
+  background: var(--stitch-navy);
+  color: #ffffff;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-today-btn:hover {
+  background: var(--stitch-blue);
+}
+
+.cal-schedule-action-btn {
+  background: var(--stitch-blue);
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.cal-schedule-action-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.clinical-calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 0;
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-dot.completed {
+  background: var(--stitch-teal);
+}
+
+.legend-dot.upcoming {
+  background: var(--stitch-blue);
+}
+
+.legend-dot.today-indicator {
+  background: #f59e0b;
+}
+
+.legend-text {
+  font-weight: 500;
+  color: var(--stitch-text);
+}
+
+.legend-count {
+  color: var(--stitch-text-muted);
+  font-size: 11.5px;
+}
+
+.clinical-calendar-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .clinical-calendar-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calendar-month-grid-wrapper {
+  background: var(--stitch-card-bg);
+  border: 1px solid var(--stitch-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.calendar-weekdays-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--stitch-bg);
+  border-bottom: 1px solid var(--stitch-border);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--stitch-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 0;
+}
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--stitch-border);
+  gap: 1px;
+}
+
+.calendar-day-cell {
+  background: var(--stitch-card-bg);
+  min-height: 85px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.calendar-day-cell:hover {
+  background: var(--stitch-blue-light);
+}
+
+.calendar-day-cell.selected {
+  outline: 2px solid var(--stitch-blue);
+  outline-offset: -2px;
+  background: var(--stitch-blue-light);
+  z-index: 2;
+}
+
+.calendar-day-cell.out-month {
+  opacity: 0.45;
+  background: var(--stitch-bg);
+}
+
+.day-cell-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.day-number {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--stitch-text);
+}
+
+.calendar-day-cell.is-today .day-number {
+  background: var(--stitch-navy);
+  color: #ffffff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.today-badge {
+  font-size: 9.5px;
+  background: #fef3c7;
+  color: #b45309;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.day-cell-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.day-event-pill {
+  font-size: 10.5px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.completed-pill {
+  background: var(--stitch-teal-light);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.follow-up-pill {
+  background: var(--stitch-blue-light);
+  color: var(--stitch-blue);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.pill-dot {
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.pill-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Drill-Down Panel */
+.calendar-drilldown-panel {
+  background: var(--stitch-bg);
+  border: 1px solid var(--stitch-border);
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.drilldown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--stitch-border);
+  padding-bottom: 12px;
+}
+
+.drilldown-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--stitch-text-muted);
+  letter-spacing: 0.05em;
+  display: block;
+}
+
+.drilldown-selected-date {
+  margin: 3px 0 0 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--stitch-text);
+}
+
+.today-status-chip {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.calendar-empty-day {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--stitch-text-muted);
+}
+
+.empty-day-icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.calendar-empty-day h5 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--stitch-text);
+}
+
+.calendar-empty-day p {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+}
+
+.cal-mini-cta {
+  background: var(--stitch-navy);
+  color: #ffffff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-mini-cta:hover {
+  background: var(--stitch-blue);
+}
+
+.drilldown-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.drilldown-event-card {
+  background: var(--stitch-card-bg);
+  border: 1px solid var(--stitch-border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+}
+
+.card-status-bar {
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.completed-bar {
+  background: var(--stitch-teal-light);
+  color: #065f46;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.follow-up-bar {
+  background: var(--stitch-blue-light);
+  color: #1e40af;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.appointment-bar {
+  background: #fef3c7;
+  color: #92400e;
+  border-bottom: 1px solid #fde68a;
+}
+
+.status-badge.subtle-glow {
+  background: var(--stitch-blue);
+  color: #ffffff;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  box-shadow: 0 0 6px rgba(37, 99, 235, 0.4);
+}
+
+.card-detail-content {
+  padding: 12px;
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-label {
+  font-size: 11px;
+  color: var(--stitch-text-muted);
+  font-weight: 600;
+}
+
+.detail-value {
+  color: var(--stitch-text);
+  font-size: 12.5px;
+}
+
+.detail-notes {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: var(--stitch-text);
+  background: var(--stitch-bg);
+  padding: 6px 8px;
+  border-radius: 6px;
+  border-left: 3px solid var(--stitch-teal);
+  font-style: italic;
+}
+
+.modality-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.modality-chip {
+  background: var(--stitch-bg);
+  border: 1px solid var(--stitch-border);
+  color: var(--stitch-text);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.follow-up-marker {
+  background: var(--stitch-blue-light);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  color: #1e40af;
+}
+
+.card-action-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--stitch-border);
+  background: var(--stitch-bg);
+  text-align: right;
+}
+
+.view-receipt-link-btn {
+  background: transparent;
+  border: none;
+  color: var(--stitch-blue);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.view-receipt-link-btn:hover {
+  text-decoration: underline;
+}
+
+.fu-whatsapp-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #25d366;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .clinical-calendar-container {
+    padding: 14px;
+  }
+  .cal-heading {
+    font-size: 16px;
+  }
+  .calendar-day-cell {
+    min-height: 56px;
+    padding: 4px 2px;
+  }
+  .day-number {
+    font-size: 11px;
+  }
+  .day-event-pill {
+    font-size: 9px;
+    padding: 1px 3px;
+  }
+  .calendar-actions-cluster {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+
 

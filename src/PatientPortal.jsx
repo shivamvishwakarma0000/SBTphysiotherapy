@@ -5,6 +5,7 @@ import { CLINIC_LOGO_B64 } from "./pdfAssets";
 import { PatientAvatar } from "./PatientAvatar";
 import ErrorBoundary from "./ErrorBoundary";
 import PullToRefresh from "./PullToRefresh";
+import PatientVisitCalendar from "./PatientVisitCalendar";
 
 export default function PatientPortal({ onClose, themeProps }) {
   const handleToggleTheme = () => {
@@ -29,6 +30,7 @@ export default function PatientPortal({ onClose, themeProps }) {
   const [patientProfile, setPatientProfile] = useState(() => patientApi.getStoredPatient() || null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard", "appointments", "visits", "receipts", "treatment", "exercises", "security"
+  const [visitViewMode, setVisitViewMode] = useState("calendar"); // "calendar" or "timeline"
   const [recordsData, setRecordsData] = useState({
     visits: [],
     appointments: [],
@@ -1066,17 +1068,69 @@ export default function PatientPortal({ onClose, themeProps }) {
         {activeTab === "visits" && (
           <div className="tab-pane visits-pane">
             <div className="section-title-box">
-              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Chronological Visit History ({recordsData?.visits?.length || 0})</h2>
-              <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Complete record of your physical therapy sessions, clinical evaluations, and doctor recommendations.</p>
+              <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Clinical Records & Visit History ({recordsData?.visits?.length || 0})</h2>
+              <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Interactive physical therapy calendar, session milestones, and doctor recommendations.</p>
             </div>
 
-            {(recordsData?.visits?.length || 0) === 0 ? (
-              <div className="empty-state-box">
-                <span>🩺</span>
-                <p>No clinic visits logged yet. Records are added in real-time during your consultation with Dr. Satyam Vishwakarma.</p>
-              </div>
+            {/* View Mode Switcher */}
+            <div style={{ display: "flex", gap: "10px", margin: "14px 0", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className={`secondary-btn ${visitViewMode === "calendar" ? "active" : ""}`}
+                style={{
+                  background: visitViewMode === "calendar" ? "var(--stitch-blue, #2563EB)" : "rgba(255,255,255,0.12)",
+                  color: "#ffffff",
+                  border: visitViewMode === "calendar" ? "1px solid #60a5fa" : "1px solid rgba(255,255,255,0.25)",
+                  borderRadius: "10px",
+                  padding: "8px 18px",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  boxShadow: visitViewMode === "calendar" ? "0 2px 10px rgba(37,99,235,0.4)" : "none",
+                  transition: "all 0.15s ease"
+                }}
+                onClick={() => setVisitViewMode("calendar")}
+              >
+                📅 Interactive Calendar View
+              </button>
+              <button
+                type="button"
+                className={`secondary-btn ${visitViewMode === "timeline" ? "active" : ""}`}
+                style={{
+                  background: visitViewMode === "timeline" ? "var(--stitch-blue, #2563EB)" : "rgba(255,255,255,0.12)",
+                  color: "#ffffff",
+                  border: visitViewMode === "timeline" ? "1px solid #60a5fa" : "1px solid rgba(255,255,255,0.25)",
+                  borderRadius: "10px",
+                  padding: "8px 18px",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  boxShadow: visitViewMode === "timeline" ? "0 2px 10px rgba(37,99,235,0.4)" : "none",
+                  transition: "all 0.15s ease"
+                }}
+                onClick={() => setVisitViewMode("timeline")}
+              >
+                📋 Chronological Timeline List ({recordsData?.visits?.length || 0})
+              </button>
+            </div>
+
+            {visitViewMode === "calendar" ? (
+              <PatientVisitCalendar
+                visits={recordsData?.visits || []}
+                appointments={recordsData?.appointments || []}
+                patientName={patientProfile?.name}
+                patientId={patientProfile?.patientId}
+                onSelectVisit={(v) => setPreviewReceipt(makeReceiptObj(v))}
+                onScheduleAppointment={() => setActiveTab("appointments")}
+              />
             ) : (
-              <>
+              (recordsData?.visits?.length || 0) === 0 ? (
+                <div className="empty-state-box">
+                  <span>🩺</span>
+                  <p>No clinic visits logged yet. Records are added in real-time during your consultation with Dr. Satyam Vishwakarma.</p>
+                </div>
+              ) : (
+                <>
                 {/* RECENT / LATEST VISIT PROMINENT HIGHLIGHT CARD */}
                 {latestVisit && (
                   <div
@@ -1478,7 +1532,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   })}
                 </div>
               </>
-            )}
+            ))}
           </div>
         )}
 

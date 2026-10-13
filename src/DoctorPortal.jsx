@@ -23,6 +23,7 @@ import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
 import { PatientAvatar } from "./PatientAvatar";
 import PullToRefresh from "./PullToRefresh";
+import PatientVisitCalendar from "./PatientVisitCalendar";
 
 
 // =============================================================================
@@ -284,6 +285,8 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [patientFilter, setPatientFilter] = useState("all"); // "all", "today", "active", "waiting", "completed"
   const [patientSort, setPatientSort] = useState("newest"); // "newest", "name", "visits"
   const [todayVisits, setTodayVisits] = useState([]);
+  const [todayViewMode, setTodayViewMode] = useState("calendar"); // "calendar" or "queue"
+  const [doctorProfileVisitMode, setDoctorProfileVisitMode] = useState("calendar"); // "calendar" or "timeline"
   const [enquiries, setEnquiries] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientVisits, setPatientVisits] = useState([]);
@@ -3006,53 +3009,100 @@ _(Saved in patient clinic records)_`;
           <div className="today-visits-view">
             <div className="section-header-row">
               <div>
-                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Today's Patient Queue ({new Date().toISOString().slice(0, 10)})</h2>
-                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Real-time list of all patient consultations logged for today.</p>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Clinical Schedule & Visits ({todayVisits.length})</h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Interactive physical therapy calendar & real-time queue of patient consultations.</p>
               </div>
-              <button className="secondary-btn" onClick={() => handleExportCSV("visits")}>
-                📥 Export Today's Visits (CSV)
-              </button>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className={`secondary-btn ${todayViewMode === "calendar" ? "active" : ""}`}
+                  style={{
+                    background: todayViewMode === "calendar" ? "var(--stitch-blue, #2563EB)" : "rgba(255,255,255,0.12)",
+                    color: "#ffffff",
+                    border: todayViewMode === "calendar" ? "1px solid #60a5fa" : "1px solid rgba(255,255,255,0.25)",
+                    borderRadius: "10px",
+                    padding: "6px 14px",
+                    fontWeight: "700",
+                    fontSize: "12.5px",
+                    cursor: "pointer"
+                  }}
+                  onClick={() => setTodayViewMode("calendar")}
+                >
+                  📅 Calendar View
+                </button>
+                <button
+                  type="button"
+                  className={`secondary-btn ${todayViewMode === "queue" ? "active" : ""}`}
+                  style={{
+                    background: todayViewMode === "queue" ? "var(--stitch-blue, #2563EB)" : "rgba(255,255,255,0.12)",
+                    color: "#ffffff",
+                    border: todayViewMode === "queue" ? "1px solid #60a5fa" : "1px solid rgba(255,255,255,0.25)",
+                    borderRadius: "10px",
+                    padding: "6px 14px",
+                    fontWeight: "700",
+                    fontSize: "12.5px",
+                    cursor: "pointer"
+                  }}
+                  onClick={() => setTodayViewMode("queue")}
+                >
+                  📋 Today's Queue ({todayVisits.length})
+                </button>
+                <button className="secondary-btn" onClick={() => handleExportCSV("visits")}>
+                  📥 Export (CSV)
+                </button>
+              </div>
             </div>
 
-            <div className="table-responsive">
-              <table className="doctor-table">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Patient ID</th>
-                    <th>Patient Name</th>
-                    <th>Phone</th>
-                    <th>Visit No</th>
-                    <th>Reason / Treatment</th>
-                    <th>Doctor</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {todayVisits.map(v => (
-                    <tr key={v.visitId}>
-                      <td><strong>{v.time || "Scheduled"}</strong></td>
-                      <td><span className="patient-id-badge">{v.patientId}</span></td>
-                      <td>{v.patientName}</td>
-                      <td>+91 {v.phone}</td>
-                      <td><span className="visit-count-tag">Visit #{v.visitNumber}</span></td>
-                      <td>{v.reason}</td>
-                      <td>Dr. Satyam Vishwakarma</td>
-                      <td>
-                        <button className="table-action-btn" onClick={() => openPatientProfile(v.patientId)}>
-                          Open Profile
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {todayVisits.length === 0 && (
+            {todayViewMode === "calendar" && (
+              <PatientVisitCalendar
+                visits={todayVisits}
+                isDoctorView={true}
+                onSelectVisit={(v) => openPatientProfile(v.patientId)}
+                onScheduleAppointment={() => selectDoctorTab("new-patient")}
+              />
+            )}
+
+            {todayViewMode === "queue" && (
+              <div className="table-responsive">
+                <table className="doctor-table">
+                  <thead>
                     <tr>
-                      <td colSpan="8" className="empty-cell">No visits recorded for today yet.</td>
+                      <th>Time</th>
+                      <th>Patient ID</th>
+                      <th>Patient Name</th>
+                      <th>Phone</th>
+                      <th>Visit No</th>
+                      <th>Reason / Treatment</th>
+                      <th>Doctor</th>
+                      <th>Actions</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {todayVisits.map(v => (
+                      <tr key={v.visitId}>
+                        <td><strong>{v.time || "Scheduled"}</strong></td>
+                        <td><span className="patient-id-badge">{v.patientId}</span></td>
+                        <td>{v.patientName}</td>
+                        <td>+91 {v.phone}</td>
+                        <td><span className="visit-count-tag">Visit #{v.visitNumber}</span></td>
+                        <td>{v.reason}</td>
+                        <td>Dr. Satyam Vishwakarma</td>
+                        <td>
+                          <button className="table-action-btn" onClick={() => openPatientProfile(v.patientId)}>
+                            Open Profile
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {todayVisits.length === 0 && (
+                      <tr>
+                        <td colSpan="8" className="empty-cell">No visits recorded for today yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -4375,11 +4425,44 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              {/* 5. CHRONOLOGICAL VISITS TIMELINE */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
-                <h3 className="section-subtitle" style={{ margin: 0, fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>
-                  📜 Chronological Consultation & Visit Records ({patientVisits.length})
-                </h3>
+              {/* 5. CHRONOLOGICAL VISITS TIMELINE & CALENDAR */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    style={{
+                      background: doctorProfileVisitMode === "calendar" ? "var(--stitch-blue, #2563EB)" : "rgba(15, 23, 42, 0.06)",
+                      color: doctorProfileVisitMode === "calendar" ? "#ffffff" : "#0f172a",
+                      border: "none",
+                      padding: "6px 14px",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      boxShadow: doctorProfileVisitMode === "calendar" ? "0 2px 8px rgba(37,99,235,0.3)" : "none"
+                    }}
+                    onClick={() => setDoctorProfileVisitMode("calendar")}
+                  >
+                    📅 Visit Calendar
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      background: doctorProfileVisitMode === "timeline" ? "var(--stitch-blue, #2563EB)" : "rgba(15, 23, 42, 0.06)",
+                      color: doctorProfileVisitMode === "timeline" ? "#ffffff" : "#0f172a",
+                      border: "none",
+                      padding: "6px 14px",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      boxShadow: doctorProfileVisitMode === "timeline" ? "0 2px 8px rgba(37,99,235,0.3)" : "none"
+                    }}
+                    onClick={() => setDoctorProfileVisitMode("timeline")}
+                  >
+                    📜 Timeline List ({patientVisits.length})
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => openQuickDailyVisitModal(selectedPatient)}
@@ -4387,8 +4470,8 @@ _(Saved in patient clinic records)_`;
                     background: "#ecfdf5",
                     color: "#059669",
                     border: "1px solid #86efac",
-                    padding: "4px 10px",
-                    borderRadius: "6px",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
                     fontSize: "12px",
                     fontWeight: "800",
                     cursor: "pointer"
@@ -4398,7 +4481,19 @@ _(Saved in patient clinic records)_`;
                 </button>
               </div>
 
-              <div className="visit-timeline">
+              {doctorProfileVisitMode === "calendar" && (
+                <PatientVisitCalendar
+                  visits={patientVisits}
+                  patientName={selectedPatient.name}
+                  patientId={selectedPatient.patientId}
+                  isDoctorView={true}
+                  onSelectVisit={(v) => handleFinalizeAndIssueReceipt(selectedPatient, v)}
+                  onScheduleAppointment={() => openQuickDailyVisitModal(selectedPatient)}
+                />
+              )}
+
+              {doctorProfileVisitMode === "timeline" && (
+                <div className="visit-timeline">
                 {patientVisits.map(v => {
                   const isExpanded = !!expandedVisitIds[v.visitId];
                   return (
@@ -4565,6 +4660,7 @@ _(Saved in patient clinic records)_`;
                   </div>
                 )}
               </div>
+            )}
             </div>
           </div>
         </div>

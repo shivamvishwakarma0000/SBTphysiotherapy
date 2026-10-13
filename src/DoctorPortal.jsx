@@ -1104,6 +1104,70 @@ export default function DoctorPortal({ onClose, themeProps }) {
     });
   };
 
+  const handleSetPatientFollowUp = async (targetDateKey) => {
+    if (!selectedPatient || !targetDateKey) return;
+    try {
+      await api.updatePatient(selectedPatient.patientId, {
+        followUpDate: targetDateKey,
+        follow_up_date: targetDateKey
+      });
+      setSelectedPatient((prev) => ({
+        ...prev,
+        followUpDate: targetDateKey,
+        follow_up_date: targetDateKey
+      }));
+      setPatients((prev) =>
+        prev.map((p) =>
+          p.patientId === selectedPatient.patientId
+            ? { ...p, followUpDate: targetDateKey, follow_up_date: targetDateKey }
+            : p
+        )
+      );
+      setLeadActionToast(`🔔 Milestone: Next follow-up for ${selectedPatient.name} set to ${targetDateKey}!`);
+      setTimeout(() => setLeadActionToast(""), 3500);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update follow-up date: " + e.message);
+    }
+  };
+
+  const handleToggleDailyCourse = async (enable, duration = "Ongoing Daily Rehab") => {
+    if (!selectedPatient) return;
+    try {
+      const nextDate = new Date();
+      nextDate.setDate(nextDate.getDate() + 1);
+      if (nextDate.getDay() === 0) nextDate.setDate(nextDate.getDate() + 1); // skip Sunday
+      const y = nextDate.getFullYear();
+      const m = String(nextDate.getMonth() + 1).padStart(2, "0");
+      const d = String(nextDate.getDate()).padStart(2, "0");
+      const tomorrowStr = `${d}/${m}/${y}`;
+
+      const updates = {
+        isDailyCourse: enable,
+        dailyCourseDuration: enable ? duration : "",
+        dailyCourseStartDate: enable ? (selectedPatient.dailyCourseStartDate || new Date().toISOString().slice(0, 10)) : "",
+        followUpDate: enable ? tomorrowStr : selectedPatient.followUpDate,
+        follow_up_date: enable ? tomorrowStr : (selectedPatient.follow_up_date || selectedPatient.followUpDate)
+      };
+
+      await api.updatePatient(selectedPatient.patientId, updates);
+      setSelectedPatient((prev) => ({ ...prev, ...updates }));
+      setPatients((prev) =>
+        prev.map((p) => (p.patientId === selectedPatient.patientId ? { ...p, ...updates } : p))
+      );
+
+      setLeadActionToast(
+        enable 
+          ? `🔄 Daily Therapy Protocol active for ${selectedPatient.name}! Next follow-up auto-set to ${tomorrowStr}.`
+          : `⏹️ Daily Course paused for ${selectedPatient.name}.`
+      );
+      setTimeout(() => setLeadActionToast(""), 3500);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update daily course status: " + err.message);
+    }
+  };
+
   const handleFinalizeConsultationSubmit = async (e) => {
     e.preventDefault();
     if (!activeConsultPatient) return;
@@ -1981,14 +2045,11 @@ _(Saved in patient clinic records)_`;
           <button className={activeTab === "today" ? "active" : ""} onClick={() => { setActiveTab("today"); fetchTodayVisits(); }}>
             📅 4. Today's Visits ({todayVisits.length})
           </button>
-          <button className={activeTab === "calendar" ? "active" : ""} onClick={() => { setActiveTab("calendar"); fetchAllVisits(); }}>
-            🗓️ 5. Master Calendar ({allVisits.length || todayVisits.length})
-          </button>
           <button className={activeTab === "enquiries" ? "active" : ""} onClick={() => { setActiveTab("enquiries"); fetchEnquiries(); }}>
-            📩 6. Online Bookings {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
+            📩 5. Online Bookings {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
           </button>
           <button className={activeTab === "settings" ? "active" : ""} onClick={() => setActiveTab("settings")}>
-            ⚙️ 7. Cloud Settings
+            ⚙️ 6. Cloud Settings
           </button>
         </nav>
       </header>
@@ -2145,12 +2206,6 @@ _(Saved in patient clinic records)_`;
                 <div className="card-icon-bubble green">📅</div>
                 <strong className="card-title">Today's Visits</strong>
                 <span className="card-count-badge green">{stats.todayVisitsCount || todayVisits.length}</span>
-              </div>
-
-              <div className="mobile-app-card" onClick={() => { selectDoctorTab("calendar"); fetchAllVisits(); }}>
-                <div className="card-icon-bubble blue">🗓️</div>
-                <strong className="card-title">Master Calendar</strong>
-                <span className="card-count-badge blue">{allVisits.length || todayVisits.length}</span>
               </div>
 
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
@@ -3276,66 +3331,6 @@ _(Saved in patient clinic records)_`;
           </div>
         )}
 
-        {/* ================= 5. MASTER CLINICAL CALENDAR ================= */}
-        {activeTab === "calendar" && (
-          <div className="calendar-master-view">
-            <div className="section-header-row">
-              <div>
-                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
-                  🗓️ Master Rehabilitation &amp; Treatment Calendar ({allVisits.length || todayVisits.length} Records)
-                </h2>
-                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>
-                  Interactive physical therapy calendar, attended treatment days, missing rehab sessions, and blinking upcoming follow-up appointments.
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  onClick={handleDoctorFullRefresh}
-                  disabled={isDoctorRefreshing}
-                  style={{
-                    background: "rgba(255,255,255,0.12)",
-                    color: "#ffffff",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    borderRadius: "10px",
-                    padding: "6px 14px",
-                    fontWeight: "700",
-                    fontSize: "12.5px",
-                    cursor: "pointer"
-                  }}
-                >
-                  🔄 {isDoctorRefreshing ? "Refreshing..." : "Refresh Calendar"}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  onClick={() => selectDoctorTab("new-patient")}
-                  style={{
-                    background: "var(--stitch-blue, #2563EB)",
-                    color: "#ffffff",
-                    border: "1px solid #60a5fa",
-                    borderRadius: "10px",
-                    padding: "6px 14px",
-                    fontWeight: "700",
-                    fontSize: "12.5px",
-                    cursor: "pointer"
-                  }}
-                >
-                  ➕ Schedule New Visit
-                </button>
-              </div>
-            </div>
-
-            <PatientVisitCalendar
-              visits={allVisits.length > 0 ? allVisits : todayVisits}
-              appointments={enquiries}
-              isDoctorView={true}
-              onSelectVisit={(v) => openPatientProfile(v.patientId)}
-              onScheduleAppointment={() => selectDoctorTab("new-patient")}
-            />
-          </div>
-        )}
 
         {/* ================= 6. ONLINE BOOKINGS & ENQUIRIES ================= */}
         {activeTab === "enquiries" && (
@@ -4812,6 +4807,111 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
+              {/* 4. DAILY REHABILITATION COURSE PROTOCOL CARD */}
+              <div
+                className="daily-course-control-card"
+                style={{
+                  background: selectedPatient.isDailyCourse
+                    ? "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 95, 70, 0.08))"
+                    : "linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(248, 250, 252, 0.9))",
+                  border: selectedPatient.isDailyCourse ? "1.5px solid #10b981" : "1.5px solid #cbd5e1",
+                  borderRadius: "14px",
+                  padding: "14px 16px",
+                  marginBottom: "16px"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span
+                        style={{
+                          background: selectedPatient.isDailyCourse ? "#dcfce7" : "#f1f5f9",
+                          color: selectedPatient.isDailyCourse ? "#15803d" : "#475569",
+                          fontWeight: "800",
+                          fontSize: "12px",
+                          padding: "3px 10px",
+                          borderRadius: "999px",
+                          border: selectedPatient.isDailyCourse ? "1px solid #86efac" : "1px solid #cbd5e1"
+                        }}
+                      >
+                        {selectedPatient.isDailyCourse ? "🔄 Active Daily Therapy Protocol" : "⚡ Regular Daily Rehab Plan"}
+                      </span>
+                      {selectedPatient.isDailyCourse && (
+                        <span style={{ fontSize: "12px", fontWeight: "700", color: "#065f46" }}>
+                          Protocol: <strong>{selectedPatient.dailyCourseDuration || "Ongoing Daily Rehab"}</strong>
+                        </span>
+                      )}
+                    </div>
+                    <h4 style={{ margin: "6px 0 2px 0", color: "#0f172a", fontSize: "15px", fontWeight: "800" }}>
+                      Auto-Consecutive Follow-Up &amp; Attendance Adherence Tracking
+                    </h4>
+                    <p style={{ margin: 0, color: "#475569", fontSize: "12.5px", lineHeight: "1.4" }}>
+                      {selectedPatient.isDailyCourse
+                        ? "Every recorded visit automatically sets tomorrow as the next follow-up. Skipped days record as Missed Day."
+                        : "For patients needing regular consecutive therapy (e.g. 7 days, 15 days, 1 month, or ongoing). Auto-schedules next-day follow-ups."}
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    {selectedPatient.isDailyCourse ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleDailyCourse(false)}
+                        style={{
+                          background: "#fee2e2",
+                          color: "#b91c1c",
+                          border: "1px solid #fca5a5",
+                          padding: "8px 14px",
+                          borderRadius: "8px",
+                          fontSize: "12.5px",
+                          fontWeight: "700",
+                          cursor: "pointer"
+                        }}
+                      >
+                        ⏹️ Pause / End Daily Course
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDailyCourse(true, "Ongoing Daily Rehab")}
+                          style={{
+                            background: "#0284c7",
+                            color: "#ffffff",
+                            border: "none",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 6px rgba(2, 132, 199, 0.25)"
+                          }}
+                        >
+                          ⚡ Start Ongoing Daily Rehab
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDailyCourse(true, "1 Month (30 Days)")}
+                          style={{
+                            background: "#10b981",
+                            color: "#ffffff",
+                            border: "none",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)"
+                          }}
+                        >
+                          📅 1 Month (30 Days) Course
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* 5. CHRONOLOGICAL VISITS TIMELINE & CALENDAR */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
                 <div style={{ display: "flex", gap: "8px" }}>
@@ -4873,7 +4973,11 @@ _(Saved in patient clinic records)_`;
                   visits={patientVisits}
                   patientName={selectedPatient.name}
                   patientId={selectedPatient.patientId}
+                  phone={selectedPatient.phone}
                   isDoctorView={true}
+                  isDailyCourse={!!selectedPatient.isDailyCourse}
+                  dailyCourseDuration={selectedPatient.dailyCourseDuration || ""}
+                  onSetFollowUpDate={handleSetPatientFollowUp}
                   onSelectVisit={(v) => handleFinalizeAndIssueReceipt(selectedPatient, v)}
                   onScheduleAppointment={() => openQuickDailyVisitModal(selectedPatient)}
                 />
@@ -6013,12 +6117,12 @@ _(Saved in patient clinic records)_`;
         </button>
 
         <button 
-          className={`nav-item-4 ${(activeTab === "calendar" || activeTab === "today") && !showDoctorMore ? "active" : ""}`}
-          onClick={() => { selectDoctorTab("calendar"); fetchAllVisits(); }}
+          className={`nav-item-4 ${activeTab === "today" && !showDoctorMore ? "active" : ""}`}
+          onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}
         >
-          <span className="nav-icon-4">🗓️</span>
-          <span className="nav-label-4">Calendar</span>
-          {(allVisits.length || todayVisits.length) > 0 && <span className="bottom-nav-badge green">{allVisits.length || todayVisits.length}</span>}
+          <span className="nav-icon-4">📅</span>
+          <span className="nav-label-4">Today's Visits</span>
+          {todayVisits.length > 0 && <span className="bottom-nav-badge green">{todayVisits.length}</span>}
         </button>
 
         <button 

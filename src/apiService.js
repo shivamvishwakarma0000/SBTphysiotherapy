@@ -853,6 +853,34 @@ export const api = {
     return { ok: true, patient, visit: newVisit };
   },
 
+  async updatePatient(patientId, fields = {}) {
+    const patients = getLocal(KEYS.PATIENTS, []);
+    const idx = patients.findIndex(p => p.patientId === patientId);
+    if (idx === -1) throw new Error("Patient not found");
+
+    patients[idx] = { ...patients[idx], ...fields };
+    const updated = patients[idx];
+    setLocal(KEYS.PATIENTS, patients);
+
+    // Update patient profile cache if currently logged in
+    try {
+      const stored = JSON.parse(localStorage.getItem(PATIENT_PROFILE_KEY) || "null");
+      if (stored && (stored.patientId === patientId || stored.phone === updated.phone)) {
+        localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...stored, ...updated }));
+      }
+    } catch (_) {}
+
+    // Push to Supabase PostgreSQL (Non-blocking)
+    try {
+      supabaseUpsertPatient(updated).catch(err => console.warn("Supabase patient update notice:", err));
+    } catch (_) {}
+
+    // Push to Google Sheets
+    syncToGoogleSheets("sync_patient", updated);
+
+    return { ok: true, patient: updated };
+  },
+
   async deletePatient(patientId) {
     // 1. Record in permanent deletion tombstones
     const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));

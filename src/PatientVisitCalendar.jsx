@@ -22,6 +22,9 @@ export default function PatientVisitCalendar({
   onSelectVisit = null,
   onScheduleAppointment = null,
   onSaveAppointment = null,
+  onSetFollowUpDate = null,
+  isDailyCourse = false,
+  dailyCourseDuration = "",
   isDoctorView = false
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -33,6 +36,17 @@ export default function PatientVisitCalendar({
     return `${d}/${m}/${y}`;
   });
   const [filterType, setFilterType] = useState("all"); // "all", "completed", "missed", "followup"
+
+  const [overrideFollowUpKey, setOverrideFollowUpKey] = useState(null);
+
+  const handleSetDoctorFollowUp = async (targetDateKey) => {
+    if (!targetDateKey) return;
+    setOverrideFollowUpKey(targetDateKey);
+    setSelectedDateStr(targetDateKey);
+    if (onSetFollowUpDate) {
+      await onSetFollowUpDate(targetDateKey);
+    }
+  };
 
   // Internal Schedule Visit Modal State
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -207,6 +221,19 @@ export default function PatientVisitCalendar({
     const todayObj = keyToDateObj(todayKey);
     const todayTime = todayObj ? todayObj.getTime() : Date.now();
 
+    // 1. Check doctor explicit milestone override first
+    if (overrideFollowUpKey) {
+      const oObj = keyToDateObj(overrideFollowUpKey);
+      if (oObj && oObj.getTime() >= todayTime) {
+        return {
+          dateKey: overrideFollowUpKey,
+          dateObj: oObj,
+          time: "10:30 AM",
+          isFutureOrToday: true
+        };
+      }
+    }
+
     const allFollowUps = [];
     (visits || []).forEach((v) => {
       if (v?.followUpDate) {
@@ -239,8 +266,6 @@ export default function PatientVisitCalendar({
       }
     });
 
-    if (allFollowUps.length === 0) return null;
-
     // Filter to ONLY genuine upcoming follow-ups that have NOT already been attended!
     const upcomingFollowUps = allFollowUps.filter(
       (fu) => fu.isFutureOrToday && !attendedDateSet.has(fu.dateKey)
@@ -251,10 +276,35 @@ export default function PatientVisitCalendar({
       return upcomingFollowUps[0];
     }
 
+    // 2. If Daily Rehabilitation Course is active, automatically roll to next session
+    if (isDailyCourse) {
+      if (!attendedDateSet.has(todayKey)) {
+        return {
+          dateKey: todayKey,
+          dateObj: todayObj || new Date(),
+          time: "10:30 AM",
+          isFutureOrToday: true
+        };
+      } else {
+        const nextDt = new Date();
+        nextDt.setDate(nextDt.getDate() + 1);
+        if (nextDt.getDay() === 0) nextDt.setDate(nextDt.getDate() + 1); // skip Sunday
+        const ny = nextDt.getFullYear();
+        const nm = String(nextDt.getMonth() + 1).padStart(2, "0");
+        const nd = String(nextDt.getDate()).padStart(2, "0");
+        const nKey = `${nd}/${nm}/${ny}`;
+        return {
+          dateKey: nKey,
+          dateObj: nextDt,
+          time: "10:30 AM",
+          isFutureOrToday: true
+        };
+      }
+    }
+
     // If there is NO upcoming follow-up (all are in past or already attended): return null!
-    // A past date should NEVER blink and should NEVER have the blinking beacon!
     return null;
-  }, [visits, allMergedAppointments, todayKey, attendedDateSet]);
+  }, [visits, allMergedAppointments, todayKey, attendedDateSet, overrideFollowUpKey, isDailyCourse]);
 
   const nextFollowUpKey = nextFollowUpInfo ? nextFollowUpInfo.dateKey : null;
 
@@ -535,6 +585,35 @@ export default function PatientVisitCalendar({
         </div>
       </div>
 
+      {/* Daily Rehabilitation Course Protocol Active Ribbon */}
+      {isDailyCourse && (
+        <div
+          className="cal-daily-course-indicator-strip"
+          style={{
+            background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 95, 70, 0.08))",
+            border: "1.5px solid #10b981",
+            borderRadius: "12px",
+            padding: "10px 14px",
+            margin: "12px 0 4px 0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "8px"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#10b981", display: "inline-block", boxShadow: "0 0 8px #10b981" }}></span>
+            <strong style={{ fontSize: "13px", color: "#065f46" }}>
+              🔄 Continuous Daily Rehabilitation Protocol Active ({dailyCourseDuration || "Daily Auto Next-Day"})
+            </strong>
+          </div>
+          <span style={{ fontSize: "11.5px", color: "#047857", fontWeight: "600" }}>
+            ⚡ Attended sessions yield official receipts; skipped days record as missed.
+          </span>
+        </div>
+      )}
+
       {/* 2. SUMMARY METRICS RIBBON (How Many Visits, When Visited, Missing Days, Next Follow-Up Blinking) */}
       <div className="calendar-metrics-ribbon">
         {/* Metric 1: Total Completed Visits */}
@@ -783,6 +862,56 @@ export default function PatientVisitCalendar({
           </div>
 
           <div className="drilldown-body">
+            {/* Doctor Follow-Up Setting Action */}
+            {isDoctorView && onSetFollowUpDate && (
+              <div
+                className="cal-doctor-followup-box"
+                style={{
+                  background: "#f0f9ff",
+                  border: "1.5px solid #bae6fd",
+                  borderRadius: "12px",
+                  padding: "12px",
+                  marginBottom: "14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "11.5px", fontWeight: "800", color: "#0369a1" }}>
+                    👨‍⚕️ Doctor Milestone Control
+                  </span>
+                  {isSelectedDateNextFollowUp && (
+                    <span style={{ fontSize: "10.5px", fontWeight: "800", color: "#0284c7", background: "#e0f2fe", padding: "2px 8px", borderRadius: "999px" }}>
+                      Active Target Follow-Up
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSetDoctorFollowUp(selectedDateStr)}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    background: isSelectedDateNextFollowUp ? "#e0f2fe" : "linear-gradient(135deg, #0284c7, #0369a1)",
+                    color: isSelectedDateNextFollowUp ? "#0369a1" : "#ffffff",
+                    border: isSelectedDateNextFollowUp ? "1.5px solid #38bdf8" : "none",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "12.5px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    boxShadow: isSelectedDateNextFollowUp ? "none" : "0 2px 8px rgba(2, 132, 199, 0.25)"
+                  }}
+                >
+                  <span>🔔 {isSelectedDateNextFollowUp ? `Current Follow-Up (${selectedDateStr})` : `Set ${selectedDateStr} as Next Follow-Up`}</span>
+                </button>
+              </div>
+            )}
+
             {/* If this selected day is flagged as a missed day */}
             {selectedEvents.missed && selectedEvents.visits.length === 0 && (
               <div className="drilldown-missed-alert-card">

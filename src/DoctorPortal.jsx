@@ -1134,9 +1134,22 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
-  const handleToggleDailyCourse = async (enable, duration = "Ongoing Daily Rehab") => {
+  const handleToggleDailyCourse = async (enable, duration = "Ongoing Daily Rehab", totalDays = 30) => {
     if (!selectedPatient) return;
     try {
+      const now = new Date();
+      const startD = String(now.getDate()).padStart(2, "0");
+      const startM = String(now.getMonth() + 1).padStart(2, "0");
+      const startY = now.getFullYear();
+      const startFormatted = `${startD}/${startM}/${startY}`;
+
+      const endDateObj = new Date();
+      endDateObj.setDate(endDateObj.getDate() + (totalDays || 30));
+      const endD = String(endDateObj.getDate()).padStart(2, "0");
+      const endM = String(endDateObj.getMonth() + 1).padStart(2, "0");
+      const endY = endDateObj.getFullYear();
+      const endFormatted = `${endD}/${endM}/${endY}`;
+
       const nextDate = new Date();
       nextDate.setDate(nextDate.getDate() + 1);
       if (nextDate.getDay() === 0) nextDate.setDate(nextDate.getDate() + 1); // skip Sunday
@@ -1148,7 +1161,9 @@ export default function DoctorPortal({ onClose, themeProps }) {
       const updates = {
         isDailyCourse: enable,
         dailyCourseDuration: enable ? duration : "",
-        dailyCourseStartDate: enable ? (selectedPatient.dailyCourseStartDate || new Date().toISOString().slice(0, 10)) : "",
+        dailyCourseStartDate: enable ? (selectedPatient.dailyCourseStartDate || startFormatted) : "",
+        dailyCourseEndDate: enable ? endFormatted : "",
+        dailyCourseTotalDays: enable ? totalDays : 0,
         followUpDate: enable ? tomorrowStr : selectedPatient.followUpDate,
         follow_up_date: enable ? tomorrowStr : (selectedPatient.follow_up_date || selectedPatient.followUpDate)
       };
@@ -1161,7 +1176,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
 
       setLeadActionToast(
         enable 
-          ? `🔄 Daily Therapy Protocol active for ${selectedPatient.name}! Next follow-up auto-set to ${tomorrowStr}.`
+          ? `🔄 Daily Therapy Protocol active for ${selectedPatient.name}! Reserved from ${updates.dailyCourseStartDate} to ${updates.dailyCourseEndDate} (${duration}).`
           : `⏹️ Daily Course paused for ${selectedPatient.name}.`
       );
       setTimeout(() => setLeadActionToast(""), 3500);
@@ -2068,21 +2083,26 @@ _(Saved in patient clinic records)_`;
             <span style={{ fontSize: "17px" }}>⭐</span>
             <span>
               <strong>Post-Consultation Review:</strong> 2 hours completed for{" "}
-              <strong>{readyReviews[0].patientName}</strong> ({readyReviews[0].phone}). Send feedback message?
+              <strong>{readyReviews[0].patientName}</strong>{" "}
+              <span style={{ background: "#ffffff", color: "#064e3b", padding: "2px 8px", borderRadius: "6px", fontWeight: "800", marginLeft: "4px" }}>
+                📞 +91 {readyReviews[0].phone}
+              </span>
+              . Send feedback message?
             </span>
           </div>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <button
-              className="primary-btn"
+              type="button"
               style={{
-                background: "#ffffff",
-                color: "#065f46",
+                background: "#ffffff !important",
+                color: "#064e3b !important",
                 fontWeight: "800",
-                padding: "6px 14px",
-                fontSize: "12px",
-                borderRadius: "6px",
+                padding: "7px 16px",
+                fontSize: "12.5px",
+                borderRadius: "7px",
                 border: "none",
-                cursor: "pointer"
+                cursor: "pointer",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.15)"
               }}
               onClick={() => handleSendReviewWhatsApp(readyReviews[0])}
             >
@@ -3611,6 +3631,71 @@ _(Saved in patient clinic records)_`;
 
                         {/* Action Buttons Toolbar */}
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "auto", paddingTop: "10px", borderTop: "1px solid var(--border-color, #f1f5f9)" }}>
+                          {e.status === "Pending Approval" && (
+                            <div style={{ width: "100%", display: "flex", gap: "6px", marginBottom: "4px" }}>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await api.updateEnquiryStatus(e.id, "Approved");
+                                  setEnquiries(prev => prev.map(item => item.id === e.id ? { ...item, status: "Approved" } : item));
+                                  setLeadActionToast(`✅ Appointment booking approved for ${patientName}!`);
+                                  setTimeout(() => setLeadActionToast(""), 3500);
+                                  if (cleanPhone) {
+                                    window.open(
+                                      `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
+                                        `Namaste ${patientName} ji, your physiotherapy appointment on ${cleanDateOnly(e.appointmentDate) || "requested date"} has been APPROVED by Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center.`
+                                      )}`,
+                                      "_blank"
+                                    );
+                                  }
+                                }}
+                                style={{
+                                  flex: 1,
+                                  background: "#16a34a",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "7px",
+                                  padding: "7px 10px",
+                                  fontSize: "12px",
+                                  fontWeight: "800",
+                                  cursor: "pointer",
+                                  boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)"
+                                }}
+                              >
+                                ✅ Approve Slot
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await api.updateEnquiryStatus(e.id, "Rejected");
+                                  setEnquiries(prev => prev.map(item => item.id === e.id ? { ...item, status: "Rejected" } : item));
+                                  setLeadActionToast(`❌ Appointment marked Doctor Unavailable.`);
+                                  setTimeout(() => setLeadActionToast(""), 3500);
+                                  if (cleanPhone) {
+                                    window.open(
+                                      `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
+                                        `Namaste ${patientName} ji, Dr. Satyam Vishwakarma will NOT be available on ${cleanDateOnly(e.appointmentDate) || "requested date"}. Please choose another date or contact us. Thank you.`
+                                      )}`,
+                                      "_blank"
+                                    );
+                                  }
+                                }}
+                                style={{
+                                  flex: 1,
+                                  background: "#ef4444",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "7px",
+                                  padding: "7px 10px",
+                                  fontSize: "12px",
+                                  fontWeight: "800",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                ❌ Reject (Unavailable)
+                              </button>
+                            </div>
+                          )}
                           {(() => {
                             const matchedPatient = patients.find(
                               (p) =>
@@ -4854,7 +4939,7 @@ _(Saved in patient clinic records)_`;
                 )}
               </div>
 
-              {/* 4. DAILY REHABILITATION COURSE PROTOCOL CARD */}
+              {/* 4. DAILY REHABILITATION COURSE PROTOCOL & CONSECUTIVE FOLLOW-UP CARD */}
               <div
                 className="daily-course-control-card"
                 style={{
@@ -4863,7 +4948,7 @@ _(Saved in patient clinic records)_`;
                     : "linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(248, 250, 252, 0.9))",
                   border: selectedPatient.isDailyCourse ? "1.5px solid #10b981" : "1.5px solid #cbd5e1",
                   borderRadius: "14px",
-                  padding: "14px 16px",
+                  padding: "16px 18px",
                   marginBottom: "16px"
                 }}
               >
@@ -4890,68 +4975,166 @@ _(Saved in patient clinic records)_`;
                       )}
                     </div>
                     <h4 style={{ margin: "6px 0 2px 0", color: "#0f172a", fontSize: "15px", fontWeight: "800" }}>
-                      Auto-Consecutive Follow-Up &amp; Attendance Adherence Tracking
+                      Auto-Consecutive Daily Follow-Ups &amp; Attendance Tracking
                     </h4>
-                    <p style={{ margin: 0, color: "#475569", fontSize: "12.5px", lineHeight: "1.4" }}>
+                    <p style={{ margin: "0 0 8px 0", color: "#475569", fontSize: "12.5px", lineHeight: "1.4" }}>
                       {selectedPatient.isDailyCourse
-                        ? "Every recorded visit automatically sets tomorrow as the next follow-up. Skipped days record as Missed Day."
-                        : "For patients needing regular consecutive therapy (e.g. 7 days, 15 days, 1 month, or ongoing). Auto-schedules next-day follow-ups."}
+                        ? "Patient comes per day. All consecutive daily slots are reserved on the calendar. Skipped days automatically flag as Missed."
+                        : "For patients coming daily for therapy. Select duration below to auto-reserve all consecutive calendar slots."}
                     </p>
-                  </div>
 
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                    {selectedPatient.isDailyCourse ? (
-                      <button
-                        type="button"
-                        onClick={() => handleToggleDailyCourse(false)}
+                    {selectedPatient.isDailyCourse && (
+                      <div
                         style={{
-                          background: "#fee2e2",
-                          color: "#b91c1c",
-                          border: "1px solid #fca5a5",
-                          padding: "8px 14px",
+                          background: "#ffffff",
+                          border: "1px solid #a7f3d0",
                           borderRadius: "8px",
+                          padding: "8px 12px",
                           fontSize: "12.5px",
-                          fontWeight: "700",
-                          cursor: "pointer"
+                          color: "#065f46",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          flexWrap: "wrap"
                         }}
                       >
-                        ⏹️ Pause / End Daily Course
-                      </button>
+                        <span>
+                          📅 <strong>Course Period:</strong> From <strong>{selectedPatient.dailyCourseStartDate || "Start Date"}</strong> to <strong>{selectedPatient.dailyCourseEndDate || "End Date"}</strong>
+                        </span>
+                        <span>
+                          ✅ <strong>Attended:</strong> {patientVisits.length} visits
+                        </span>
+                        <span>
+                          ⏳ <strong>Remaining:</strong> {Math.max(0, (selectedPatient.dailyCourseTotalDays || 10) - patientVisits.length)} sessions
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                    {selectedPatient.isDailyCourse ? (
+                      <>
+                        <a
+                          href={`https://wa.me/91${String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
+                            `Namaste ${selectedPatient.name} ji, Dr. Satyam Vishwakarma has prescribed your daily physical therapy protocol from ${selectedPatient.dailyCourseStartDate || "today"} to ${selectedPatient.dailyCourseEndDate || "completion"} (${selectedPatient.dailyCourseDuration || "Daily Sessions"}). All daily slots are reserved for you at Vindhy Physio & Rehab Center. Consistent daily attendance is crucial for your full recovery!`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            background: "#25d366",
+                            color: "#ffffff",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            boxShadow: "0 2px 6px rgba(37, 211, 102, 0.3)"
+                          }}
+                        >
+                          💬 Send Schedule on WhatsApp
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDailyCourse(false)}
+                          style={{
+                            background: "#fee2e2",
+                            color: "#b91c1c",
+                            border: "1px solid #fca5a5",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            cursor: "pointer"
+                          }}
+                        >
+                          ⏹️ End Course
+                        </button>
+                      </>
                     ) : (
                       <>
                         <button
                           type="button"
-                          onClick={() => handleToggleDailyCourse(true, "Ongoing Daily Rehab")}
+                          onClick={() => handleToggleDailyCourse(true, "5 Days Therapy", 5)}
+                          style={{
+                            background: "#f1f5f9",
+                            color: "#0f172a",
+                            border: "1px solid #cbd5e1",
+                            padding: "7px 10px",
+                            borderRadius: "7px",
+                            fontSize: "11.5px",
+                            fontWeight: "700",
+                            cursor: "pointer"
+                          }}
+                        >
+                          ⚡ 5 Days
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDailyCourse(true, "7 Days (1 Week)", 7)}
+                          style={{
+                            background: "#f1f5f9",
+                            color: "#0f172a",
+                            border: "1px solid #cbd5e1",
+                            padding: "7px 10px",
+                            borderRadius: "7px",
+                            fontSize: "11.5px",
+                            fontWeight: "700",
+                            cursor: "pointer"
+                          }}
+                        >
+                          ⚡ 7 Days
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDailyCourse(true, "10 Days Plan", 10)}
                           style={{
                             background: "#0284c7",
                             color: "#ffffff",
                             border: "none",
-                            padding: "8px 12px",
-                            borderRadius: "8px",
-                            fontSize: "12px",
+                            padding: "7px 10px",
+                            borderRadius: "7px",
+                            fontSize: "11.5px",
                             fontWeight: "800",
-                            cursor: "pointer",
-                            boxShadow: "0 2px 6px rgba(2, 132, 199, 0.25)"
+                            cursor: "pointer"
                           }}
                         >
-                          ⚡ Start Ongoing Daily Rehab
+                          ⚡ 10 Days
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleToggleDailyCourse(true, "1 Month (30 Days)")}
+                          onClick={() => handleToggleDailyCourse(true, "15 Days Course", 15)}
+                          style={{
+                            background: "#0284c7",
+                            color: "#ffffff",
+                            border: "none",
+                            padding: "7px 10px",
+                            borderRadius: "7px",
+                            fontSize: "11.5px",
+                            fontWeight: "800",
+                            cursor: "pointer"
+                          }}
+                        >
+                          ⚡ 15 Days
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDailyCourse(true, "1 Month (30 Days)", 30)}
                           style={{
                             background: "#10b981",
                             color: "#ffffff",
                             border: "none",
-                            padding: "8px 12px",
-                            borderRadius: "8px",
-                            fontSize: "12px",
+                            padding: "7px 10px",
+                            borderRadius: "7px",
+                            fontSize: "11.5px",
                             fontWeight: "800",
                             cursor: "pointer",
                             boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)"
                           }}
                         >
-                          📅 1 Month (30 Days) Course
+                          📅 30 Days
                         </button>
                       </>
                     )}
@@ -4959,7 +5142,177 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              {/* 5. CHRONOLOGICAL VISITS TIMELINE, CALENDAR & QUICK FOLLOW-UP FORM */}
+              {/* Patient Requested Appointments & Online Bookings */}
+              {(() => {
+                const cleanSelectedPhone = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
+                const patientApts = (enquiries || []).filter(
+                  (a) =>
+                    a.linkedPatientId === selectedPatient.patientId ||
+                    a.patientId === selectedPatient.patientId ||
+                    (cleanSelectedPhone && a.phone && String(a.phone).replace(/\D/g, "").slice(-10) === cleanSelectedPhone)
+                );
+                if (patientApts.length === 0) return null;
+                return (
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1.5px solid #cbd5e1",
+                      borderRadius: "14px",
+                      padding: "14px 16px",
+                      marginBottom: "16px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "6px" }}>
+                      <strong style={{ fontSize: "14px", color: "#0f172a" }}>
+                        🗓️ Online Visit Bookings &amp; Appointment Requests ({patientApts.length})
+                      </strong>
+                      <span style={{ fontSize: "12px", color: "#64748b" }}>
+                        Approve or Reject patient requests
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {patientApts.map((apt, idx) => {
+                        const aptId = apt.id || apt.enquiryId || `apt-${idx}`;
+                        const aptDate = cleanDateOnly(apt.appointmentDate || apt.date);
+                        const aptTime = cleanTimeOnly(apt.time) || "10:00 AM";
+                        const isApproved = apt.status === "Approved" || apt.status === "Confirmed";
+                        const isRejected = apt.status === "Rejected";
+                        const isPending = !isApproved && !isRejected;
+
+                        return (
+                          <div
+                            key={aptId}
+                            style={{
+                              background: isApproved ? "#f0fdf4" : isRejected ? "#fef2f2" : "#f8fafc",
+                              border: isApproved ? "1.5px solid #86efac" : isRejected ? "1.5px solid #fca5a5" : "1.5px solid #cbd5e1",
+                              borderRadius: "10px",
+                              padding: "10px 14px",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                              gap: "8px"
+                            }}
+                          >
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <strong style={{ fontSize: "13.5px", color: "#0f172a" }}>
+                                  📅 {aptDate} • ⏰ {aptTime}
+                                </strong>
+                                <span
+                                  style={{
+                                    fontSize: "11px",
+                                    fontWeight: "800",
+                                    padding: "2px 8px",
+                                    borderRadius: "20px",
+                                    background: isApproved ? "#dcfce7" : isRejected ? "#fee2e2" : "#fef3c7",
+                                    color: isApproved ? "#15803d" : isRejected ? "#b91c1c" : "#b45309"
+                                  }}
+                                >
+                                  {isApproved ? "✅ Approved" : isRejected ? "❌ Doctor Not Available" : "⏳ Pending Doctor Confirmation"}
+                                </span>
+                              </div>
+                              <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#475569" }}>
+                                <strong>Reason:</strong> {apt.service || apt.reason || "Rehabilitation Follow-up"}
+                              </p>
+                            </div>
+
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                              {isPending && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      await api.updateEnquiryStatus(aptId, "Approved", selectedPatient.patientId);
+                                      setEnquiries((prev) => prev.map((e) => (String(e.id) === String(aptId) ? { ...e, status: "Approved" } : e)));
+                                      setLeadActionToast(`✅ Appointment on ${aptDate} approved for ${selectedPatient.name}!`);
+                                      setTimeout(() => setLeadActionToast(""), 3500);
+                                      const phone10 = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
+                                      window.open(
+                                        `https://wa.me/91${phone10}?text=${encodeURIComponent(
+                                          `Namaste ${selectedPatient.name} ji, your physiotherapy appointment on ${aptDate} at ${aptTime} has been APPROVED by Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center. See you then!`
+                                        )}`,
+                                        "_blank"
+                                      );
+                                    }}
+                                    style={{
+                                      background: "#16a34a",
+                                      color: "#ffffff",
+                                      border: "none",
+                                      padding: "6px 12px",
+                                      borderRadius: "7px",
+                                      fontSize: "12px",
+                                      fontWeight: "800",
+                                      cursor: "pointer",
+                                      boxShadow: "0 2px 6px rgba(22, 163, 74, 0.3)"
+                                    }}
+                                  >
+                                    ✅ Approve &amp; WhatsApp
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      await api.updateEnquiryStatus(aptId, "Rejected", selectedPatient.patientId);
+                                      setEnquiries((prev) => prev.map((e) => (String(e.id) === String(aptId) ? { ...e, status: "Rejected" } : e)));
+                                      setLeadActionToast(`❌ Appointment on ${aptDate} marked Doctor Unavailable.`);
+                                      setTimeout(() => setLeadActionToast(""), 3500);
+                                      const phone10 = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
+                                      window.open(
+                                        `https://wa.me/91${phone10}?text=${encodeURIComponent(
+                                          `Namaste ${selectedPatient.name} ji, Dr. Satyam Vishwakarma will NOT be available on ${aptDate} at ${aptTime}. Please choose another date or reply here to reschedule. Thank you.`
+                                        )}`,
+                                        "_blank"
+                                      );
+                                    }}
+                                    style={{
+                                      background: "#ef4444",
+                                      color: "#ffffff",
+                                      border: "none",
+                                      padding: "6px 12px",
+                                      borderRadius: "7px",
+                                      fontSize: "12px",
+                                      fontWeight: "800",
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    ❌ Reject (Unavailable)
+                                  </button>
+                                </>
+                              )}
+                              {isApproved && (
+                                <a
+                                  href={`https://wa.me/91${String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
+                                    `Namaste ${selectedPatient.name} ji, reminder for your approved physiotherapy visit on ${aptDate} at ${aptTime} with Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center.`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    background: "#25d366",
+                                    color: "#ffffff",
+                                    fontSize: "12px",
+                                    fontWeight: "800",
+                                    padding: "6px 12px",
+                                    borderRadius: "7px",
+                                    textDecoration: "none"
+                                  }}
+                                >
+                                  💬 Message Patient
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* 5. CHRONOLOGICAL VISITS TIMELINE & CALENDAR */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   <button
@@ -4968,10 +5321,10 @@ _(Saved in patient clinic records)_`;
                       background: doctorProfileVisitMode === "calendar" ? "var(--stitch-blue, #2563EB)" : "rgba(15, 23, 42, 0.06)",
                       color: doctorProfileVisitMode === "calendar" ? "#ffffff" : "#0f172a",
                       border: "none",
-                      padding: "6px 14px",
+                      padding: "8px 16px",
                       borderRadius: "8px",
-                      fontSize: "12px",
-                      fontWeight: "700",
+                      fontSize: "12.5px",
+                      fontWeight: "800",
                       cursor: "pointer",
                       boxShadow: doctorProfileVisitMode === "calendar" ? "0 2px 8px rgba(37,99,235,0.3)" : "none"
                     }}
@@ -4982,30 +5335,13 @@ _(Saved in patient clinic records)_`;
                   <button
                     type="button"
                     style={{
-                      background: doctorProfileVisitMode === "form" ? "var(--stitch-blue, #2563EB)" : "rgba(15, 23, 42, 0.06)",
-                      color: doctorProfileVisitMode === "form" ? "#ffffff" : "#0f172a",
-                      border: "none",
-                      padding: "6px 14px",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      cursor: "pointer",
-                      boxShadow: doctorProfileVisitMode === "form" ? "0 2px 8px rgba(37,99,235,0.3)" : "none"
-                    }}
-                    onClick={() => setDoctorProfileVisitMode("form")}
-                  >
-                    ✍️ Quick Follow-Up Form
-                  </button>
-                  <button
-                    type="button"
-                    style={{
                       background: doctorProfileVisitMode === "timeline" ? "var(--stitch-blue, #2563EB)" : "rgba(15, 23, 42, 0.06)",
                       color: doctorProfileVisitMode === "timeline" ? "#ffffff" : "#0f172a",
                       border: "none",
-                      padding: "6px 14px",
+                      padding: "8px 16px",
                       borderRadius: "8px",
-                      fontSize: "12px",
-                      fontWeight: "700",
+                      fontSize: "12.5px",
+                      fontWeight: "800",
                       cursor: "pointer",
                       boxShadow: doctorProfileVisitMode === "timeline" ? "0 2px 8px rgba(37,99,235,0.3)" : "none"
                     }}
@@ -5021,7 +5357,7 @@ _(Saved in patient clinic records)_`;
                     background: "#ecfdf5",
                     color: "#059669",
                     border: "1px solid #86efac",
-                    padding: "6px 12px",
+                    padding: "7px 14px",
                     borderRadius: "8px",
                     fontSize: "12px",
                     fontWeight: "800",
@@ -5035,6 +5371,11 @@ _(Saved in patient clinic records)_`;
               {doctorProfileVisitMode === "calendar" && (
                 <PatientVisitCalendar
                   visits={patientVisits}
+                  appointments={enquiries.filter(
+                    (e) =>
+                      e.linkedPatientId === selectedPatient.patientId ||
+                      (e.phone && selectedPatient.phone && String(e.phone).replace(/\D/g, "").slice(-10) === String(selectedPatient.phone).replace(/\D/g, "").slice(-10))
+                  )}
                   patientName={selectedPatient.name}
                   patientId={selectedPatient.patientId}
                   phone={selectedPatient.phone}
@@ -5042,163 +5383,11 @@ _(Saved in patient clinic records)_`;
                   isDailyCourse={!!selectedPatient.isDailyCourse}
                   dailyCourseDuration={selectedPatient.dailyCourseDuration || ""}
                   dailyCourseStartDate={selectedPatient.dailyCourseStartDate || selectedPatient.enrollmentDate || ""}
+                  dailyCourseEndDate={selectedPatient.dailyCourseEndDate || ""}
                   onSetFollowUpDate={handleSetPatientFollowUp}
                   onSelectVisit={(v) => handleFinalizeAndIssueReceipt(selectedPatient, v)}
                   onScheduleAppointment={() => openQuickDailyVisitModal(selectedPatient)}
                 />
-              )}
-
-              {doctorProfileVisitMode === "form" && (
-                <div
-                  className="quick-followup-form-card"
-                  style={{
-                    background: "#ffffff",
-                    border: "1.5px solid #cbd5e1",
-                    borderRadius: "14px",
-                    padding: "18px 20px",
-                    boxShadow: "0 4px 14px rgba(0,0,0,0.05)",
-                    marginBottom: "16px"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "800", color: "#0f172a" }}>
-                        ✍️ Schedule Next Follow-Up Milestone
-                      </h4>
-                      <p style={{ margin: "2px 0 0 0", fontSize: "12.5px", color: "#64748b" }}>
-                        Easily schedule the next rehabilitation session date for {selectedPatient.name}.
-                      </p>
-                    </div>
-                    {selectedPatient.followUpDate ? (
-                      <span style={{ fontSize: "12px", fontWeight: "800", background: "#dcfce7", color: "#15803d", padding: "4px 10px", borderRadius: "999px", border: "1px solid #86efac" }}>
-                        🔔 Active Milestone: {cleanDateOnly(selectedPatient.followUpDate)}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: "12px", fontWeight: "700", background: "#f1f5f9", color: "#64748b", padding: "4px 10px", borderRadius: "999px" }}>
-                        No Upcoming Milestone Set
-                      </span>
-                    )}
-                  </div>
-
-                  {/* 1-Tap Presets */}
-                  <div style={{ marginBottom: "16px", background: "#f8fafc", padding: "12px 14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                    <span style={{ fontSize: "12px", fontWeight: "800", color: "#0284c7", display: "block", marginBottom: "8px" }}>
-                      ⚡ 1-Tap Preset Milestones (Click to set immediately):
-                    </span>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      {[
-                        { label: "⚡ Tomorrow (Daily)", days: 1 },
-                        { label: "📅 In 2 Days", days: 2 },
-                        { label: "🗓️ In 1 Week (7 Days)", days: 7 },
-                        { label: "📆 In 15 Days", days: 15 },
-                        { label: "🗓️ 1 Month (30 Days)", days: 30 }
-                      ].map((item) => {
-                        const targetDt = new Date();
-                        targetDt.setDate(targetDt.getDate() + item.days);
-                        if (targetDt.getDay() === 0 && item.days === 1) targetDt.setDate(targetDt.getDate() + 1); // skip Sunday
-                        const y = targetDt.getFullYear();
-                        const m = String(targetDt.getMonth() + 1).padStart(2, "0");
-                        const d = String(targetDt.getDate()).padStart(2, "0");
-                        const dateKey = `${d}/${m}/${y}`;
-                        const isCurrent = cleanDateOnly(selectedPatient.followUpDate) === dateKey;
-
-                        return (
-                          <button
-                            key={item.label}
-                            type="button"
-                            onClick={() => handleSetPatientFollowUp(dateKey)}
-                            style={{
-                              padding: "7px 12px",
-                              borderRadius: "7px",
-                              fontSize: "12px",
-                              fontWeight: "800",
-                              cursor: "pointer",
-                              border: isCurrent ? "1.5px solid #10b981" : "1px solid #cbd5e1",
-                              background: isCurrent ? "#ecfdf5" : "#ffffff",
-                              color: isCurrent ? "#059669" : "#0f172a",
-                              boxShadow: isCurrent ? "0 2px 6px rgba(16, 185, 129, 0.2)" : "0 1px 3px rgba(0,0,0,0.03)"
-                            }}
-                          >
-                            {item.label} ({dateKey})
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Manual Date Input & WhatsApp Confirm */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", alignItems: "flex-end" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12.5px", fontWeight: "700", color: "#0f172a", marginBottom: "4px" }}>
-                        Or Pick Specific Date
-                      </label>
-                      <input
-                        type="date"
-                        value={manualFollowUpDate}
-                        onChange={(e) => setManualFollowUpDate(e.target.value)}
-                        style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1.5px solid #cbd5e1", boxSizing: "border-box" }}
-                      />
-                    </div>
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!manualFollowUpDate) {
-                            alert("Please select a date first");
-                            return;
-                          }
-                          handleSetPatientFollowUp(cleanDateOnly(manualFollowUpDate));
-                          setManualFollowUpDate("");
-                        }}
-                        style={{
-                          width: "100%",
-                          minHeight: "42px",
-                          padding: "10px 16px",
-                          background: "linear-gradient(135deg, #0284c7, #0369a1)",
-                          color: "#ffffff",
-                          border: "none",
-                          borderRadius: "8px",
-                          fontWeight: "800",
-                          fontSize: "13px",
-                          cursor: "pointer",
-                          boxShadow: "0 2px 8px rgba(2, 132, 199, 0.3)"
-                        }}
-                      >
-                        🔔 Save Custom Follow-Up Date
-                      </button>
-                    </div>
-                    <div>
-                      <a
-                        href={`https://wa.me/91${String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
-                          `Namaste ${selectedPatient.name} ji, Dr. Satyam Vishwakarma has scheduled your next physiotherapy follow-up on ${cleanDateOnly(selectedPatient.followUpDate || "upcoming date")}. Please arrive at Vindhy Physio & Rehab Center on time for optimal recovery.`
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          width: "100%",
-                          minHeight: "42px",
-                          padding: "10px 16px",
-                          background: "#25d366",
-                          color: "#ffffff",
-                          border: "none",
-                          borderRadius: "8px",
-                          fontWeight: "800",
-                          fontSize: "13px",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "6px",
-                          textDecoration: "none",
-                          boxSizing: "border-box",
-                          boxShadow: "0 2px 8px rgba(37, 211, 102, 0.3)"
-                        }}
-                      >
-                        💬 Confirm on WhatsApp
-                      </a>
-                    </div>
-                  </div>
-                </div>
               )}
 
               {doctorProfileVisitMode === "timeline" && (

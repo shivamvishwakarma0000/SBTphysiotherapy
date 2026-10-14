@@ -1755,7 +1755,7 @@ export const patientApi = {
       date: cleanDate,
       time: cleanTime,
       appointmentDate: cleanDate,
-      status: "Scheduled",
+      status: payload.status || "Pending Approval",
       type: "Follow-up",
       createdAt: new Date().toISOString()
     };

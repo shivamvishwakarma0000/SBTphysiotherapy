@@ -919,108 +919,6 @@ export default function PatientPortal({ onClose, themeProps }) {
                 <span className="card-caption">Call & WhatsApp</span>
               </button>
             </div>
-
-            {/* 3.1 PROMINENT INTERACTIVE CLINICAL REHABILITATION CALENDAR (User Dashboard Feature) */}
-            <div className="dashboard-calendar-card" style={{ marginTop: "18px", marginBottom: "20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "8px" }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "800", color: "#f8fafc" }}>
-                    📅 My Rehabilitation Calendar &amp; Attendance
-                  </h3>
-                  <p style={{ margin: "3px 0 0 0", fontSize: "12.5px", color: "#94a3b8" }}>
-                    Track your clinic visits, missed therapy sessions &amp; upcoming follow-ups
-                  </p>
-                </div>
-                <button
-                  className="view-all-link"
-                  onClick={() => setActiveTab("visits")}
-                  style={{
-                    background: "rgba(37, 99, 235, 0.12)",
-                    border: "1px solid rgba(37, 99, 235, 0.3)",
-                    color: "#60a5fa",
-                    padding: "5px 12px",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    cursor: "pointer"
-                  }}
-                >
-                  Full Visits Timeline →
-                </button>
-              </div>
-
-              <PatientVisitCalendar
-                visits={recordsData?.visits || []}
-                appointments={recordsData?.appointments || []}
-                patientName={patientProfile?.name}
-                patientId={patientProfile?.patientId}
-                phone={patientProfile?.phone}
-                isDailyCourse={!!patientProfile?.isDailyCourse}
-                dailyCourseDuration={patientProfile?.dailyCourseDuration || ""}
-                dailyCourseStartDate={patientProfile?.dailyCourseStartDate || patientProfile?.enrollmentDate || ""}
-                onSelectVisit={(v) => setPreviewReceipt(makeReceiptObj(v))}
-                onScheduleAppointment={() => setActiveTab("appointments")}
-                onSaveAppointment={async (payload) => {
-                  await patientApi.scheduleAppointment(payload);
-                  await loadPatientData();
-                }}
-              />
-            </div>
-
-            {/* 4. Desktop Only: Recent Visits Timeline */}
-            <div className="recent-visits-section compact-preview desktop-only-widget">
-              <div className="section-header-flex">
-                <h3>Recent Visit History</h3>
-                <button className="view-all-link" onClick={() => setActiveTab("visits")}>
-                  View All ({recordsData?.visits?.length || 0}) →
-                </button>
-              </div>
-
-              {(recordsData?.visits?.length || 0) === 0 ? (
-                <div className="empty-state-box">
-                  <span>🩺</span>
-                  <p>Your visit history will appear here following your clinic consultation.</p>
-                </div>
-              ) : (
-                <div className="timeline-cards-list">
-                  {(recordsData?.visits || []).slice(0, 2).map((v) => {
-                    const receiptObj = makeReceiptObj(v);
-                    return (
-                      <div className="patient-visit-card" key={v.visitId}>
-                        <div className="visit-card-head">
-                          <div className="head-left">
-                            <span className="visit-number-badge">Visit #{v.visitNumber || 1}</span>
-                            <span className="visit-date-str">
-                              {cleanDateOnly(v.date)} {v.time ? `• ${v.time}` : ""}
-                            </span>
-                          </div>
-                          <button
-                            className="receipt-download-btn-sm"
-                            onClick={() => downloadReceiptPDF(receiptObj)}
-                            title="Download PDF Receipt"
-                          >
-                            📥 PDF Receipt
-                          </button>
-                        </div>
-
-                        <div className="visit-card-content">
-                          <div className="row-item">
-                            <span className="item-label">Diagnosis:</span>
-                            <strong className="item-value">{v.diagnosis || "Under Evaluation"}</strong>
-                          </div>
-                          {v.treatmentNotes && (
-                            <div className="row-item">
-                              <span className="item-label">Treatment:</span>
-                              <span className="item-value">{v.treatmentNotes}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
@@ -1151,45 +1049,80 @@ export default function PatientPortal({ onClose, themeProps }) {
               <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Interactive physical therapy calendar, session milestones, and doctor recommendations.</p>
             </div>
 
-            {/* View Mode Switcher */}
-            <div style={{ display: "flex", gap: "10px", margin: "14px 0", flexWrap: "wrap" }}>
+            {/* View Mode Switcher: Full Width 2-Column Segmented Bar */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "10px",
+                margin: "14px 0 16px 0",
+                width: "100%",
+                boxSizing: "border-box"
+              }}
+            >
               <button
                 type="button"
                 className={`secondary-btn ${visitViewMode === "calendar" ? "active" : ""}`}
                 style={{
-                  background: visitViewMode === "calendar" ? "var(--stitch-blue, #2563EB)" : "rgba(255,255,255,0.12)",
-                  color: "#ffffff",
-                  border: visitViewMode === "calendar" ? "1px solid #60a5fa" : "1px solid rgba(255,255,255,0.25)",
-                  borderRadius: "10px",
-                  padding: "8px 18px",
-                  fontWeight: "700",
+                  background:
+                    visitViewMode === "calendar"
+                      ? "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)"
+                      : "#ffffff",
+                  color: visitViewMode === "calendar" ? "#ffffff" : "#1e293b",
+                  border: visitViewMode === "calendar" ? "2px solid #60a5fa" : "1.5px solid #cbd5e1",
+                  borderRadius: "12px",
+                  padding: "12px 8px",
+                  fontWeight: "800",
                   fontSize: "13px",
                   cursor: "pointer",
-                  boxShadow: visitViewMode === "calendar" ? "0 2px 10px rgba(37,99,235,0.4)" : "none",
-                  transition: "all 0.15s ease"
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  textAlign: "center",
+                  width: "100%",
+                  boxShadow:
+                    visitViewMode === "calendar"
+                      ? "0 4px 14px rgba(37, 99, 235, 0.45)"
+                      : "0 2px 6px rgba(0, 0, 0, 0.05)",
+                  transition: "all 0.2s ease"
                 }}
                 onClick={() => setVisitViewMode("calendar")}
               >
-                📅 Interactive Calendar View
+                <span>📅</span>
+                <span>Interactive Calendar</span>
               </button>
               <button
                 type="button"
                 className={`secondary-btn ${visitViewMode === "timeline" ? "active" : ""}`}
                 style={{
-                  background: visitViewMode === "timeline" ? "var(--stitch-blue, #2563EB)" : "rgba(255,255,255,0.12)",
-                  color: "#ffffff",
-                  border: visitViewMode === "timeline" ? "1px solid #60a5fa" : "1px solid rgba(255,255,255,0.25)",
-                  borderRadius: "10px",
-                  padding: "8px 18px",
-                  fontWeight: "700",
+                  background:
+                    visitViewMode === "timeline"
+                      ? "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)"
+                      : "#ffffff",
+                  color: visitViewMode === "timeline" ? "#ffffff" : "#1e293b",
+                  border: visitViewMode === "timeline" ? "2px solid #5eead4" : "1.5px solid #cbd5e1",
+                  borderRadius: "12px",
+                  padding: "12px 8px",
+                  fontWeight: "800",
                   fontSize: "13px",
                   cursor: "pointer",
-                  boxShadow: visitViewMode === "timeline" ? "0 2px 10px rgba(37,99,235,0.4)" : "none",
-                  transition: "all 0.15s ease"
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  textAlign: "center",
+                  width: "100%",
+                  boxShadow:
+                    visitViewMode === "timeline"
+                      ? "0 4px 14px rgba(13, 148, 136, 0.45)"
+                      : "0 2px 6px rgba(0, 0, 0, 0.05)",
+                  transition: "all 0.2s ease"
                 }}
                 onClick={() => setVisitViewMode("timeline")}
               >
-                📋 Chronological Timeline List ({recordsData?.visits?.length || 0})
+                <span>📋</span>
+                <span>Timeline List ({recordsData?.visits?.length || 0})</span>
               </button>
             </div>
 
@@ -1203,6 +1136,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 isDailyCourse={!!patientProfile?.isDailyCourse}
                 dailyCourseDuration={patientProfile?.dailyCourseDuration || ""}
                 dailyCourseStartDate={patientProfile?.dailyCourseStartDate || patientProfile?.enrollmentDate || ""}
+                dailyCourseEndDate={patientProfile?.dailyCourseEndDate || ""}
                 onSelectVisit={(v) => setPreviewReceipt(makeReceiptObj(v))}
                 onScheduleAppointment={() => setActiveTab("appointments")}
                 onSaveAppointment={async (payload) => {

@@ -8506,12 +8506,15 @@ textarea:focus {
   /* Fill full vertical screen height evenly and stretch the 6 cards equally without excess dead space */
   .dashboard-pane.mobile-app-home-view,
   .dashboard-view.mobile-app-home-view {
-    flex: 1 1 auto !important;
+    height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+    overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: flex-start !important;
-    min-height: auto !important;
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
@@ -8601,27 +8604,29 @@ textarea:focus {
 
   /* 2. Six Prominent Touch Boxes (Full frame fit, rich proportions, captions visible) */
   .mobile-app-grid-6 {
-    flex: 1 1 auto !important;
+    flex: 1 1 0% !important;
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
-    grid-template-rows: repeat(3, auto) !important;
-    gap: clamp(10px, 2.8vw, 14px) !important;
-    padding: 0 14px calc(95px + env(safe-area-inset-bottom, 0px)) 14px !important;
-    margin-top: -6px !important;
+    grid-template-rows: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    padding: 6px 12px 10px 12px !important;
+    margin-top: 0 !important;
     position: relative !important;
     z-index: 10 !important;
     margin-bottom: 0 !important;
     width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
     box-sizing: border-box !important;
   }
 
   .mobile-app-card {
-    height: auto !important;
-    min-height: clamp(98px, 13.5vh, 112px) !important;
+    height: 100% !important;
+    min-height: 0 !important;
     background: #ffffff !important;
     border: 1.5px solid #cbd5e1 !important;
     border-radius: 16px !important;
-    padding: 12px 10px 10px 10px !important;
+    padding: 8px 6px !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -8712,16 +8717,23 @@ textarea:focus {
   }
 
   .mobile-app-grid-6 {
-    margin-top: -12px !important;
-    gap: 8px !important;
-    padding: 0 12px calc(100px + env(safe-area-inset-bottom, 0px)) 12px !important;
+    flex: 1 1 0% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-rows: repeat(3, 1fr) !important;
+    margin-top: 0 !important;
+    gap: 6px !important;
+    padding: 4px 10px 8px 10px !important;
     margin-bottom: 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
   }
 
   .mobile-app-card {
-    min-height: 92px !important;
-    padding: 10px 6px 10px 6px !important;
-    border-radius: 16px !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 6px 4px !important;
+    border-radius: 14px !important;
     gap: 2px !important;
   }
 
@@ -11914,7 +11926,8 @@ img, video, canvas, svg {
 
 .blinking-bell-icon {
   display: inline-block;
-  animation: bellRattle 2.2s infinite ease-in-out;
+  animation: none !important;
+  transform: none !important;
 }
 
 .followup-live-beacon {
@@ -11939,11 +11952,22 @@ img, video, canvas, svg {
   animation: liveDotPulse 1.2s infinite;
 }
 
-/* 3. CALENDAR DAY CELL ENHANCEMENTS */
+/* 3. CALENDAR DAY CELL ENHANCEMENTS: ONLY BORDER PULSES */
+@keyframes followupBorderPulse {
+  0%, 100% {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.6) !important;
+  }
+  50% {
+    border-color: #93c5fd !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25) !important;
+  }
+}
+
 .calendar-day-cell.is-next-followup {
-  border: 2px solid #2563eb !important;
+  border: 2.5px solid #2563eb !important;
   background: #f0f7ff !important;
-  animation: beaconBlinkGlow 2.5s infinite ease-in-out;
+  animation: followupBorderPulse 2s infinite ease-in-out !important;
   z-index: 3;
 }
 
@@ -12023,7 +12047,7 @@ img, video, canvas, svg {
 
 .spotlight-bell-beacon {
   font-size: 24px;
-  animation: bellRattle 2.4s infinite ease-in-out;
+  animation: none !important;
 }
 
 .spotlight-title {

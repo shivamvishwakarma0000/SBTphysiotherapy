@@ -150,18 +150,22 @@ export const buildReceiptPDF = (receipt) => {
   doc.text(receiptDocTitle, 105, 56, { align: "center" });
 
   // Summary Box
+  const receiptNo = visit.receiptNumber || `VPR-REC-${patient.patientId || "PT"}-V${visit.visitNumber || 1}-${cleanDateOnly(visit.date).replace(/[^0-9]/g, "")}`;
   doc.setFillColor(241, 245, 249);
   doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(15, 62, 180, 16, 2, 2, "FD");
+  doc.roundedRect(15, 61, 180, 19, 2, 2, "FD");
 
-  doc.setFontSize(9.5);
+  doc.setFontSize(9);
   doc.setTextColor(7, 25, 39);
-  doc.text(`Patient ID: ${patient.patientId}`, 22, 72);
-  doc.text(`Visit No: #${visit.visitNumber || 1} (Day ${visit.visitNumber || 1})`, 82, 72);
-  doc.text(`Date & Time: ${cleanDateOnly(visit.date)} ${visit.time || ""}`, 134, 72);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Receipt No: ${receiptNo}`, 20, 68);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Patient ID: ${patient.patientId}`, 130, 68);
+  doc.text(`Visit No: #${visit.visitNumber || 1} (Day ${visit.visitNumber || 1})`, 20, 75);
+  doc.text(`Date & Time: ${cleanDateOnly(visit.date)} ${visit.time || ""}`, 130, 75);
 
   // Demographics Section Box
-  doc.roundedRect(15, 86, 180, 130, 2, 2, "D");
+  doc.roundedRect(15, 84, 180, 132, 2, 2, "D");
 
   // Subsection 1: Patient Information
   doc.setFillColor(220, 240, 235);

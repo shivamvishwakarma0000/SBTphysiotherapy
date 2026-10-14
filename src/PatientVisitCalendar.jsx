@@ -26,6 +26,7 @@ export default function PatientVisitCalendar({
   isDailyCourse = false,
   dailyCourseDuration = "",
   dailyCourseStartDate = "",
+  dailyCourseEndDate = "",
   isDoctorView = false
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -129,6 +130,8 @@ export default function PatientVisitCalendar({
     setShowScheduleModal(true);
   };
 
+  const [lastBookedSession, setLastBookedSession] = useState(null);
+
   const handleScheduleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!schedDate) return;
@@ -136,15 +139,16 @@ export default function PatientVisitCalendar({
     try {
       const parts = schedDate.split("-");
       const ddmmyyyy = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : schedDate;
+      const initialStatus = isDoctorView ? "Approved" : "Pending Approval";
       const payload = {
         patientId,
         patientName,
         phone,
         appointmentDate: ddmmyyyy,
         time: schedTime,
-        reason: schedReason,
-        notes: schedNotes,
-        status: "Confirmed",
+        reason: schedReason || "Follow-up Rehabilitation Session",
+        notes: "",
+        status: initialStatus,
         requestedBy: isDoctorView ? "Doctor" : "Patient",
         createdAt: new Date().toISOString()
       };
@@ -157,11 +161,12 @@ export default function PatientVisitCalendar({
 
       setInternalAppointments((prev) => [...prev, payload]);
       setSelectedDateStr(ddmmyyyy);
-      setSchedSuccessMsg(`Appointment booked for ${ddmmyyyy} at ${schedTime}! Dr. Satyam Vishwakarma has been alerted.`);
-      setTimeout(() => {
-        setShowScheduleModal(false);
-        setSchedSuccessMsg("");
-      }, 2500);
+      setLastBookedSession({
+        date: ddmmyyyy,
+        time: schedTime,
+        reason: schedReason || "Follow-up Rehabilitation Session"
+      });
+      setSchedSuccessMsg(`Appointment requested for ${ddmmyyyy} at ${schedTime}!`);
     } catch (err) {
       console.error("Failed to book appointment:", err);
       alert("Error scheduling appointment: " + (err.message || "Please try again."));
@@ -412,6 +417,59 @@ export default function PatientVisitCalendar({
 
   const missingDaysCount = Object.keys(missingDaysMap).length;
 
+  const dailyCourseSpan = useMemo(() => {
+    if (!isDailyCourse) return null;
+    const sKey = parseToKey(dailyCourseStartDate) || todayKey;
+    const sObj = keyToDateObj(sKey) || new Date();
+
+    let eKey = parseToKey(dailyCourseEndDate);
+    let eObj = eKey ? keyToDateObj(eKey) : null;
+
+    if (!eObj || isNaN(eObj.getTime())) {
+      let days = 7;
+      const dur = String(dailyCourseDuration || "").toLowerCase();
+      if (dur.includes("5 day")) days = 5;
+      else if (dur.includes("7 day") || dur.includes("1 week")) days = 7;
+      else if (dur.includes("10 day")) days = 10;
+      else if (dur.includes("15 day")) days = 15;
+      else if (dur.includes("30 day") || dur.includes("1 month")) days = 30;
+
+      eObj = new Date(sObj.getTime());
+      eObj.setDate(eObj.getDate() + (days - 1));
+      const ed = String(eObj.getDate()).padStart(2, "0");
+      const em = String(eObj.getMonth() + 1).padStart(2, "0");
+      const ey = eObj.getFullYear();
+      eKey = `${ed}/${em}/${ey}`;
+    }
+
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    const totalDays = Math.max(1, Math.round((eObj.getTime() - sObj.getTime()) / ONE_DAY) + 1);
+
+    const reservedDates = [];
+    const reservedSet = new Set();
+    for (let t = sObj.getTime(); t <= eObj.getTime() + 1000; t += ONE_DAY) {
+      const cur = new Date(t);
+      const cd = String(cur.getDate()).padStart(2, "0");
+      const cm = String(cur.getMonth() + 1).padStart(2, "0");
+      const cy = cur.getFullYear();
+      const k = `${cd}/${cm}/${cy}`;
+      reservedDates.push(k);
+      reservedSet.add(k);
+    }
+
+    const attendedInCourse = reservedDates.filter(k => attendedDateSet.has(k)).length;
+
+    return {
+      startKey: sKey,
+      endKey: eKey,
+      totalDays,
+      reservedDates,
+      reservedSet,
+      attendedCount: attendedInCourse,
+      remainingCount: Math.max(0, totalDays - attendedInCourse)
+    };
+  }, [isDailyCourse, dailyCourseStartDate, dailyCourseEndDate, dailyCourseDuration, todayKey, attendedDateSet]);
+
   // Group visits, follow-ups, missing days, and appointments by DD/MM/YYYY date key
   const calendarMap = useMemo(() => {
     const map = {};
@@ -449,8 +507,21 @@ export default function PatientVisitCalendar({
       map[k].missed = missingDaysMap[k];
     });
 
+    // Attach reserved daily course slots
+    if (dailyCourseSpan) {
+      const todayTime = keyToDateObj(todayKey)?.getTime() || Date.now();
+      dailyCourseSpan.reservedDates.forEach((k) => {
+        if (!map[k]) map[k] = { visits: [], followUps: [], appointments: [], missed: null };
+        map[k].isDailyCourseSlot = true;
+        const kObj = keyToDateObj(k);
+        if (kObj && kObj.getTime() >= todayTime && map[k].visits.length === 0) {
+          map[k].dailySlot = true;
+        }
+      });
+    }
+
     return map;
-  }, [visits, appointments, missingDaysMap]);
+  }, [visits, appointments, missingDaysMap, dailyCourseSpan, todayKey]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -614,35 +685,60 @@ export default function PatientVisitCalendar({
       </div>
 
       {/* Daily Rehabilitation Course Protocol Active Ribbon */}
-      {isDailyCourse && (
+      {isDailyCourse && dailyCourseSpan && (
         <div
           className="cal-daily-course-indicator-strip"
           style={{
             background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 95, 70, 0.08))",
             border: "1.5px solid #10b981",
             borderRadius: "12px",
-            padding: "10px 14px",
-            margin: "12px 0 4px 0",
+            padding: "12px 16px",
+            margin: "12px 0 16px 0",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: "8px"
+            gap: "10px"
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#10b981", display: "inline-block", boxShadow: "0 0 8px #10b981" }}></span>
-            <strong style={{ fontSize: "13px", color: "#065f46" }}>
-              🔄 Continuous Daily Rehabilitation Protocol Active ({dailyCourseDuration || "Daily Auto Next-Day"})
-            </strong>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#10b981", display: "inline-block", boxShadow: "0 0 8px #10b981" }}></span>
+              <strong style={{ fontSize: "14px", color: "#065f46" }}>
+                🗓️ Daily Therapy Schedule: From {dailyCourseSpan.startKey} to {dailyCourseSpan.endKey}
+              </strong>
+            </div>
+            <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#047857" }}>
+              Consecutive attendance active • {dailyCourseSpan.attendedCount} of {dailyCourseSpan.totalDays} sessions attended ({dailyCourseSpan.remainingCount} remaining). All daily slots reserved.
+            </p>
           </div>
-          <span style={{ fontSize: "11.5px", color: "#047857", fontWeight: "600" }}>
-            ⚡ Attended sessions yield official receipts; skipped days record as missed.
-          </span>
+          {phone && (
+            <a
+              href={`https://wa.me/91${String(phone).replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
+                `Namaste ${patientName || "Patient"} ji, Dr. Satyam Vishwakarma has prescribed your daily physical therapy protocol from ${dailyCourseSpan.startKey} to ${dailyCourseSpan.endKey} (${dailyCourseSpan.totalDays} Days). All consecutive daily therapy slots are reserved for you at Vindhy Physio & Rehab Center.`
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                background: "#25d366",
+                color: "#ffffff",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: "800",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px"
+              }}
+            >
+              📲 WhatsApp Schedule
+            </a>
+          )}
         </div>
       )}
 
-      {/* 2. SUMMARY METRICS RIBBON (How Many Visits, When Visited, Missing Days, Next Follow-Up Blinking) */}
+      {/* 2. SUMMARY METRICS RIBBON (How Many Visits, When Visited, Missing Days, Next Follow-Up) */}
       <div className="calendar-metrics-ribbon">
         {/* Metric 1: Total Completed Visits */}
         <div className="cal-metric-card metric-completed">
@@ -680,10 +776,10 @@ export default function PatientVisitCalendar({
           </div>
         </div>
 
-        {/* Metric 4: Next Follow-Up (BLINKING ALERT) */}
+        {/* Metric 4: Next Follow-Up */}
         <div className={`cal-metric-card metric-followup ${nextFollowUpKey ? "has-followup" : ""}`}>
           <div className="metric-icon-wrap indigo">
-            <span className="blinking-bell-icon">🔔</span>
+            <span className="beacon-icon-static">🔔</span>
           </div>
           <div className="metric-info">
             <div className="metric-followup-header">
@@ -691,7 +787,7 @@ export default function PatientVisitCalendar({
               {nextFollowUpKey && (
                 <span className="followup-live-beacon" title="Next Follow-up active alert">
                   <span className="beacon-dot"></span>
-                  <span className="beacon-text-desktop"> BLINKING</span>
+                  <span className="beacon-text-desktop"> ACTIVE</span>
                 </span>
               )}
             </div>
@@ -786,12 +882,6 @@ export default function PatientVisitCalendar({
                   <div className="day-cell-top">
                     <span className="day-number">{cell.dayNumber}</span>
                     {isToday && <span className="today-badge">Today</span>}
-                    {isNextFollowUp && (
-                      <span className="followup-blinking-pill" title="Next Follow-up">
-                        <span className="cal-pill-desktop">🔔 NEXT</span>
-                        <span className="cal-pill-mobile">🔔</span>
-                      </span>
-                    )}
                   </div>
 
                   <div className="day-cell-badges">
@@ -838,7 +928,7 @@ export default function PatientVisitCalendar({
                         className={`day-event-pill follow-up-pill ${isNextFollowUp ? "pulsing-badge" : ""}`}
                         title="Scheduled Clinical Follow-up"
                       >
-                        <span className="pill-dot">{isNextFollowUp ? "🔔" : "●"}</span>
+                        <span className="pill-dot">●</span>
                         <span className="pill-text">
                           <span className="cal-pill-desktop">
                             {isNextFollowUp ? "Next Follow-Up" : "Scheduled Visit"}
@@ -846,6 +936,26 @@ export default function PatientVisitCalendar({
                           <span className="cal-pill-mobile">
                             {isNextFollowUp ? "Next" : "Appt"}
                           </span>
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 4. Reserved Daily Therapy Course Slot */}
+                    {!hasVisits && !isMissedDay && !hasFollowUps && !hasAppointments && data?.dailySlot && (
+                      <div
+                        className="day-event-pill daily-slot-pill"
+                        title="Reserved Daily Therapy Slot"
+                        style={{
+                          background: "#ecfdf5",
+                          color: "#059669",
+                          border: "1px solid #a7f3d0",
+                          fontWeight: "700"
+                        }}
+                      >
+                        <span className="pill-dot">🔄</span>
+                        <span className="pill-text">
+                          <span className="cal-pill-desktop">Daily Slot Reserved</span>
+                          <span className="cal-pill-mobile">Reserved</span>
                         </span>
                       </div>
                     )}
@@ -900,81 +1010,39 @@ export default function PatientVisitCalendar({
                 </button>
               </div>
 
-              {/* Quick Presets Row: 1-Tap Milestone Setting */}
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", paddingTop: "8px", borderTop: "1px dashed #bae6fd" }}>
-                <span style={{ fontSize: "11.5px", fontWeight: "800", color: "#0369a1" }}>⚡ Quick Milestones:</span>
-                {[
-                  { label: "Tomorrow", days: 1 },
-                  { label: "In 2 Days", days: 2 },
-                  { label: "In 1 Week", days: 7 },
-                  { label: "In 15 Days", days: 15 },
-                  { label: "1 Month (30 Days)", days: 30 }
-                ].map((item) => {
-                  const targetKey = getCalPresetKey(item.days);
-                  const isCurrent = targetKey === nextFollowUpKey;
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDateStr(targetKey);
-                        handleSetDoctorFollowUp(targetKey);
-                      }}
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: "6px",
-                        fontSize: "11.5px",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        border: isCurrent ? "1.5px solid #10b981" : "1px solid #93c5fd",
-                        background: isCurrent ? "#ecfdf5" : "#ffffff",
-                        color: isCurrent ? "#059669" : "#0284c7"
-                      }}
-                      title={`Set follow-up milestone for ${targetKey}`}
-                    >
-                      {item.label} ({targetKey})
-                    </button>
-                  );
-                })}
-              </div>
+              {phone && (
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", paddingTop: "8px", borderTop: "1px dashed #bae6fd" }}>
+                  <a
+                    href={`https://wa.me/91${String(phone).replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
+                      `Namaste ${patientName || "Patient"} ji, Dr. Satyam Vishwakarma has scheduled your next physiotherapy follow-up on ${selectedDateStr}. Please arrive at Vindhy Physio & Rehab Center on time for optimal rehabilitation.`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      background: "#25d366",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "7px",
+                      padding: "7px 14px",
+                      fontSize: "12px",
+                      fontWeight: "800",
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      boxShadow: "0 2px 6px rgba(37, 211, 102, 0.25)"
+                    }}
+                  >
+                    💬 Send Follow-Up Message to Patient WhatsApp (+91 {String(phone).replace(/\D/g, "").slice(-10)})
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Right: Selected Date Drill-Down Panel */}
         <div className="calendar-drilldown-panel">
-          {/* Section A: NEXT FOLLOW-UP SPOTLIGHT BANNER */}
-          {nextFollowUpKey && (
-            <div className={`drilldown-followup-spotlight ${isSelectedDateNextFollowUp ? "is-active-target" : ""}`}>
-              <div className="spotlight-header">
-                <span className="spotlight-bell-beacon">🔔</span>
-                <div>
-                  <h5 className="spotlight-title">Upcoming Clinical Follow-Up</h5>
-                  <span className="spotlight-date">
-                    {nextFollowUpKey} {nextFollowUpInfo.time ? `• ${nextFollowUpInfo.time}` : ""}
-                  </span>
-                </div>
-                <span className="spotlight-countdown-badge">
-                  {followUpCountdownText}
-                </span>
-              </div>
-              <p className="spotlight-body">
-                Dr. Satyam Vishwakarma scheduled this rehabilitation follow-up. Maintaining this milestone prevents symptom relapse.
-              </p>
-              <div className="spotlight-actions">
-                <a
-                  className="fu-whatsapp-confirm"
-                  href={`https://wa.me/919793093316?text=${encodeURIComponent(
-                    `Namaste Dr. Satyam Vishwakarma ji, I am confirming my follow-up appointment on ${nextFollowUpKey} for ${patientName || "Patient"} (Patient ID: ${patientId || "VPR"}).`
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  💬 Confirm on WhatsApp (+91 9793093316)
-                </a>
-              </div>
-            </div>
-          )}
 
           {/* Section B: Selected Date Drill-Down Card */}
           <div className="drilldown-header">
@@ -1037,6 +1105,80 @@ export default function PatientVisitCalendar({
                 >
                   <span>🔔 {isSelectedDateNextFollowUp ? `Current Follow-Up (${selectedDateStr})` : `Set ${selectedDateStr} as Next Follow-Up`}</span>
                 </button>
+              </div>
+            )}
+
+            {/* If there are booked appointments on this date */}
+            {selectedEvents.appointments.length > 0 && (
+              <div className="drilldown-appointments-list" style={{ marginBottom: "14px" }}>
+                {selectedEvents.appointments.map((apt, ai) => (
+                  <div
+                    key={`apt-${ai}`}
+                    style={{
+                      background: "#f8fafc",
+                      border: "1.5px solid #cbd5e1",
+                      borderRadius: "12px",
+                      padding: "12px 14px",
+                      marginBottom: "8px"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                      <span style={{ fontWeight: "800", fontSize: "13px", color: "#0f172a" }}>
+                        🗓️ Booked Session • {apt.time || "10:00 AM"}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: "800",
+                          padding: "2px 8px",
+                          borderRadius: "20px",
+                          background:
+                            apt.status === "Approved" || apt.status === "Confirmed"
+                              ? "#dcfce7"
+                              : apt.status === "Rejected"
+                              ? "#fee2e2"
+                              : "#fef3c7",
+                          color:
+                            apt.status === "Approved" || apt.status === "Confirmed"
+                              ? "#15803d"
+                              : apt.status === "Rejected"
+                              ? "#b91c1c"
+                              : "#b45309"
+                        }}
+                      >
+                        {apt.status === "Approved" || apt.status === "Confirmed"
+                          ? "✅ Approved by Doctor"
+                          : apt.status === "Rejected"
+                          ? "❌ Doctor Not Available"
+                          : "⏳ Pending Doctor Confirmation"}
+                      </span>
+                    </div>
+                    <p style={{ margin: "0 0 10px 0", fontSize: "12px", color: "#475569" }}>
+                      <strong>Service:</strong> {apt.service || apt.reason || "Physiotherapy Session"}
+                    </p>
+                    <a
+                      href={`https://wa.me/919793093316?text=${encodeURIComponent(
+                        `Namaste Dr. Satyam Vishwakarma ji, I am inquiring about my appointment booking on ${selectedDateStr} (${apt.time || "10:00 AM"}) for ${patientName || "Patient"} (Patient ID: ${patientId || "VPR"}).`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        background: "#25d366",
+                        color: "#ffffff",
+                        padding: "6px 12px",
+                        borderRadius: "7px",
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        textDecoration: "none"
+                      }}
+                    >
+                      💬 Confirm with Dr. Satyam on WhatsApp (+91 9793093316)
+                    </a>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -1155,6 +1297,39 @@ export default function PatientVisitCalendar({
               </div>
             )}
 
+            {/* Section: UPCOMING CLINICAL FOLLOW-UP SPOTLIGHT BANNER (NOW BELOW SELECTED DATE) */}
+            {nextFollowUpKey && (
+              <div className={`drilldown-followup-spotlight ${isSelectedDateNextFollowUp ? "is-active-target" : ""}`} style={{ marginTop: "16px", marginBottom: "16px" }}>
+                <div className="spotlight-header">
+                  <span className="spotlight-bell-beacon">🔔</span>
+                  <div>
+                    <h5 className="spotlight-title">Upcoming Clinical Follow-Up</h5>
+                    <span className="spotlight-date">
+                      {nextFollowUpKey} {nextFollowUpInfo?.time ? `• ${nextFollowUpInfo.time}` : ""}
+                    </span>
+                  </div>
+                  <span className="spotlight-countdown-badge">
+                    {followUpCountdownText}
+                  </span>
+                </div>
+                <p className="spotlight-body">
+                  Dr. Satyam Vishwakarma scheduled this rehabilitation follow-up. Maintaining this milestone prevents symptom relapse.
+                </p>
+                <div className="spotlight-actions">
+                  <a
+                    className="fu-whatsapp-confirm"
+                    href={`https://wa.me/919793093316?text=${encodeURIComponent(
+                      `Namaste Dr. Satyam Vishwakarma ji, I am confirming my follow-up appointment on ${nextFollowUpKey} for ${patientName || "Patient"} (Patient ID: ${patientId || "VPR"}).`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    💬 Confirm on WhatsApp (+91 9793093316)
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* Section C: COMPLETE PAST / OLD VISITS TIMELINE FOR THIS PATIENT */}
             <div className="patient-old-visits-history-section">
               <div className="old-visits-history-header">
@@ -1241,11 +1416,41 @@ export default function PatientVisitCalendar({
             {schedSuccessMsg ? (
               <div className="cal-modal-success-state">
                 <div className="cal-modal-success-icon">🎉</div>
-                <h4 style={{ margin: "6px 0", color: "#15803d", fontSize: "18px", fontWeight: "800" }}>Appointment Confirmed!</h4>
-                <p style={{ margin: "4px 0 14px 0", color: "#334155", fontSize: "14px" }}>{schedSuccessMsg}</p>
+                <h4 style={{ margin: "6px 0", color: "#15803d", fontSize: "18px", fontWeight: "800" }}>
+                  {isDoctorView ? "Appointment Scheduled!" : "Appointment Request Sent!"}
+                </h4>
+                <p style={{ margin: "4px 0 10px 0", color: "#334155", fontSize: "14px" }}>{schedSuccessMsg}</p>
                 <div className="cal-modal-success-note">
-                  Dr. Satyam Vishwakarma has received your appointment notification. When you arrive at the clinic, the doctor will check you in and record Visit #{(visits?.length || 0) + 1}.
+                  {isDoctorView
+                    ? "The follow-up slot has been recorded on the clinic roster and calendar."
+                    : "Dr. Satyam Vishwakarma will review and confirm your slot. You can notify the doctor directly via WhatsApp below:"}
                 </div>
+
+                <a
+                  href={`https://wa.me/919793093316?text=${encodeURIComponent(
+                    `Namaste Dr. Satyam Vishwakarma ji, I have booked a rehabilitation visit on ${lastBookedSession?.date || schedDate} at ${lastBookedSession?.time || schedTime}${lastBookedSession?.reason ? ` (${lastBookedSession.reason})` : ""}. Patient ID: ${patientId || "VPR"}, Name: ${patientName || "Patient"}. Please confirm my slot.`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    background: "#25d366",
+                    color: "#ffffff",
+                    fontWeight: "800",
+                    fontSize: "13px",
+                    padding: "12px 16px",
+                    borderRadius: "10px",
+                    textDecoration: "none",
+                    margin: "14px 0 8px 0",
+                    boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)"
+                  }}
+                >
+                  💬 Inform &amp; Confirm with Dr. Satyam on WhatsApp (+91 9793093316)
+                </a>
+
                 <button
                   type="button"
                   className="cal-modal-primary-btn"
@@ -1253,7 +1458,7 @@ export default function PatientVisitCalendar({
                     setShowScheduleModal(false);
                     setSchedSuccessMsg("");
                   }}
-                  style={{ marginTop: "16px", width: "100%" }}
+                  style={{ marginTop: "8px", width: "100%" }}
                 >
                   Done &amp; View on Calendar
                 </button>
@@ -1316,10 +1521,10 @@ export default function PatientVisitCalendar({
                   </div>
                 </div>
 
-                {/* Clinical Focus / Reason */}
+                {/* Clinical Focus / Reason (Optional) */}
                 <div className="cal-form-group">
                   <label className="cal-form-label" htmlFor="cal-reason-select">
-                    <span>Reason / Treatment Focus</span>
+                    <span>Reason / Treatment Focus (Optional)</span>
                   </label>
                   <select
                     id="cal-reason-select"
@@ -1327,6 +1532,7 @@ export default function PatientVisitCalendar({
                     value={schedReason}
                     onChange={(e) => setSchedReason(e.target.value)}
                   >
+                    <option value="">-- Select Focus / Reason (Optional) --</option>
                     <option value="Follow-up Rehabilitation Session">Follow-up Rehabilitation Session</option>
                     <option value="Spine / Lower Back Decompression (L4-L5)">Spine / Lower Back Decompression (L4-L5)</option>
                     <option value="Cervical Spine / Neck Pain &amp; Stiffness">Cervical Spine / Neck Pain &amp; Stiffness</option>
@@ -1335,21 +1541,6 @@ export default function PatientVisitCalendar({
                     <option value="Electrotherapy &amp; IFT Modality">Electrotherapy &amp; IFT Modality</option>
                     <option value="General Physiotherapy Progress Review">General Physiotherapy Progress Review</option>
                   </select>
-                </div>
-
-                {/* Patient Symptoms / Notes */}
-                <div className="cal-form-group">
-                  <label className="cal-form-label" htmlFor="cal-notes-input">
-                    <span>Symptom Updates / Specific Note (Optional)</span>
-                  </label>
-                  <input
-                    id="cal-notes-input"
-                    type="text"
-                    className="cal-form-input"
-                    placeholder="e.g. Mild morning stiffness, feeling better..."
-                    value={schedNotes}
-                    onChange={(e) => setSchedNotes(e.target.value)}
-                  />
                 </div>
 
                 {/* Action Buttons */}

@@ -1109,6 +1109,24 @@ app.delete("/api/doctor/patients/:id", requireDoctorAuth, async (req, res) => {
   }
 });
 
+// Doctor: Update Patient Record
+app.patch("/api/doctor/patients/:id", requireDoctorAuth, async (req, res) => {
+  try {
+    const patientId = req.params.id;
+    const patients = await ensureDataFile(patientsFile, []);
+    const idx = patients.findIndex(p => p.patientId === patientId);
+    if (idx === -1) {
+      return res.status(404).json({ error: "Patient not found." });
+    }
+    patients[idx] = { ...patients[idx], ...req.body };
+    await writeDataFile(patientsFile, patients);
+    syncToGoogleSheets("sync_patient", patients[idx]).catch(() => {});
+    res.json({ ok: true, patient: patients[idx] });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update patient." });
+  }
+});
+
 // Doctor: Delete Visit Record
 app.delete("/api/doctor/visits/:id", requireDoctorAuth, async (req, res) => {
   try {

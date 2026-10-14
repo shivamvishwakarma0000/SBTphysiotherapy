@@ -310,6 +310,8 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [manualFollowUpDate, setManualFollowUpDate] = useState("");
   const [manualFollowUpTime, setManualFollowUpTime] = useState("10:30 AM");
   const [billingPlanType, setBillingPlanType] = useState("daily"); // "daily", "package", "prepaid"
+  const [selectedPlanDays, setSelectedPlanDays] = useState(10);
+  const [selectedPlanLabel, setSelectedPlanLabel] = useState("10 Days Plan");
 
   // Custom Webhook Settings State
   const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
@@ -773,16 +775,28 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const todayExpectedList = useMemo(() => {
     const map = new Map();
 
+    const isValidDateKey = (raw) => {
+      if (!raw) return false;
+      const s = String(raw).trim();
+      if (s.toLowerCase().includes("advise") || s.toLowerCase().includes("sos")) return false;
+      return /\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/.test(s) || /\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(s);
+    };
+
+    const normalizeDateStr = (raw) => {
+      if (!isValidDateKey(raw)) return "";
+      return cleanDateOnly(raw);
+    };
+
     // 1. Check patients with followUpDate === todayKey OR active daily course covering today
     (patients || []).forEach((p) => {
       if (!p) return;
-      const pFollowUp = cleanDateOnly(p.followUpDate || p.follow_up_date);
+      const pFollowUp = normalizeDateStr(p.followUpDate || p.follow_up_date);
       const isDueFollowUp = pFollowUp === todayKey;
 
       let isDailyDue = false;
       if (p.isDailyCourse) {
-        const startKey = cleanDateOnly(p.dailyCourseStartDate || p.enrollmentDate);
-        const endKey = cleanDateOnly(p.dailyCourseEndDate);
+        const startKey = normalizeDateStr(p.dailyCourseStartDate || p.enrollmentDate);
+        const endKey = normalizeDateStr(p.dailyCourseEndDate);
         if (pFollowUp === todayKey || !endKey) {
           isDailyDue = true;
         } else {
@@ -822,11 +836,53 @@ export default function DoctorPortal({ onClose, themeProps }) {
       }
     });
 
-    // 2. Check enquiries / online bookings where appointmentDate === todayKey
+    // 2. Check all visits for followUpDate === todayKey (covers visits where followUpDate was set on consultation/visit)
+    (allVisits || []).forEach((v) => {
+      if (!v || !v.followUpDate) return;
+      const vFollowUp = normalizeDateStr(v.followUpDate);
+      if (vFollowUp !== todayKey) return;
+
+      const cleanVPhone = String(v.phone || "").replace(/\D/g, "").slice(-10);
+      const matchedP = (patients || []).find(
+        (p) =>
+          (v.patientId && p.patientId === v.patientId) ||
+          (cleanVPhone && p.phone && String(p.phone).replace(/\D/g, "").slice(-10) === cleanVPhone)
+      );
+
+      const key = matchedP?.patientId || v.patientId || cleanVPhone;
+      if (!key) return;
+
+      const existing = map.get(key);
+      if (existing) {
+        existing.isFollowUp = true;
+        if (!existing.types.includes("🔔 Doctor Follow-Up") && !existing.isDailyCourse) {
+          existing.types.push("🔔 Doctor Follow-Up");
+        }
+        if (v.followUpTime) existing.time = v.followUpTime;
+      } else {
+        map.set(key, {
+          patientId: matchedP?.patientId || v.patientId || "Enrolled Patient",
+          patientName: matchedP?.name || v.patientName || "Patient",
+          phone: matchedP?.phone || v.phone || "",
+          age: matchedP?.age || "",
+          gender: matchedP?.gender || "",
+          diagnosis: v.diagnosis || v.reason || matchedP?.diagnosis || "Rehabilitation Follow-Up",
+          time: v.followUpTime || matchedP?.followUpTime || "10:30 AM",
+          isFollowUp: true,
+          isDailyCourse: !!matchedP?.isDailyCourse,
+          isSelfBooked: false,
+          appointmentId: null,
+          patientRef: matchedP || null,
+          types: ["🔔 Doctor Follow-Up"]
+        });
+      }
+    });
+
+    // 3. Check enquiries / online bookings where appointmentDate === todayKey
     (enquiries || []).forEach((e) => {
       if (!e) return;
       if (e.status === "Hidden" || e.status === "Hidden / Spam" || e.status === "Rejected") return;
-      const aptDate = cleanDateOnly(e.appointmentDate || e.date);
+      const aptDate = normalizeDateStr(e.appointmentDate || e.date);
       if (aptDate !== todayKey) return;
 
       const cleanPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
@@ -869,7 +925,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
       }
     });
 
-    // 3. Mark attended status based on todayVisits
+    // 4. Mark attended status based on todayVisits & allVisits
     const result = Array.from(map.values());
     result.forEach((item) => {
       const cleanItemPhone = String(item.phone || "").replace(/\D/g, "").slice(-10);
@@ -877,7 +933,13 @@ export default function DoctorPortal({ onClose, themeProps }) {
         (v) =>
           (item.patientId && item.patientId !== "New Booking" && v.patientId === item.patientId) ||
           (cleanItemPhone && v.phone && String(v.phone).replace(/\D/g, "").slice(-10) === cleanItemPhone)
+      ) || (allVisits || []).find(
+        (v) =>
+          normalizeDateStr(v.date) === todayKey &&
+          ((item.patientId && item.patientId !== "New Booking" && v.patientId === item.patientId) ||
+          (cleanItemPhone && v.phone && String(v.phone).replace(/\D/g, "").slice(-10) === cleanItemPhone))
       );
+
       if (attendedVisit) {
         item.hasAttendedToday = true;
         item.attendedVisit = attendedVisit;
@@ -901,7 +963,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     });
 
     return result;
-  }, [patients, enquiries, todayVisits, todayKey]);
+  }, [patients, allVisits, enquiries, todayVisits, todayKey]);
 
   // Filtered Today's Expected Follow-Ups List
   const filteredExpectedList = useMemo(() => {
@@ -1306,7 +1368,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
-  const handleToggleDailyCourse = async (enable, duration = "Ongoing Daily Rehab", totalDays = 30) => {
+  const handleToggleDailyCourse = async (enable, duration = "Ongoing Daily Rehab", totalDays = 10) => {
     if (!selectedPatient) return;
     try {
       const now = new Date();
@@ -1316,7 +1378,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
       const startFormatted = `${startD}/${startM}/${startY}`;
 
       const endDateObj = new Date();
-      endDateObj.setDate(endDateObj.getDate() + (totalDays || 30));
+      endDateObj.setDate(endDateObj.getDate() + (totalDays || 10));
       const endD = String(endDateObj.getDate()).padStart(2, "0");
       const endM = String(endDateObj.getMonth() + 1).padStart(2, "0");
       const endY = endDateObj.getFullYear();
@@ -1346,12 +1408,22 @@ export default function DoctorPortal({ onClose, themeProps }) {
         prev.map((p) => (p.patientId === selectedPatient.patientId ? { ...p, ...updates } : p))
       );
 
+      // Auto-dispatch WhatsApp confirmation message directly to patient
+      if (enable && selectedPatient.phone) {
+        const cleanPh = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
+        if (cleanPh.length === 10) {
+          const waMsg = `Namaste ${selectedPatient.name || "Patient"} ji,\n\nDr. Satyam Vishwakarma has confirmed and locked your *${duration}* Physical Therapy Protocol at *Vindhy Physio & Rehab Center*.\n\n📅 *Reserved Schedule:* ${updates.dailyCourseStartDate} to ${updates.dailyCourseEndDate}\n⏱️ *Duration:* ${totalDays} Consecutive Days (Daily Attendance)\n🎯 *Next Follow-Up Session:* ${tomorrowStr} at 10:30 AM\n\nAll consecutive daily calendar slots are now officially reserved for you. Please attend every day without missing sessions to ensure optimal muscle/joint recovery.\n\n📍 *Clinic:* Amravati Chauraha, Vindhyachal, Mirzapur\n📞 *Helpdesk:* +91 9793093316`;
+          const waUrl = `https://wa.me/91${cleanPh}?text=${encodeURIComponent(waMsg)}`;
+          window.open(waUrl, "_blank");
+        }
+      }
+
       setLeadActionToast(
         enable 
-          ? `🔄 Daily Therapy Protocol active for ${selectedPatient.name}! Reserved from ${updates.dailyCourseStartDate} to ${updates.dailyCourseEndDate} (${duration}).`
+          ? `🔄 Daily Therapy Protocol locked for ${selectedPatient.name}! Reserved from ${updates.dailyCourseStartDate} to ${updates.dailyCourseEndDate} (${duration}) & WhatsApp confirmation dispatched.`
           : `⏹️ Daily Course paused for ${selectedPatient.name}.`
       );
-      setTimeout(() => setLeadActionToast(""), 3500);
+      setTimeout(() => setLeadActionToast(""), 4000);
     } catch (err) {
       console.error(err);
       alert("Failed to update daily course status: " + err.message);
@@ -2222,7 +2294,7 @@ _(Saved in patient clinic records)_`;
             <span className="nav-tab-mobile">📩 Bookings</span>
             {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
           </button>
-          <button className={activeTab === "followups" ? "active" : ""} onClick={() => selectDoctorTab("followups")}>
+          <button className={activeTab === "followups" ? "active" : ""} onClick={() => { selectDoctorTab("followups"); fetchPatients(); fetchAllVisits(); fetchTodayVisits(); fetchEnquiries(); }}>
             <span className="nav-tab-desktop">🔔 7. Due Follow-Ups ({todayExpectedList.length})</span>
             <span className="nav-tab-mobile">🔔 Follow-Ups ({todayExpectedList.length})</span>
             {todayExpectedList.length > 0 && <span className="enq-badge" style={{ background: "#ea580c" }}>{todayExpectedList.length}</span>}
@@ -2395,7 +2467,7 @@ _(Saved in patient clinic records)_`;
                 <span className="card-count-badge purple">{stats.totalEnquiriesCount || enquiries.length}</span>
               </div>
 
-              <div className="mobile-app-card" onClick={() => selectDoctorTab("followups")}>
+              <div className="mobile-app-card" onClick={() => { selectDoctorTab("followups"); fetchPatients(); fetchAllVisits(); fetchTodayVisits(); fetchEnquiries(); }}>
                 <div className="card-icon-bubble orange">🔔</div>
                 <strong className="card-title">Today's Follow-Ups</strong>
                 <span className="card-count-badge orange" style={{ fontSize: "11px", fontWeight: "800", padding: "2px 8px" }}>
@@ -5632,27 +5704,27 @@ _(Saved in patient clinic records)_`;
                     )}
                   </div>
 
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                  <div style={{ width: "100%", marginTop: "6px" }}>
                     {selectedPatient.isDailyCourse ? (
-                      <>
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
                         <a
                           href={`https://wa.me/91${String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
-                            `Namaste ${selectedPatient.name} ji, Dr. Satyam Vishwakarma has prescribed your daily physical therapy protocol from ${selectedPatient.dailyCourseStartDate || "today"} to ${selectedPatient.dailyCourseEndDate || "completion"} (${selectedPatient.dailyCourseDuration || "Daily Sessions"}). All daily slots are reserved for you at Vindhy Physio & Rehab Center. Consistent daily attendance is crucial for your full recovery!`
+                            `Namaste ${selectedPatient.name} ji, Dr. Satyam Vishwakarma has confirmed your *${selectedPatient.dailyCourseDuration || "Daily Rehabilitation"}* at *Vindhy Physio & Rehab Center*.\n\n📅 *Schedule:* ${selectedPatient.dailyCourseStartDate || "today"} to ${selectedPatient.dailyCourseEndDate || "completion"}\n⏱️ *Total Duration:* ${selectedPatient.dailyCourseTotalDays || 10} Days (Daily Attendance)\n\nAll consecutive daily calendar slots are reserved for you. Consistent daily attendance is crucial for your full recovery!\n\n📍 Clinic: Amravati Chauraha, Vindhyachal, Mirzapur\n📞 Helpdesk: +91 9793093316`
                           )}`}
                           target="_blank"
                           rel="noreferrer"
                           style={{
                             background: "#25d366",
                             color: "#ffffff",
-                            padding: "8px 14px",
+                            padding: "9px 15px",
                             borderRadius: "8px",
-                            fontSize: "12px",
+                            fontSize: "12.5px",
                             fontWeight: "800",
                             textDecoration: "none",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "5px",
-                            boxShadow: "0 2px 6px rgba(37, 211, 102, 0.3)"
+                            gap: "6px",
+                            boxShadow: "0 2px 8px rgba(37, 211, 102, 0.3)"
                           }}
                         >
                           💬 Send Schedule on WhatsApp
@@ -5664,7 +5736,7 @@ _(Saved in patient clinic records)_`;
                             background: "#fee2e2",
                             color: "#b91c1c",
                             border: "1px solid #fca5a5",
-                            padding: "8px 12px",
+                            padding: "9px 14px",
                             borderRadius: "8px",
                             fontSize: "12px",
                             fontWeight: "700",
@@ -5673,91 +5745,97 @@ _(Saved in patient clinic records)_`;
                         >
                           ⏹️ End Course
                         </button>
-                      </>
+                      </div>
                     ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleDailyCourse(true, "5 Days Therapy", 5)}
-                          style={{
-                            background: "#f1f5f9",
-                            color: "#0f172a",
-                            border: "1px solid #cbd5e1",
-                            padding: "7px 10px",
-                            borderRadius: "7px",
-                            fontSize: "11.5px",
-                            fontWeight: "700",
-                            cursor: "pointer"
-                          }}
-                        >
-                          ⚡ 5 Days
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleDailyCourse(true, "7 Days (1 Week)", 7)}
-                          style={{
-                            background: "#f1f5f9",
-                            color: "#0f172a",
-                            border: "1px solid #cbd5e1",
-                            padding: "7px 10px",
-                            borderRadius: "7px",
-                            fontSize: "11.5px",
-                            fontWeight: "700",
-                            cursor: "pointer"
-                          }}
-                        >
-                          ⚡ 7 Days
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleDailyCourse(true, "10 Days Plan", 10)}
-                          style={{
-                            background: "#0284c7",
-                            color: "#ffffff",
-                            border: "none",
-                            padding: "7px 10px",
-                            borderRadius: "7px",
-                            fontSize: "11.5px",
-                            fontWeight: "800",
-                            cursor: "pointer"
-                          }}
-                        >
-                          ⚡ 10 Days
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleDailyCourse(true, "15 Days Course", 15)}
-                          style={{
-                            background: "#0284c7",
-                            color: "#ffffff",
-                            border: "none",
-                            padding: "7px 10px",
-                            borderRadius: "7px",
-                            fontSize: "11.5px",
-                            fontWeight: "800",
-                            cursor: "pointer"
-                          }}
-                        >
-                          ⚡ 15 Days
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleDailyCourse(true, "1 Month (30 Days)", 30)}
-                          style={{
-                            background: "#10b981",
-                            color: "#ffffff",
-                            border: "none",
-                            padding: "7px 10px",
-                            borderRadius: "7px",
-                            fontSize: "11.5px",
-                            fontWeight: "800",
-                            cursor: "pointer",
-                            boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)"
-                          }}
-                        >
-                          📅 30 Days
-                        </button>
-                      </>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
+                        {/* 5 Duration Selection Pills */}
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                          {[
+                            { days: 5, label: "5 Days Therapy", btnText: "⚡ 5 Days" },
+                            { days: 7, label: "7 Days (1 Week)", btnText: "⚡ 7 Days" },
+                            { days: 10, label: "10 Days Plan", btnText: "⚡ 10 Days" },
+                            { days: 15, label: "15 Days Course", btnText: "⚡ 15 Days" },
+                            { days: 30, label: "1 Month (30 Days)", btnText: "📅 30 Days" }
+                          ].map((plan) => {
+                            const isSelected = selectedPlanDays === plan.days;
+                            const is30 = plan.days === 30;
+                            return (
+                              <button
+                                key={`plan-${plan.days}`}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPlanDays(plan.days);
+                                  setSelectedPlanLabel(plan.label);
+                                }}
+                                style={{
+                                  background: isSelected
+                                    ? (is30 ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #0284c7, #0369a1)")
+                                    : "#ffffff",
+                                  color: isSelected ? "#ffffff" : "#1e293b",
+                                  border: isSelected
+                                    ? (is30 ? "1.5px solid #059669" : "1.5px solid #0369a1")
+                                    : "1.5px solid #cbd5e1",
+                                  padding: "8px 12px",
+                                  borderRadius: "8px",
+                                  fontSize: "12px",
+                                  fontWeight: isSelected ? "800" : "700",
+                                  cursor: "pointer",
+                                  boxShadow: isSelected ? "0 3px 8px rgba(2, 132, 199, 0.3)" : "none",
+                                  transition: "all 0.15s ease",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                <span>{plan.btnText}</span>
+                                {isSelected && <span style={{ fontSize: "11px" }}>✓</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Confirmation and Slot Locking Action Button */}
+                        {(() => {
+                          const previewEnd = new Date();
+                          previewEnd.setDate(previewEnd.getDate() + (selectedPlanDays || 10));
+                          const ped = String(previewEnd.getDate()).padStart(2, "0");
+                          const pem = String(previewEnd.getMonth() + 1).padStart(2, "0");
+                          const pey = previewEnd.getFullYear();
+                          const previewEndStr = `${ped}/${pem}/${pey}`;
+
+                          return (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDailyCourse(true, selectedPlanLabel, selectedPlanDays)}
+                                style={{
+                                  width: "100%",
+                                  minHeight: "44px",
+                                  background: "linear-gradient(135deg, #10b981, #059669)",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "10px",
+                                  padding: "10px 16px",
+                                  fontSize: "13.5px",
+                                  fontWeight: "800",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "8px",
+                                  boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
+                                  transition: "all 0.2s ease"
+                                }}
+                              >
+                                <span>🔒 Confirm Plan &amp; Lock Slots ({selectedPlanLabel})</span>
+                              </button>
+                              <div style={{ fontSize: "11.5px", color: "#065f46", textAlign: "center", fontWeight: "600" }}>
+                                📅 Auto-reserves daily slots through <strong>{previewEndStr}</strong> &amp; sends WhatsApp confirmation to patient.
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -7311,7 +7389,7 @@ _(Saved in patient clinic records)_`;
                 <span className="more-arrow">›</span>
               </button>
 
-              <button className="more-sheet-item" onClick={() => selectDoctorTab("followups")}>
+              <button className="more-sheet-item" onClick={() => { selectDoctorTab("followups"); fetchPatients(); fetchAllVisits(); fetchTodayVisits(); fetchEnquiries(); }}>
                 <span className="sheet-icon orange">🔔</span>
                 <div className="sheet-info">
                   <strong>Today's Follow-Ups ({todayExpectedList.length})</strong>

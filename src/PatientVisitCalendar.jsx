@@ -1297,8 +1297,8 @@ export default function PatientVisitCalendar({
               </div>
             )}
 
-            {/* Section: UPCOMING CLINICAL FOLLOW-UP SPOTLIGHT BANNER (NOW BELOW SELECTED DATE) */}
-            {nextFollowUpKey && (
+            {/* Section: UPCOMING CLINICAL FOLLOW-UP SPOTLIGHT BANNER (ONLY IN PATIENT VIEW, HIDDEN IN DOCTOR PORTAL) */}
+            {!isDoctorView && nextFollowUpKey && (
               <div className={`drilldown-followup-spotlight ${isSelectedDateNextFollowUp ? "is-active-target" : ""}`} style={{ marginTop: "16px", marginBottom: "16px" }}>
                 <div className="spotlight-header">
                   <span className="spotlight-bell-beacon">🔔</span>
@@ -1347,7 +1347,14 @@ export default function PatientVisitCalendar({
                       <div
                         key={`old-v-${ov.visitId || oIdx}`}
                         className={`old-visit-item-compact ${isSelectedDateVisit ? "is-selected-date-item" : ""}`}
-                        onClick={() => setSelectedDateStr(parseToKey(ov.date))}
+                        onClick={() => {
+                          setSelectedDateStr(parseToKey(ov.date));
+                          if (onSelectVisit) {
+                            onSelectVisit(ov);
+                          }
+                        }}
+                        style={{ cursor: "pointer" }}
+                        title="Click to view full visit details and official receipt"
                       >
                         <div className="old-visit-top">
                           <span className="old-visit-num-badge">

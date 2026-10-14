@@ -299,6 +299,8 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [enquiries, setEnquiries] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientVisits, setPatientVisits] = useState([]);
+  const [followupFilter, setFollowupFilter] = useState("all"); // "all", "pending", "doctor", "self-booked", "attended"
+  const [followupSearchQuery, setFollowupSearchQuery] = useState("");
 
   // Modals & Consultation Flow
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
@@ -758,6 +760,176 @@ export default function DoctorPortal({ onClose, themeProps }) {
     if (reviewFilterTab === "all") return reviewQueue.filter(q => q.status !== "dismissed");
     return pendingReviews;
   }, [reviewFilterTab, pendingReviews, sentReviews, reviewQueue]);
+
+  // Live Today's Expected Follow-Up & Self-Booked Patient Roster
+  const todayKey = useMemo(() => {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, "0");
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const y = now.getFullYear();
+    return `${d}/${m}/${y}`;
+  }, []);
+
+  const todayExpectedList = useMemo(() => {
+    const map = new Map();
+
+    // 1. Check patients with followUpDate === todayKey OR active daily course covering today
+    (patients || []).forEach((p) => {
+      if (!p) return;
+      const pFollowUp = cleanDateOnly(p.followUpDate || p.follow_up_date);
+      const isDueFollowUp = pFollowUp === todayKey;
+
+      let isDailyDue = false;
+      if (p.isDailyCourse) {
+        const startKey = cleanDateOnly(p.dailyCourseStartDate || p.enrollmentDate);
+        const endKey = cleanDateOnly(p.dailyCourseEndDate);
+        if (pFollowUp === todayKey || !endKey) {
+          isDailyDue = true;
+        } else {
+          const pTodayObj = new Date();
+          pTodayObj.setHours(0, 0, 0, 0);
+          const partsS = (startKey || "").split("/");
+          const partsE = (endKey || "").split("/");
+          if (partsS.length === 3 && partsE.length === 3) {
+            const startObj = new Date(partsS[2], partsS[1] - 1, partsS[0]);
+            const endObj = new Date(partsE[2], partsE[1] - 1, partsE[0]);
+            if (pTodayObj >= startObj && pTodayObj <= endObj) {
+              isDailyDue = true;
+            }
+          }
+        }
+      }
+
+      if (isDueFollowUp || isDailyDue) {
+        const key = p.patientId || String(p.phone || "").replace(/\D/g, "").slice(-10);
+        map.set(key, {
+          patientId: p.patientId,
+          patientName: p.name,
+          phone: p.phone,
+          age: p.age,
+          gender: p.gender,
+          diagnosis: p.diagnosis || p.firstVisitReason || "Physical Therapy Rehabilitation",
+          time: p.followUpTime || "10:30 AM",
+          isFollowUp: true,
+          isDailyCourse: isDailyDue,
+          isSelfBooked: false,
+          appointmentId: null,
+          patientRef: p,
+          types: [
+            isDailyDue ? "🔄 Daily Rehab Protocol" : "🔔 Doctor Follow-Up"
+          ]
+        });
+      }
+    });
+
+    // 2. Check enquiries / online bookings where appointmentDate === todayKey
+    (enquiries || []).forEach((e) => {
+      if (!e) return;
+      if (e.status === "Hidden" || e.status === "Hidden / Spam" || e.status === "Rejected") return;
+      const aptDate = cleanDateOnly(e.appointmentDate || e.date);
+      if (aptDate !== todayKey) return;
+
+      const cleanPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+      const matchedP = (patients || []).find(
+        (p) =>
+          (e.patientId && p.patientId === e.patientId) ||
+          (e.linkedPatientId && p.patientId === e.linkedPatientId) ||
+          (cleanPhone && p.phone && String(p.phone).replace(/\D/g, "").slice(-10) === cleanPhone)
+      );
+
+      const key = matchedP?.patientId || e.patientId || e.linkedPatientId || cleanPhone || e.id;
+      const existing = map.get(key);
+
+      if (existing) {
+        existing.isSelfBooked = true;
+        existing.bookingStatus = e.status || "Confirmed";
+        existing.appointmentId = e.id || e.enquiryId;
+        if (e.time) existing.time = cleanTimeOnly(e.time);
+        if (e.service || e.reason) existing.diagnosis = e.service || e.reason;
+        if (!existing.types.includes("🗓️ Self-Booked Appointment")) {
+          existing.types.unshift("🗓️ Self-Booked Appointment");
+        }
+      } else {
+        map.set(key, {
+          patientId: matchedP?.patientId || e.patientId || e.linkedPatientId || "New Booking",
+          patientName: matchedP?.name || e.name || e.patientName || "Online Patient",
+          phone: e.phone || matchedP?.phone || "",
+          age: matchedP?.age || "",
+          gender: matchedP?.gender || "",
+          diagnosis: e.service || e.reason || e.painArea || "Physiotherapy Session",
+          time: cleanTimeOnly(e.time) || "10:00 AM",
+          isFollowUp: false,
+          isDailyCourse: false,
+          isSelfBooked: true,
+          bookingStatus: e.status || "Pending Approval",
+          appointmentId: e.id || e.enquiryId,
+          patientRef: matchedP || null,
+          types: ["🗓️ Self-Booked Appointment"]
+        });
+      }
+    });
+
+    // 3. Mark attended status based on todayVisits
+    const result = Array.from(map.values());
+    result.forEach((item) => {
+      const cleanItemPhone = String(item.phone || "").replace(/\D/g, "").slice(-10);
+      const attendedVisit = (todayVisits || []).find(
+        (v) =>
+          (item.patientId && item.patientId !== "New Booking" && v.patientId === item.patientId) ||
+          (cleanItemPhone && v.phone && String(v.phone).replace(/\D/g, "").slice(-10) === cleanItemPhone)
+      );
+      if (attendedVisit) {
+        item.hasAttendedToday = true;
+        item.attendedVisit = attendedVisit;
+      } else {
+        item.hasAttendedToday = false;
+        const inQueue = (patients || []).find(
+          (p) =>
+            item.patientId &&
+            p.patientId === item.patientId &&
+            (p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0)
+        );
+        item.isInWaitingQueue = !!inQueue;
+      }
+    });
+
+    result.sort((a, b) => {
+      if (a.hasAttendedToday !== b.hasAttendedToday) {
+        return a.hasAttendedToday ? 1 : -1;
+      }
+      return (a.time || "").localeCompare(b.time || "");
+    });
+
+    return result;
+  }, [patients, enquiries, todayVisits, todayKey]);
+
+  // Filtered Today's Expected Follow-Ups List
+  const filteredExpectedList = useMemo(() => {
+    let list = todayExpectedList;
+    if (followupFilter === "pending") {
+      list = list.filter(item => !item.hasAttendedToday);
+    } else if (followupFilter === "doctor") {
+      list = list.filter(item => item.isFollowUp);
+    } else if (followupFilter === "self-booked") {
+      list = list.filter(item => item.isSelfBooked);
+    } else if (followupFilter === "attended") {
+      list = list.filter(item => item.hasAttendedToday);
+    }
+
+    if (followupSearchQuery.trim()) {
+      const q = followupSearchQuery.trim().toLowerCase();
+      list = list.filter(item => {
+        return (
+          (item.patientName || "").toLowerCase().includes(q) ||
+          (item.phone || "").toLowerCase().includes(q) ||
+          (item.patientId || "").toLowerCase().includes(q) ||
+          (item.diagnosis || "").toLowerCase().includes(q)
+        );
+      });
+    }
+
+    return list;
+  }, [todayExpectedList, followupFilter, followupSearchQuery]);
 
 
   // Phone hardware/browser back button navigation handling for Doctor Portal
@@ -2050,6 +2222,11 @@ _(Saved in patient clinic records)_`;
             <span className="nav-tab-mobile">📩 Bookings</span>
             {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
           </button>
+          <button className={activeTab === "followups" ? "active" : ""} onClick={() => selectDoctorTab("followups")}>
+            <span className="nav-tab-desktop">🔔 7. Due Follow-Ups ({todayExpectedList.length})</span>
+            <span className="nav-tab-mobile">🔔 Follow-Ups ({todayExpectedList.length})</span>
+            {todayExpectedList.length > 0 && <span className="enq-badge" style={{ background: "#ea580c" }}>{todayExpectedList.length}</span>}
+          </button>
         </nav>
       </header>
 
@@ -2218,11 +2395,11 @@ _(Saved in patient clinic records)_`;
                 <span className="card-count-badge purple">{stats.totalEnquiriesCount || enquiries.length}</span>
               </div>
 
-              <div className="mobile-app-card" onClick={() => { selectDoctorTab("patients"); fetchPatients(); }}>
-                <div className="card-icon-bubble cyan">📋</div>
-                <strong className="card-title">Treatment Records</strong>
-                <span className="card-count-badge cyan" style={{ fontSize: "11px", fontWeight: "800", padding: "2px 8px" }}>
-                  {stats.totalVisits || (patients.length > 0 ? `${patients.length} Pts` : "History")}
+              <div className="mobile-app-card" onClick={() => selectDoctorTab("followups")}>
+                <div className="card-icon-bubble orange">🔔</div>
+                <strong className="card-title">Today's Follow-Ups</strong>
+                <span className="card-count-badge orange" style={{ fontSize: "11px", fontWeight: "800", padding: "2px 8px" }}>
+                  {todayExpectedList.length} Due
                 </span>
               </div>
             </div>
@@ -4057,7 +4234,451 @@ _(Saved in patient clinic records)_`;
           </div>
         )}
 
-        {/* ================= 6. SETTINGS & SYNC ================= */}
+        {/* ================= 6. TODAY'S FOLLOW-UPS & SELF-BOOKED PATIENTS ================= */}
+        {activeTab === "followups" && (
+          <div className="followups-view">
+            <div className="section-header-row">
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: 0, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+                    🔔 Today's Expected Follow-Ups & Self-Bookings
+                  </h2>
+                  <span style={{ background: "#ea580c", color: "#ffffff", padding: "3px 8px", borderRadius: "6px", fontSize: "11.5px", fontWeight: "800" }}>
+                    📅 {todayKey}
+                  </span>
+                </div>
+                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>
+                  Live roster of patients due for follow-up today or who booked an appointment online. Monitor arrivals and send 1-click WhatsApp reminders.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() => selectDoctorTab("dashboard")}
+                  style={{ background: "rgba(255,255,255,0.12)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "8px", padding: "6px 14px", fontWeight: "700", fontSize: "12.5px" }}
+                >
+                  ← Dashboard
+                </button>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}
+                  style={{ background: "rgba(255,255,255,0.12)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "8px", padding: "6px 14px", fontWeight: "700", fontSize: "12.5px" }}
+                >
+                  📅 Clinical Calendar
+                </button>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={handleDoctorFullRefresh}
+                  disabled={isDoctorRefreshing}
+                  style={{ padding: "6px 14px", fontSize: "12.5px", fontWeight: "700" }}
+                >
+                  🔄 Refresh
+                </button>
+              </div>
+            </div>
+
+            {leadActionToast && (
+              <div className="doctor-toast-alert" style={{ background: "#0878C9", color: "#ffffff", padding: "12px 18px", borderRadius: "10px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 14px rgba(8,120,201,0.3)" }}>
+                <span>{leadActionToast}</span>
+                <button onClick={() => setLeadActionToast("")} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "16px" }}>✕</button>
+              </div>
+            )}
+
+            {/* KPI Summary Cards */}
+            <div className="followups-stats-grid">
+              <div
+                className={`followup-stat-card ${followupFilter === "all" ? "active" : ""}`}
+                onClick={() => setFollowupFilter("all")}
+              >
+                <div className="followup-stat-icon blue">📋</div>
+                <div className="followup-stat-info">
+                  <span className="followup-stat-value">{todayExpectedList.length}</span>
+                  <span className="followup-stat-label">Total Expected</span>
+                  <span className="followup-stat-sub">Scheduled for Today</span>
+                </div>
+              </div>
+
+              <div
+                className={`followup-stat-card ${followupFilter === "pending" ? "active" : ""}`}
+                onClick={() => setFollowupFilter("pending")}
+              >
+                <div className="followup-stat-icon orange">⏳</div>
+                <div className="followup-stat-info">
+                  <span className="followup-stat-value">{todayExpectedList.filter(i => !i.hasAttendedToday).length}</span>
+                  <span className="followup-stat-label">Pending Arrival</span>
+                  <span className="followup-stat-sub">Yet to check in</span>
+                </div>
+              </div>
+
+              <div
+                className={`followup-stat-card ${followupFilter === "doctor" ? "active" : ""}`}
+                onClick={() => setFollowupFilter("doctor")}
+              >
+                <div className="followup-stat-icon orange">🔔</div>
+                <div className="followup-stat-info">
+                  <span className="followup-stat-value">{todayExpectedList.filter(i => i.isFollowUp).length}</span>
+                  <span className="followup-stat-label">Doctor Follow-Ups</span>
+                  <span className="followup-stat-sub">Set by Doctor</span>
+                </div>
+              </div>
+
+              <div
+                className={`followup-stat-card ${followupFilter === "self-booked" ? "active" : ""}`}
+                onClick={() => setFollowupFilter("self-booked")}
+              >
+                <div className="followup-stat-icon purple">📱</div>
+                <div className="followup-stat-info">
+                  <span className="followup-stat-value">{todayExpectedList.filter(i => i.isSelfBooked).length}</span>
+                  <span className="followup-stat-label">Self-Booked</span>
+                  <span className="followup-stat-sub">Via Portal / Online</span>
+                </div>
+              </div>
+
+              <div
+                className={`followup-stat-card ${followupFilter === "attended" ? "active" : ""}`}
+                onClick={() => setFollowupFilter("attended")}
+              >
+                <div className="followup-stat-icon green">✅</div>
+                <div className="followup-stat-info">
+                  <span className="followup-stat-value">{todayExpectedList.filter(i => i.hasAttendedToday).length}</span>
+                  <span className="followup-stat-label">Visited Today</span>
+                  <span className="followup-stat-sub">Completed visit</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Controls Bar */}
+            <div className="followups-controls-bar">
+              <div className="followup-search-box">
+                <span>🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search expected patients by name, phone, or condition..."
+                  value={followupSearchQuery}
+                  onChange={(e) => setFollowupSearchQuery(e.target.value)}
+                />
+                {followupSearchQuery && (
+                  <button
+                    onClick={() => setFollowupSearchQuery("")}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "14px" }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="followup-filter-pills">
+                <button
+                  type="button"
+                  className={`followup-filter-pill ${followupFilter === "all" ? "active" : ""}`}
+                  onClick={() => setFollowupFilter("all")}
+                >
+                  All ({todayExpectedList.length})
+                </button>
+                <button
+                  type="button"
+                  className={`followup-filter-pill ${followupFilter === "pending" ? "active" : ""}`}
+                  onClick={() => setFollowupFilter("pending")}
+                >
+                  ⏳ Pending ({todayExpectedList.filter(i => !i.hasAttendedToday).length})
+                </button>
+                <button
+                  type="button"
+                  className={`followup-filter-pill ${followupFilter === "doctor" ? "active" : ""}`}
+                  onClick={() => setFollowupFilter("doctor")}
+                >
+                  🔔 Doctor Follow-Ups ({todayExpectedList.filter(i => i.isFollowUp).length})
+                </button>
+                <button
+                  type="button"
+                  className={`followup-filter-pill ${followupFilter === "self-booked" ? "active" : ""}`}
+                  onClick={() => setFollowupFilter("self-booked")}
+                >
+                  📱 Self-Booked ({todayExpectedList.filter(i => i.isSelfBooked).length})
+                </button>
+                <button
+                  type="button"
+                  className={`followup-filter-pill ${followupFilter === "attended" ? "active" : ""}`}
+                  onClick={() => setFollowupFilter("attended")}
+                >
+                  ✅ Visited ({todayExpectedList.filter(i => i.hasAttendedToday).length})
+                </button>
+              </div>
+            </div>
+
+            {/* Patients List Grid */}
+            <div className="followups-grid">
+              {filteredExpectedList.map((item, idx) => {
+                const cleanPhone = String(item.phone || "").replace(/\D/g, "").slice(-10);
+                const initials = (item.patientName || "PT")
+                  .split(" ")
+                  .map(n => n[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase();
+
+                const waMessage = `Namaste ${item.patientName} ji 🙏,\nThis is a gentle reminder from Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center.\n\nYour ${item.isSelfBooked ? "appointment" : "follow-up session"} is scheduled for TODAY (${todayKey}) at ${item.time || "10:30 AM"}.\nFocus: ${item.diagnosis || "Physical Therapy Rehabilitation"}\n\nPlease let us know your expected arrival time so we can keep your treatment bed ready.\nClinic: Vindhy Physio & Rehab Center, Robertsganj.\nSee you soon! 🏥✨`;
+
+                return (
+                  <div
+                    key={`${item.patientId || item.appointmentId || idx}`}
+                    className={`followup-card ${item.hasAttendedToday ? "attended" : item.isInWaitingQueue ? "in-queue" : ""}`}
+                  >
+                    <div>
+                      {/* Card Header */}
+                      <div className="followup-card-header">
+                        <div className="followup-card-title-group">
+                          <div className="followup-avatar">{initials}</div>
+                          <div>
+                            <h3 className="followup-patient-name">{item.patientName}</h3>
+                            <div className="followup-patient-meta">
+                              {item.patientId && item.patientId !== "New Booking" && (
+                                <span className="patient-id-badge">{item.patientId}</span>
+                              )}
+                              {item.age && <span>{item.age} Yrs</span>}
+                              {item.gender && <span>• {item.gender}</span>}
+                              {cleanPhone && <span>• 📞 +91 {cleanPhone}</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="followup-time-badge">
+                          <span>🕒 {item.time || "Scheduled"}</span>
+                        </div>
+                      </div>
+
+                      {/* Expected Reason Tags */}
+                      <div className="followup-type-tags" style={{ marginTop: "12px" }}>
+                        {item.types.map((t, tIdx) => (
+                          <span
+                            key={tIdx}
+                            className={`followup-type-tag ${
+                              t.includes("Self-Booked")
+                                ? "self-booked"
+                                : t.includes("Daily")
+                                ? "daily"
+                                : "doctor"
+                            }`}
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Clinical Reason / Concern */}
+                      <div className="followup-condition-box" style={{ marginTop: "10px" }}>
+                        <div>
+                          <strong>🩺 Treatment Focus / Reason:</strong>
+                          <div style={{ marginTop: "2px", fontWeight: "600" }}>{item.diagnosis}</div>
+                        </div>
+                        {item.isSelfBooked && item.bookingStatus && (
+                          <div style={{ fontSize: "11.5px", color: "var(--text-secondary)" }}>
+                            <strong>Booking Status:</strong> {item.bookingStatus}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Strip & Actions */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {item.hasAttendedToday ? (
+                        <div className="followup-status-strip attended">
+                          <span>✅ Visited Today</span>
+                          <span>Visit #{item.attendedVisit?.visitNumber || "Recorded"}</span>
+                        </div>
+                      ) : item.isInWaitingQueue ? (
+                        <div className="followup-status-strip in-queue">
+                          <span>⏳ In Clinic Waiting Queue</span>
+                          <span style={{ fontSize: "11px" }}>Ready for Doctor</span>
+                        </div>
+                      ) : (
+                        <div className="followup-status-strip pending">
+                          <span>🕒 Scheduled for Today</span>
+                          <span style={{ fontSize: "11px" }}>Pending Arrival</span>
+                        </div>
+                      )}
+
+                      {/* Self-Booked Pending Approval Actions */}
+                      {item.isSelfBooked && item.appointmentId && item.bookingStatus === "Pending Approval" && (
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await api.updateEnquiryStatus(item.appointmentId, "Approved");
+                                setEnquiries(prev => prev.map(e => (e.id === item.appointmentId || e.enquiryId === item.appointmentId) ? { ...e, status: "Approved" } : e));
+                                setLeadActionToast(`✅ Appointment booking approved for ${item.patientName}!`);
+                                setTimeout(() => setLeadActionToast(""), 3500);
+                                if (cleanPhone) {
+                                  window.open(
+                                    `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
+                                      `Namaste ${item.patientName} ji, your physiotherapy appointment for TODAY (${todayKey} at ${item.time}) has been APPROVED by Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center.`
+                                    )}`,
+                                    "_blank"
+                                  );
+                                }
+                              } catch (err) {
+                                console.error(err);
+                                alert("Failed to approve appointment.");
+                              }
+                            }}
+                            style={{
+                              flex: 1,
+                              background: "#16a34a",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: "7px",
+                              padding: "7px 10px",
+                              fontSize: "12px",
+                              fontWeight: "800",
+                              cursor: "pointer",
+                              boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)"
+                            }}
+                          >
+                            ✅ Approve Slot
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await api.updateEnquiryStatus(item.appointmentId, "Rejected");
+                                setEnquiries(prev => prev.map(e => (e.id === item.appointmentId || e.enquiryId === item.appointmentId) ? { ...e, status: "Rejected" } : e));
+                                setLeadActionToast(`❌ Appointment marked Doctor Unavailable.`);
+                                setTimeout(() => setLeadActionToast(""), 3500);
+                                if (cleanPhone) {
+                                  window.open(
+                                    `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
+                                      `Namaste ${item.patientName} ji, Dr. Satyam Vishwakarma is unavailable for your requested slot today. Please contact clinic to reschedule.`
+                                    )}`,
+                                    "_blank"
+                                  );
+                                }
+                              } catch (err) {
+                                console.error(err);
+                                alert("Failed to update appointment.");
+                              }
+                            }}
+                            style={{
+                              background: "#fee2e2",
+                              color: "#dc2626",
+                              border: "1px solid #f87171",
+                              borderRadius: "7px",
+                              padding: "7px 10px",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                              cursor: "pointer"
+                            }}
+                          >
+                            ❌ Unavailable
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Card Action Buttons */}
+                      <div className="followup-card-actions">
+                        {cleanPhone && (
+                          <a
+                            href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMessage)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="whatsapp-action-btn"
+                            title="Send WhatsApp Follow-up Reminder"
+                          >
+                            💬 WhatsApp Reminder
+                          </a>
+                        )}
+
+                        {cleanPhone && (
+                          <a
+                            href={`tel:+91${cleanPhone}`}
+                            className="profile-action-btn"
+                            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                            title="Call Patient"
+                          >
+                            📞 Call
+                          </a>
+                        )}
+
+                        {item.patientRef ? (
+                          <>
+                            <button
+                              type="button"
+                              className="profile-action-btn"
+                              onClick={() => openPatientProfile(item.patientId)}
+                            >
+                              👤 Profile
+                            </button>
+                            {!item.hasAttendedToday && (
+                              <button
+                                type="button"
+                                className="visit-action-btn"
+                                onClick={() => openQuickDailyVisitModal(item.patientRef)}
+                                title="Record today's visit for this patient"
+                              >
+                                ⚡ +1 Record Visit
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className="visit-action-btn"
+                            onClick={() => {
+                              setNewPatientForm({
+                                name: item.patientName,
+                                phone: cleanPhone,
+                                age: item.age || "",
+                                gender: item.gender || "Male",
+                                complaint: item.diagnosis || "",
+                                firstVisitReason: item.diagnosis || "Physical Therapy",
+                                duration: "1 week",
+                                isFirstTime: true
+                              });
+                              selectDoctorTab("new-patient");
+                            }}
+                          >
+                            ➕ Enroll Patient
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filteredExpectedList.length === 0 && (
+                <div className="followup-empty-card">
+                  <div className="followup-empty-icon">🔔</div>
+                  <h3 style={{ margin: "0 0 6px", color: "var(--heading)", fontSize: "16px", fontWeight: "700" }}>
+                    {todayExpectedList.length === 0
+                      ? `No Follow-Ups or Online Bookings Due Today (${todayKey})`
+                      : `No matching patients found`}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
+                    {todayExpectedList.length === 0
+                      ? "Patients with a scheduled follow-up on today's date or who book via the patient portal will automatically show up here."
+                      : "Try changing your filter pills or search terms to see all expected patients."}
+                  </p>
+                  {todayExpectedList.length > 0 && (
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      onClick={() => { setFollowupFilter("all"); setFollowupSearchQuery(""); }}
+                      style={{ marginTop: "14px", padding: "8px 18px", fontSize: "13px" }}
+                    >
+                      Show All Expected Patients ({todayExpectedList.length})
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================= 7. SETTINGS & SYNC ================= */}
         {activeTab === "settings" && (
           <div className="settings-view">
             <div className="section-header-row">
@@ -6644,7 +7265,9 @@ _(Saved in patient clinic records)_`;
         >
           <span className="nav-icon-4">☰</span>
           <span className="nav-label-4">More</span>
-          {enquiries.length > 0 && <span className="bottom-nav-badge orange">{enquiries.length}</span>}
+          {(enquiries.length + todayExpectedList.length) > 0 && (
+            <span className="bottom-nav-badge orange">{enquiries.length + todayExpectedList.length}</span>
+          )}
         </button>
       </nav>
 
@@ -6685,6 +7308,20 @@ _(Saved in patient clinic records)_`;
                   <strong>Online Bookings & Enquiries ({enquiries.length})</strong>
                   <span>Website appointments & patient leads</span>
                 </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              <button className="more-sheet-item" onClick={() => selectDoctorTab("followups")}>
+                <span className="sheet-icon orange">🔔</span>
+                <div className="sheet-info">
+                  <strong>Today's Follow-Ups ({todayExpectedList.length})</strong>
+                  <span>Doctor follow-ups & self-booked patients</span>
+                </div>
+                {todayExpectedList.length > 0 && (
+                  <span className="card-count-badge orange" style={{ fontSize: "11px", fontWeight: "800", padding: "2px 8px" }}>
+                    {todayExpectedList.length} Due
+                  </span>
+                )}
                 <span className="more-arrow">›</span>
               </button>
 

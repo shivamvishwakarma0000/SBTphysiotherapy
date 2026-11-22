@@ -1272,7 +1272,7 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
   return (
     <div className="app-download-modal-overlay" onClick={onClose}>
       <div className="app-download-card" onClick={(e) => e.stopPropagation()}>
-        <button className="download-modal-close" onClick={onClose} aria-label="Close modal">✕</button>
+        <button className="download-modal-close" onClick={onClose} aria-label="Close download popup" title="Close">✕</button>
         
         <div className="app-download-header">
           <img
@@ -1282,33 +1282,32 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
           />
           <div className="app-download-meta">
             <h3>Download Vindhy App 📱</h3>
-            <span className="app-download-badge">Official Android & iOS App</span>
+            <span className="app-download-badge">Official Clinic App</span>
           </div>
         </div>
 
         <ul className="app-download-benefits">
           <li>✓ 1-Tap access to Patient Portal, Visits & PDF Receipts</li>
           <li>✓ Fast consultation booking & recovery tracking</li>
-          <li>✓ Works smoothly offline on all Android phones</li>
         </ul>
 
         {isIOS ? (
           <div className="ios-install-steps">
-            <strong>📲 How to Install on iPhone / iPad:</strong>
+            <strong>📲 How to Install on iPhone:</strong>
             <ol>
-              <li>Tap the <strong>Share</strong> icon <span className="ios-icon">⎋</span> at the bottom of Safari.</li>
-              <li>Scroll down and tap <strong>Add to Home Screen</strong> <span className="ios-icon">⊞</span>.</li>
-              <li>Tap <strong>Add</strong> at top right corner.</li>
+              <li>Tap <strong>Share</strong> <span className="ios-icon">⎋</span> in Safari</li>
+              <li>Tap <strong>Add to Home Screen</strong> <span className="ios-icon">⊞</span></li>
+              <li>Tap <strong>Add</strong> at top right corner</li>
             </ol>
-            <div className="download-modal-actions" style={{ marginTop: "14px" }}>
-              <button className="primary-btn download-btn" onClick={handleIOSGotIt} style={{ width: "100%" }}>
+            <div className="download-modal-actions" style={{ marginTop: "12px" }}>
+              <button className="primary-btn download-btn" onClick={handleIOSGotIt} style={{ width: "100%", justifyContent: "center" }}>
                 Got It & Continue
               </button>
             </div>
           </div>
         ) : (
           <div className="android-install-flow">
-            <div className="download-modal-actions" style={{ marginBottom: "12px" }}>
+            <div className="download-modal-actions" style={{ marginBottom: "10px" }}>
               <button className="primary-btn download-btn" onClick={handleDownload} style={{ width: "100%", justifyContent: "center" }}>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style={{ marginRight: "6px" }}>
                   <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4114 13.8533 8.081 12 8.081s-3.5902.3304-5.1367.8687L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
@@ -1316,8 +1315,8 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
                 Install Android App Now
               </button>
             </div>
-            <div style={{ fontSize: "12px", color: "#64748b", background: "#f1f5f9", padding: "10px 12px", borderRadius: "10px", textAlign: "left", lineHeight: "1.4" }}>
-              <strong>💡 Quick Android Tip:</strong> If automatic install doesn't pop up, tap your Chrome menu <strong>(⋮ top right)</strong> and select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.
+            <div style={{ fontSize: "11.5px", color: "#64748b", background: "var(--panel, #f1f5f9)", padding: "8px 10px", border: "1px solid var(--line, #e2e8f0)", borderRadius: "8px", textAlign: "left", lineHeight: "1.35" }}>
+              <strong>💡 Quick Android Tip:</strong> If install prompt doesn't open automatically, tap your Chrome menu <strong>(⋮ top right)</strong> and tap <strong>"Install app"</strong>.
             </div>
           </div>
         )}
@@ -1347,10 +1346,8 @@ function WhatsAppFloating() {
 function AutoEnquiryModal({ isOpen, onClose }) {
   const [form, setForm] = useState({
     name: "",
-    age: "",
     phone: "",
-    painArea: "Spine & Back Pain (Sciatica / Slip Disc)",
-    concern: ""
+    painArea: "Spine & Back Pain (Sciatica / Slip Disc)"
   });
   const [status, setStatus] = useState("idle"); // idle, loading, success, error, invalid
 
@@ -1392,11 +1389,11 @@ function AutoEnquiryModal({ isOpen, onClose }) {
     try {
       await api.createEnquiry({
         name: form.name.trim(),
-        age: form.age.trim(),
+        age: "",
         phone: cleanPhone,
         painArea: form.painArea,
-        concern: form.concern.trim() || "Automatic website exploration enquiry",
-        duration: "Direct Online Enquiry"
+        concern: "Website Quick Consultation Callback Request",
+        duration: "Quick Online Callback"
       });
       setStatus("success");
       try {
@@ -1421,41 +1418,60 @@ function AutoEnquiryModal({ isOpen, onClose }) {
         </button>
 
         <div className="auto-enquiry-badge">
-          <span>🩺 Free Consultation Triage</span>
+          <span>🩺 Free Consultation</span>
         </div>
 
-        <h3 className="auto-enquiry-title">Need Expert Physio Guidance?</h3>
+        <h3 className="auto-enquiry-title">Need Expert Physio Advice?</h3>
         <p className="auto-enquiry-desc">
-          Tell us about your pain or condition. Dr. Satyam Vishwakarma & our clinic team will reach out directly for advice.
+          Leave your details for a quick callback & treatment guidance from Dr. Satyam Vishwakarma.
         </p>
 
         {status === "success" ? (
-          <div className="auto-enquiry-status success" style={{ textAlign: "left", padding: "16px" }}>
-            <div style={{ fontWeight: "800", fontSize: "16px", color: "#10b981", marginBottom: "6px" }}>
-              🎉 Enquiry Received & Stored!
+          <div className="auto-enquiry-status success" style={{ textAlign: "center", padding: "16px 12px" }}>
+            <div style={{ fontSize: "28px", marginBottom: "6px" }}>🎉</div>
+            <div style={{ fontWeight: "800", fontSize: "16px", color: "#10b981", marginBottom: "4px" }}>
+              Enquiry Received!
             </div>
-            <p style={{ margin: "0 0 12px 0", fontSize: "13px", color: "var(--text-primary)" }}>
-              Dr. Satyam's clinic reception will contact you at +91 {form.phone} shortly. You can also chat directly on WhatsApp:
+            <p style={{ margin: "0 0 14px 0", fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
+              Dr. Satyam's clinic reception will contact you at <strong>+91 {form.phone}</strong> shortly.
             </p>
             <a
-              href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I have sent an enquiry on your website:\n\n👤 Name: ${form.name}\n🎂 Age: ${form.age || "N/A"}\n📞 Phone: +91 ${form.phone}\n🩺 Condition: ${form.painArea}\n💬 Query: ${form.concern || "Physiotherapy Guidance"}`)}`}
+              href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I requested a consultation callback on your website:\n\n👤 Name: ${form.name}\n📞 Phone: +91 ${form.phone}\n🩺 Problem: ${form.painArea}`)}`}
               target="_blank"
               rel="noreferrer"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "6px",
                 background: "#25D366",
                 color: "#ffffff",
-                padding: "8px 14px",
-                borderRadius: "6px",
+                padding: "10px 16px",
+                borderRadius: "8px",
                 fontSize: "13px",
                 fontWeight: "700",
-                textDecoration: "none"
+                textDecoration: "none",
+                width: "100%",
+                boxSizing: "border-box"
               }}
             >
-              <WhatsAppIcon /> Chat Directly on WhatsApp ➔
+              <WhatsAppIcon /> Chat on WhatsApp Now ➔
             </a>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                marginTop: "12px",
+                background: "none",
+                border: "none",
+                color: "var(--muted)",
+                fontSize: "12px",
+                cursor: "pointer",
+                textDecoration: "underline"
+              }}
+            >
+              Close & Explore Website
+            </button>
           </div>
         ) : (
           <form className="auto-enquiry-form" onSubmit={handleSubmit}>
@@ -1472,68 +1488,42 @@ function AutoEnquiryModal({ isOpen, onClose }) {
               />
             </label>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <label className="auto-enquiry-field">
-                Age (Years)
-                <input
-                  type="number"
-                  name="age"
-                  min="1"
-                  max="120"
-                  value={form.age}
-                  onChange={update}
-                  placeholder="e.g. 35"
-                />
-              </label>
-
-              <label className="auto-enquiry-field">
-                Mobile Number *
-                <div className="auto-enquiry-phone-row">
-                  <span>+91</span>
-                  <input
-                    type="tel"
-                    name="phone"
-                    required
-                    maxLength="10"
-                    inputMode="numeric"
-                    value={form.phone}
-                    onChange={update}
-                    placeholder="9876543210"
-                    autoComplete="tel"
-                  />
-                </div>
-              </label>
-            </div>
-
             <label className="auto-enquiry-field">
-              Pain Area / Clinical Condition *
-              <select name="painArea" value={form.painArea} onChange={update}>
-                <option value="Spine & Back Pain (Sciatica / Slip Disc)">Spine & Lower Back Pain (Sciatica / Disc Bulge)</option>
-                <option value="Cupping Therapy / Hijama">Cupping Therapy / Pain Relief</option>
-                <option value="Cervical & Neck Spondylosis">Cervical & Neck Pain (Tech Neck)</option>
-                <option value="Knee Pain & Arthritis / ACL">Knee Pain & Arthritis / ACL Recovery</option>
-                <option value="Paralysis & Neuro Rehabilitation">Paralysis & Neuro Rehabilitation</option>
-                <option value="Frozen Shoulder & Shoulder Pain">Frozen Shoulder & Rotator Cuff</option>
-                <option value="Sports Injury Recovery">Sports Injury & Ligament Rehabilitation</option>
-                <option value="Post-Surgical Rehabilitation">Post-Surgical Knee / Hip / Spine Rehab</option>
-                <option value="Other Clinical Condition">Other Clinical Pain / Query</option>
-              </select>
+              Mobile Number *
+              <div className="auto-enquiry-phone-row">
+                <span>+91</span>
+                <input
+                  type="tel"
+                  name="phone"
+                  required
+                  maxLength="10"
+                  inputMode="numeric"
+                  value={form.phone}
+                  onChange={update}
+                  placeholder="9876543210"
+                  autoComplete="tel"
+                />
+              </div>
             </label>
 
             <label className="auto-enquiry-field">
-              Describe Symptoms / Query (Optional)
-              <input
-                type="text"
-                name="concern"
-                value={form.concern}
-                onChange={update}
-                placeholder="e.g. Pain since 2 weeks, worse while sitting"
-              />
+              Pain Area / Clinical Problem *
+              <select name="painArea" value={form.painArea} onChange={update}>
+                <option value="Spine & Back Pain (Sciatica / Slip Disc)">Lower Back Pain / Sciatica / Slip Disc</option>
+                <option value="Cervical & Neck Spondylosis">Neck & Cervical Pain / Spondylosis</option>
+                <option value="Knee Pain & Arthritis / ACL">Knee Pain & Arthritis / ACL Rehab</option>
+                <option value="Cupping Therapy / Hijama">Cupping Therapy / Hijama Pain Relief</option>
+                <option value="Frozen Shoulder & Shoulder Pain">Frozen Shoulder & Rotator Cuff</option>
+                <option value="Sports Injury Recovery">Sports Injury & Ligament Recovery</option>
+                <option value="Paralysis & Neuro Rehabilitation">Paralysis & Neuro Recovery</option>
+                <option value="Post-Surgical Rehabilitation">Post-Surgical Knee / Spine Rehab</option>
+                <option value="Other Clinical Condition">Other Pain / Clinical Consultation</option>
+              </select>
             </label>
 
             {status === "invalid" && (
               <div className="auto-enquiry-status error">
-                Please provide your name and a valid 10-digit mobile number.
+                Please enter full name and a valid 10-digit mobile number.
               </div>
             )}
             {status === "error" && (
@@ -1547,7 +1537,7 @@ function AutoEnquiryModal({ isOpen, onClose }) {
               className="auto-enquiry-submit-btn"
               disabled={status === "loading"}
             >
-              {status === "loading" ? "Submitting..." : "Send Quick Enquiry ➔"}
+              {status === "loading" ? "Submitting..." : "Request Callback ➔"}
             </button>
 
             <button
@@ -1555,7 +1545,7 @@ function AutoEnquiryModal({ isOpen, onClose }) {
               className="auto-enquiry-cancel-btn"
               onClick={onClose}
             >
-              Cancel & Continue Exploring Website
+              Explore Website First
             </button>
           </form>
         )}

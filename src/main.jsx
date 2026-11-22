@@ -777,6 +777,10 @@ function Assessment() {
       setForm({ name: "", age: "", phone: "", appointmentDate: "", concern: "" });
       setCustomPainArea("");
       setCustomDuration("");
+      // Automatically dismiss the success message after 7 seconds so the form returns to clean state
+      setTimeout(() => {
+        setStatus((cur) => (cur === "success" ? "" : cur));
+      }, 7000);
     } catch {
       setStatus("error");
     }
@@ -907,21 +911,9 @@ function Assessment() {
               Preferred Date of Visit
               <input
                 name="appointmentDate"
-                type={form.appointmentDate ? "date" : "text"}
+                type="date"
                 value={form.appointmentDate}
-                placeholder="Click to choose date"
                 min={new Date().toISOString().split("T")[0]}
-                onFocus={(e) => {
-                  e.target.type = "date";
-                  try { if (typeof e.target.showPicker === "function") e.target.showPicker(); } catch {}
-                }}
-                onClick={(e) => {
-                  e.target.type = "date";
-                  try { if (typeof e.target.showPicker === "function") e.target.showPicker(); } catch {}
-                }}
-                onBlur={(e) => {
-                  if (!e.target.value) e.target.type = "text";
-                }}
                 onChange={update}
               />
             </label>
@@ -934,12 +926,31 @@ function Assessment() {
           {status === "invalid" && <p className="form-status">Please enter a valid patient name, age, and 10-digit Indian mobile number.</p>}
           {status === "loading" && <p className="form-status">Submitting consultation request...</p>}
           {status === "success" && (
-            <div className="form-status-box success" style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid #10b981", borderRadius: "8px", padding: "14px", marginTop: "14px", color: "var(--text-primary)" }}>
+            <div className="form-status-box success" style={{ position: "relative", background: "rgba(16, 185, 129, 0.12)", border: "1.5px solid #10b981", borderRadius: "10px", padding: "14px 16px", marginTop: "14px", color: "var(--text-primary)" }}>
+              <button
+                type="button"
+                onClick={() => setStatus("")}
+                style={{
+                  position: "absolute",
+                  top: "10px",
+                  right: "12px",
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "18px",
+                  fontWeight: "700",
+                  color: "#10b981",
+                  cursor: "pointer",
+                  padding: "2px 6px"
+                }}
+                title="Dismiss"
+              >
+                ✕
+              </button>
               <div style={{ fontWeight: "700", color: "#10b981", fontSize: "15px", marginBottom: "4px" }}>
-                ✅ Consultation Request Successfully Stored in Website!
+                ✅ Consultation Request Successfully Received!
               </div>
               <p style={{ margin: "0 0 10px 0", fontSize: "13px" }}>
-                Dr. Satyam Vishwakarma and our clinic reception have received your request. You can also send an instant copy directly on WhatsApp:
+                Dr. Satyam Vishwakarma and clinic reception have received your request. (Auto-closing shortly).
               </p>
               {lastSubmittedLead && (
                 <a

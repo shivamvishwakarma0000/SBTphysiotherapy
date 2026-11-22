@@ -104,9 +104,9 @@ export default function PatientVisitCalendar({
       };
     };
 
+    list.push({ label: "Today", ...addDays(0) });
     list.push({ label: "Tomorrow", ...addDays(1) });
     list.push({ label: "In 2 Days", ...addDays(2) });
-    list.push({ label: "In 3 Days", ...addDays(3) });
     list.push({ label: "Next Week", ...addDays(7) });
     return list;
   }, []);
@@ -126,6 +126,8 @@ export default function PatientVisitCalendar({
       } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateKeyOrISO)) {
         setSchedDate(dateKeyOrISO);
       }
+    } else {
+      setSchedDate(minDateStr);
     }
     setShowScheduleModal(true);
   };
@@ -144,6 +146,7 @@ export default function PatientVisitCalendar({
         patientId,
         patientName,
         phone,
+        date: ddmmyyyy,
         appointmentDate: ddmmyyyy,
         time: schedTime,
         reason: schedReason || "Follow-up Rehabilitation Session",

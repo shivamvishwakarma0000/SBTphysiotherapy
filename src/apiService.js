@@ -23,6 +23,7 @@ import {
 } from "./supabaseClient";
 import defaultSeedPatients from "../data/patients.json";
 import defaultSeedVisits from "../data/visits.json";
+import { cleanDateOnly, cleanTimeOnly } from "./receiptUtils";
 
 export {
   getSupabaseConfig,
@@ -190,6 +191,16 @@ export function dismissReview(queueId) {
     queue[idx].status = "dismissed";
     setLocal(KEYS.REVIEW_QUEUE, queue);
   }
+}
+
+export function dismissAllReviews() {
+  const queue = getLocal(KEYS.REVIEW_QUEUE, []);
+  queue.forEach(q => {
+    if (q.status === "pending") {
+      q.status = "dismissed";
+    }
+  });
+  setLocal(KEYS.REVIEW_QUEUE, queue);
 }
 
 // Helper: Local DB Storage
@@ -1806,7 +1817,7 @@ export const patientApi = {
     if (!p) return { ok: false, error: "Patient session not found" };
 
     const aptId = `APT-${Date.now()}`;
-    const cleanDate = cleanDateOnly(payload.date);
+    const cleanDate = cleanDateOnly(payload.date || payload.appointmentDate || new Date());
     const cleanTime = cleanTimeOnly(payload.time) || "10:00 AM";
 
     const appointment = {

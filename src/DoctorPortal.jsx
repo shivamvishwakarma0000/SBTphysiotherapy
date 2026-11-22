@@ -11,6 +11,7 @@ import {
   scheduleReviewRequest,
   markReviewSent,
   dismissReview,
+  dismissAllReviews,
   generateReviewWhatsAppMessage,
   getReviewWhatsAppUrl,
   restoreFromGoogleSheets,
@@ -741,6 +742,32 @@ export default function DoctorPortal({ onClose, themeProps }) {
     fetchReviewQueue();
     setShareFeedback("Review reminder dismissed.");
     setTimeout(() => setShareFeedback(""), 3000);
+  };
+
+  const handleDismissAllReviews = () => {
+    dismissAllReviews();
+    fetchReviewQueue();
+    setShareFeedback("All pending review reminders cleared.");
+    setTimeout(() => setShareFeedback(""), 3000);
+  };
+
+  const [disableReviewAlerts, setDisableReviewAlerts] = useState(() => {
+    try {
+      return localStorage.getItem("vindhy_disable_review_alerts") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleDisableReviewAlerts = (val) => {
+    setDisableReviewAlerts(val);
+    try {
+      localStorage.setItem("vindhy_disable_review_alerts", String(val));
+    } catch {}
+    if (val) {
+      dismissAllReviews();
+      fetchReviewQueue();
+    }
   };
 
   const handleMarkReviewSent = (queueId) => {
@@ -2405,7 +2432,7 @@ _(Saved in patient clinic records)_`;
       )}
 
       {/* 2-Hour Post-Consultation WhatsApp Review Reminder Banner */}
-      {readyReviews.length > 0 && (
+      {!disableReviewAlerts && readyReviews.length > 0 && (
         <div
           className="review-alert-banner"
           style={{
@@ -2431,18 +2458,17 @@ _(Saved in patient clinic records)_`;
               <span style={{ background: "#ffffff", color: "#064e3b", padding: "2px 8px", borderRadius: "6px", fontWeight: "800", marginLeft: "4px" }}>
                 📞 +91 {readyReviews[0].phone}
               </span>
-              . Send feedback message?
             </span>
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
             <button
               type="button"
               style={{
-                background: "#ffffff !important",
-                color: "#064e3b !important",
+                background: "#ffffff",
+                color: "#064e3b",
                 fontWeight: "800",
-                padding: "7px 16px",
-                fontSize: "12.5px",
+                padding: "6px 14px",
+                fontSize: "12px",
                 borderRadius: "7px",
                 border: "none",
                 cursor: "pointer",
@@ -2455,10 +2481,10 @@ _(Saved in patient clinic records)_`;
             <button
               className="secondary-btn"
               style={{
-                background: "rgba(239, 68, 68, 0.2)",
+                background: "rgba(239, 68, 68, 0.25)",
                 color: "#fee2e2",
-                border: "1px solid rgba(239, 68, 68, 0.45)",
-                padding: "6px 12px",
+                border: "1px solid rgba(239, 68, 68, 0.5)",
+                padding: "6px 10px",
                 fontSize: "12px",
                 borderRadius: "6px",
                 cursor: "pointer",
@@ -2469,23 +2495,39 @@ _(Saved in patient clinic records)_`;
             >
               ✕ Don't Send
             </button>
-            {readyReviews.length > 1 && (
-              <button
-                className="secondary-btn"
-                style={{
-                  background: "rgba(255,255,255,0.15)",
-                  color: "#ffffff",
-                  border: "1px solid rgba(255,255,255,0.35)",
-                  padding: "6px 10px",
-                  fontSize: "11px",
-                  borderRadius: "6px",
-                  cursor: "pointer"
-                }}
-                onClick={() => setActiveTab("waiting")}
-              >
-                +{readyReviews.length - 1} More
-              </button>
-            )}
+            <button
+              className="secondary-btn"
+              style={{
+                background: "rgba(220, 38, 38, 0.45)",
+                color: "#ffffff",
+                border: "1px solid rgba(239, 68, 68, 0.7)",
+                padding: "6px 10px",
+                fontSize: "11.5px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontWeight: "700"
+              }}
+              onClick={handleDismissAllReviews}
+              title="Do not send review to anyone — clear all"
+            >
+              ✕ Don't Send to Anyone
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleDisableReviewAlerts(true)}
+              style={{
+                background: "transparent",
+                color: "rgba(255,255,255,0.7)",
+                border: "none",
+                fontSize: "11px",
+                cursor: "pointer",
+                textDecoration: "underline",
+                marginLeft: "4px"
+              }}
+              title="Turn off 2-hour feedback prompt"
+            >
+              Turn off
+            </button>
           </div>
         </div>
       )}
@@ -2945,11 +2987,15 @@ _(Saved in patient clinic records)_`;
           <div className="waiting-queue-view">
             <div className="section-header-row">
               <div>
-                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Step 2: Patients Awaiting Doctor Consultation</h2>
-                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Enrolled patients currently waiting in the clinic. Open a patient to perform examination, enter diagnosis & fee, and issue the official receipt.</p>
+                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 4px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+                  ⏳ Clinic Waiting Room ({patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length})
+                </h2>
+                <p style={{ color: "#e2e8f0", fontSize: "13px", margin: 0, opacity: 0.95 }}>
+                  Enrolled patients waiting in clinic. Click to start consultation, diagnose, and print receipt.
+                </p>
               </div>
               <button className="primary-btn" onClick={() => setActiveTab("new-patient")}>
-                ➕ 1. Intake New Patient
+                ➕ Intake Patient
               </button>
             </div>
 
@@ -2958,11 +3004,11 @@ _(Saved in patient clinic records)_`;
                 <div className="waiting-patient-card" key={p.patientId}>
                   <div className="waiting-card-header">
                     <div className="waiting-badge-row">
-                      <span className="status-pill warning">⏳ Waiting for Doctor</span>
+                      <span className="status-pill warning">⏳ Waiting</span>
                       <span className="patient-id-badge">{p.patientId}</span>
                     </div>
                     <span className="waiting-time-tag" style={{ background: "#e0f2fe", color: "#0369a1", border: "1px solid #7dd3fc", fontWeight: "700" }}>
-                      🕒 Arrived: {p.intakeTime || p.visitTime || "Live Now"}
+                      🕒 {p.intakeTime || p.visitTime || "Just now"}
                     </span>
                   </div>
 
@@ -2973,10 +3019,9 @@ _(Saved in patient clinic records)_`;
                     </p>
 
                     <div className="waiting-problem-box">
-                      <strong>🩺 Chief Concern:</strong> {p.firstVisitReason}
-                      <br />
-                      <strong>⏱️ Duration:</strong> {p.duration || "Initial onset"}
-                      {p.isFirstTime && <span className="first-time-tag"> • First Time Visit</span>}
+                      <strong>🩺 Concern:</strong> {p.firstVisitReason || "Physiotherapy Consultation"}
+                      {p.duration && <span> • ⏱️ {p.duration}</span>}
+                      {p.isFirstTime && <span className="first-time-tag"> • First Visit</span>}
                     </div>
 
                     {p.complaint && (
@@ -2989,10 +3034,10 @@ _(Saved in patient clinic records)_`;
                   <div className="waiting-card-actions" style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "14px" }}>
                     <button
                       className="primary-btn consult-start-btn"
-                      style={{ flex: 1, padding: "10px 16px", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                      style={{ flex: 1, padding: "10px 16px", fontSize: "13.5px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
                       onClick={() => handleOpenConsultationModal(p)}
                     >
-                      🩺 Start Doctor Consultation & Issue Receipt
+                      🩺 Consult &amp; Issue Receipt
                     </button>
                     <button
                       className="secondary-btn delete-action"
@@ -3009,31 +3054,39 @@ _(Saved in patient clinic records)_`;
               {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length === 0 && (
                 <div className="empty-waiting-card">
                   <span style={{ fontSize: "40px" }}>🎉</span>
-                  <h3>No Patients Currently in Waiting Queue!</h3>
+                  <h3>Waiting Room is Empty!</h3>
                   <p>All enrolled patients have completed their doctor consultations.</p>
                   <button className="primary-btn" onClick={() => setActiveTab("new-patient")} style={{ marginTop: "12px" }}>
-                    ➕ 1. Intake Arriving Patient
+                    ➕ Intake New Patient
                   </button>
                 </div>
               )}
 
               {/* ⭐ 2-Hour Post-Consultation WhatsApp Review Automation Section */}
-              <div className="review-queue-panel" style={{ marginTop: "30px", borderTop: "1px dashed var(--line, #334155)", paddingTop: "24px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "16px" }}>
+              <div className="review-queue-panel" style={{ marginTop: "24px", borderTop: "1px dashed var(--line, #334155)", paddingTop: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "14px" }}>
                   <div>
-                    <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: "800", color: "var(--text, #ffffff)", display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span>⭐</span> Post-Consultation Review Queue (2-Hour Follow-Up)
+                    <h3 style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: "800", color: "var(--text, #ffffff)", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>⭐</span> Post-Consultation Reviews (2-Hour Follow-Up)
                       {pendingReviews.length > 0 && (
                         <span className="enq-badge" style={{ background: readyReviews.length > 0 ? "#10b981" : "#0284c7", fontSize: "11px", padding: "2px 8px" }}>
                           {readyReviews.length > 0 ? `${readyReviews.length} Ready` : `${pendingReviews.length} Scheduled`}
                         </span>
                       )}
                     </h3>
-                    <p style={{ margin: 0, fontSize: "12.5px", color: "var(--text-secondary, #94a3b8)" }}>
-                      Automatically scheduled for <strong>newly enrolled patients</strong>. Triggers 2 hours after intake or consultation.
+                    <p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary, #94a3b8)" }}>
+                      Automatically prepares a WhatsApp review link 2 hours after intake or consultation.
                     </p>
                   </div>
                   <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                    <button
+                      className="secondary-btn"
+                      style={{ fontSize: "12px", padding: "6px 12px", background: "rgba(239, 68, 68, 0.2)", color: "#fee2e2", border: "1px solid rgba(239, 68, 68, 0.5)" }}
+                      onClick={handleDismissAllReviews}
+                      title="Clear all pending review alerts"
+                    >
+                      ✕ Dismiss All Reviews (Don't Send)
+                    </button>
                     <button
                       className="secondary-btn"
                       style={{ fontSize: "12px", padding: "6px 12px" }}
@@ -3979,8 +4032,7 @@ _(Saved in patient clinic records)_`;
                             <div style={{ width: "100%", display: "flex", gap: "6px", marginBottom: "4px" }}>
                               <button
                                 type="button"
-                                onClick={async () => {
-                                  await api.updateEnquiryStatus(e.id, "Approved");
+                                onClick={() => {
                                   setEnquiries(prev => prev.map(item => item.id === e.id ? { ...item, status: "Approved" } : item));
                                   setLeadActionToast(`✅ Appointment booking approved for ${patientName}!`);
                                   setTimeout(() => setLeadActionToast(""), 3500);
@@ -3992,6 +4044,7 @@ _(Saved in patient clinic records)_`;
                                       "_blank"
                                     );
                                   }
+                                  api.updateEnquiryStatus(e.id, "Approved");
                                 }}
                                 style={{
                                   flex: 1,
@@ -4010,8 +4063,7 @@ _(Saved in patient clinic records)_`;
                               </button>
                               <button
                                 type="button"
-                                onClick={async () => {
-                                  await api.updateEnquiryStatus(e.id, "Rejected");
+                                onClick={() => {
                                   setEnquiries(prev => prev.map(item => item.id === e.id ? { ...item, status: "Rejected" } : item));
                                   setLeadActionToast(`❌ Appointment marked Doctor Unavailable.`);
                                   setTimeout(() => setLeadActionToast(""), 3500);
@@ -4023,6 +4075,7 @@ _(Saved in patient clinic records)_`;
                                       "_blank"
                                     );
                                   }
+                                  api.updateEnquiryStatus(e.id, "Rejected");
                                 }}
                                 style={{
                                   flex: 1,
@@ -6306,18 +6359,25 @@ _(Saved in patient clinic records)_`;
                                 <>
                                   <button
                                     type="button"
-                                    onClick={async () => {
-                                      await api.updateEnquiryStatus(aptId, "Approved", selectedPatient.patientId);
+                                    onClick={() => {
+                                      // 1. Instant UI update & storage sync
                                       setEnquiries((prev) => prev.map((e) => (String(e.id) === String(aptId) ? { ...e, status: "Approved" } : e)));
                                       setLeadActionToast(`✅ Appointment on ${aptDate} approved for ${selectedPatient.name}!`);
                                       setTimeout(() => setLeadActionToast(""), 3500);
+
+                                      // 2. Open WhatsApp synchronously before async call so mobile popup blocker never blocks it
                                       const phone10 = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
-                                      window.open(
-                                        `https://wa.me/91${phone10}?text=${encodeURIComponent(
-                                          `Namaste ${selectedPatient.name} ji, your physiotherapy appointment on ${aptDate} at ${aptTime} has been APPROVED by Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center. See you then!`
-                                        )}`,
-                                        "_blank"
-                                      );
+                                      if (phone10) {
+                                        window.open(
+                                          `https://wa.me/91${phone10}?text=${encodeURIComponent(
+                                            `Namaste ${selectedPatient.name} ji, your physiotherapy appointment on ${aptDate} at ${aptTime} has been APPROVED by Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center. See you then!`
+                                          )}`,
+                                          "_blank"
+                                        );
+                                      }
+
+                                      // 3. Persist to API / Supabase / Sheets in background
+                                      api.updateEnquiryStatus(aptId, "Approved", selectedPatient.patientId);
                                     }}
                                     style={{
                                       background: "#16a34a",
@@ -6335,18 +6395,25 @@ _(Saved in patient clinic records)_`;
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={async () => {
-                                      await api.updateEnquiryStatus(aptId, "Rejected", selectedPatient.patientId);
+                                    onClick={() => {
+                                      // 1. Instant UI update & storage sync
                                       setEnquiries((prev) => prev.map((e) => (String(e.id) === String(aptId) ? { ...e, status: "Rejected" } : e)));
                                       setLeadActionToast(`❌ Appointment on ${aptDate} marked Doctor Unavailable.`);
                                       setTimeout(() => setLeadActionToast(""), 3500);
+
+                                      // 2. Open WhatsApp rejection notification synchronously
                                       const phone10 = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
-                                      window.open(
-                                        `https://wa.me/91${phone10}?text=${encodeURIComponent(
-                                          `Namaste ${selectedPatient.name} ji, Dr. Satyam Vishwakarma will NOT be available on ${aptDate} at ${aptTime}. Please choose another date or reply here to reschedule. Thank you.`
-                                        )}`,
-                                        "_blank"
-                                      );
+                                      if (phone10) {
+                                        window.open(
+                                          `https://wa.me/91${phone10}?text=${encodeURIComponent(
+                                            `Namaste ${selectedPatient.name} ji, Dr. Satyam Vishwakarma will NOT be available on ${aptDate} at ${aptTime}. Please choose another date or reply here to reschedule. Thank you.`
+                                          )}`,
+                                          "_blank"
+                                        );
+                                      }
+
+                                      // 3. Persist in background
+                                      api.updateEnquiryStatus(aptId, "Rejected", selectedPatient.patientId);
                                     }}
                                     style={{
                                       background: "#ef4444",

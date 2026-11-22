@@ -117,6 +117,31 @@ export default function PatientVisitCalendar({
     "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM"
   ];
 
+  // Prevent collision: Compute slots already occupied by appointments or visits on selected date
+  const occupiedSlotsOnSchedDate = useMemo(() => {
+    if (!schedDate) return new Set();
+    const parts = schedDate.split("-");
+    const ddmmyyyy = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : schedDate;
+
+    const set = new Set();
+    const allApts = [...(appointments || []), ...(internalAppointments || [])];
+    allApts.forEach(apt => {
+      const aptDate = cleanDateOnly(apt.date || apt.appointmentDate);
+      if (aptDate === ddmmyyyy && apt.status !== "Rejected" && apt.status !== "Doctor Not Available" && apt.status !== "Cancelled") {
+        const cleanT = cleanTimeOnly(apt.time);
+        if (cleanT) set.add(cleanT);
+      }
+    });
+    (visits || []).forEach(v => {
+      const vDate = cleanDateOnly(v.date);
+      if (vDate === ddmmyyyy) {
+        const cleanT = cleanTimeOnly(v.time);
+        if (cleanT) set.add(cleanT);
+      }
+    });
+    return set;
+  }, [schedDate, appointments, internalAppointments, visits]);
+
   const openSchedulerForDate = (dateKeyOrISO) => {
     if (dateKeyOrISO) {
       if (typeof dateKeyOrISO === "string" && dateKeyOrISO.includes("/")) {
@@ -138,10 +163,18 @@ export default function PatientVisitCalendar({
   const handleScheduleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!schedDate) return;
+
+    const parts = schedDate.split("-");
+    const ddmmyyyy = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : schedDate;
+
+    // Check collision before proceeding
+    if (occupiedSlotsOnSchedDate.has(schedTime)) {
+      alert(`⚠️ Slot Clash: The ${schedTime} slot on ${ddmmyyyy} is already reserved for another appointment. Please choose another open time slot.`);
+      return;
+    }
+
     setSchedSubmitting(true);
     try {
-      const parts = schedDate.split("-");
-      const ddmmyyyy = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : schedDate;
       const initialStatus = isDoctorView ? "Approved" : "Pending Approval";
       const payload = {
         patientId,
@@ -157,10 +190,16 @@ export default function PatientVisitCalendar({
         createdAt: new Date().toISOString()
       };
 
+      let res;
       if (onSaveAppointment) {
-        await onSaveAppointment(payload);
+        res = await onSaveAppointment(payload);
       } else {
-        await patientApi.scheduleAppointment(payload);
+        res = await patientApi.scheduleAppointment(payload);
+      }
+
+      if (res && res.ok === false) {
+        alert("⚠️ Booking Notice: " + (res.error || "Slot conflict detected. Please select another slot."));
+        return;
       }
 
       setInternalAppointments((prev) => [...prev, payload]);
@@ -1600,20 +1639,42 @@ export default function PatientVisitCalendar({
 
                 {/* Preferred Time Slot */}
                 <div className="cal-form-group">
-                  <label className="cal-form-label">
-                    <span>Preferred Consultation / Therapy Time</span>
-                  </label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <label className="cal-form-label" style={{ margin: 0 }}>
+                      <span>Preferred Consultation / Therapy Time</span>
+                    </label>
+                    {occupiedSlotsOnSchedDate.size > 0 && (
+                      <span style={{ fontSize: "11px", color: "#dc2626", fontWeight: "700" }}>
+                        ⚠️ {occupiedSlotsOnSchedDate.size} slot(s) already booked
+                      </span>
+                    )}
+                  </div>
                   <div className="cal-time-slots-grid">
-                    {timeSlots.map((ts) => (
-                      <button
-                        key={ts}
-                        type="button"
-                        className={`cal-time-slot-chip ${schedTime === ts ? "active" : ""}`}
-                        onClick={() => setSchedTime(ts)}
-                      >
-                        {ts}
-                      </button>
-                    ))}
+                    {timeSlots.map((ts) => {
+                      const isOccupied = occupiedSlotsOnSchedDate.has(ts);
+                      return (
+                        <button
+                          key={ts}
+                          type="button"
+                          disabled={isOccupied}
+                          className={`cal-time-slot-chip ${schedTime === ts ? "active" : ""} ${isOccupied ? "occupied-slot" : ""}`}
+                          onClick={() => {
+                            if (!isOccupied) setSchedTime(ts);
+                          }}
+                          title={isOccupied ? "This slot is already booked for another patient" : "Available slot"}
+                          style={isOccupied ? {
+                            opacity: 0.55,
+                            cursor: "not-allowed",
+                            background: "#fee2e2",
+                            color: "#991b1b",
+                            border: "1.5px dashed #f87171"
+                          } : {}}
+                        >
+                          <span>{ts}</span>
+                          {isOccupied && <span style={{ display: "block", fontSize: "9.5px", fontWeight: "800", color: "#b91c1c" }}>⛔ Booked</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

@@ -498,16 +498,24 @@ export default function DoctorPortal({ onClose, themeProps }) {
 
   const getNowTimeStr = () => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 
+  const isEnquiryEnrolled = (e) => {
+    if (!e) return false;
+    if (e.status === "Converted" || String(e.status || "").startsWith("Linked:") || e.linkedPatientId) return true;
+    const cleanEPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+    if (cleanEPhone && patients.some(p => String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanEPhone)) return true;
+    return false;
+  };
+
   const filteredPatients = useMemo(() => {
     let list = [...patients];
     const todayStr = cleanDateOnly(new Date());
     if (patientFilter === "all") {
-      // By default in Enrolled Patients directory, show enrolled patients who completed doctor consultation
-      list = list.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0);
+      // Show enrolled active patients (exclude waiting and completed)
+      list = list.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0 && p.status !== "Completed");
     } else if (patientFilter === "today") {
       list = list.filter(p => cleanDateOnly(p.lastVisitDate || p.registrationDate) === todayStr && p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0);
     } else if (patientFilter === "active") {
-      list = list.filter(p => (p.status || "Active").toLowerCase() === "active" && p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0);
+      list = list.filter(p => (p.status || "Active").toLowerCase() === "active" && p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0 && p.status !== "Completed");
     } else if (patientFilter === "waiting") {
       list = list.filter(p => (p.status || "").toLowerCase().includes("wait") || (p.totalVisits || 0) === 0);
     } else if (patientFilter === "completed") {
@@ -1234,7 +1242,27 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const fetchEnquiries = async () => {
     try {
       const data = await api.getEnquiries();
-      if (data.ok) setEnquiries(data.enquiries);
+      if (data.ok) {
+        // Auto-detect and sync any leads that have already been enrolled as patients
+        const cleanPtMap = new Map();
+        patients.forEach(p => {
+          const ph = String(p.phone || "").replace(/\D/g, "").slice(-10);
+          if (ph) cleanPtMap.set(ph, p);
+        });
+
+        const synced = (data.enquiries || []).map(e => {
+          const ePhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+          if (cleanPtMap.has(ePhone) && e.status !== "Converted" && !e.linkedPatientId) {
+            const matchedPatient = cleanPtMap.get(ePhone);
+            const updatedLead = { ...e, status: "Converted", linkedPatientId: matchedPatient.patientId };
+            api.updateEnquiryStatus(e.id || e.enquiryId, "Converted", matchedPatient.patientId);
+            return updatedLead;
+          }
+          return e;
+        });
+
+        setEnquiries(synced);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -1960,6 +1988,62 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
+  const handleCompletePatient = async () => {
+    if (!selectedPatient) return;
+    const pName = selectedPatient.name || "Patient";
+    const problem = selectedPatient.firstVisitReason || selectedPatient.reasonForVisit || selectedPatient.lastDiagnosis || selectedPatient.complaint || "health condition";
+    const confirmed = window.confirm(
+      `Are you sure you want to mark treatment as COMPLETE and RECOVERED for ${pName}?\n\n` +
+      `• Patient status will be set to "Completed"\n` +
+      `• Patient will move to the "✓ Completed" section in patient directory\n` +
+      `• A big celebratory completion card will appear on their portal\n\n` +
+      `Click OK to confirm completion.`
+    );
+    if (!confirmed) return;
+
+    const updatedPatient = {
+      ...selectedPatient,
+      status: "Completed",
+      treatmentCompletedDate: new Date().toISOString().slice(0, 10),
+      recoveredCondition: problem,
+      recoveryMessage: `Your treatment is over and you are recovered from ${problem}!`
+    };
+
+    try {
+      await api.updatePatient(selectedPatient.patientId, updatedPatient);
+      setSelectedPatient(updatedPatient);
+      setPatients((prev) => prev.map((p) => (p.patientId === selectedPatient.patientId ? updatedPatient : p)));
+      fetchStats();
+      setShareFeedback(`🎉 Treatment for ${pName} marked as COMPLETED & RECOVERED!`);
+      setTimeout(() => setShareFeedback(""), 4500);
+    } catch (err) {
+      alert("Could not update patient status: " + err.message);
+    }
+  };
+
+  const handleReactivatePatient = async () => {
+    if (!selectedPatient) return;
+    const pName = selectedPatient.name || "Patient";
+    const confirmed = window.confirm(`Reactivate active rehabilitation sessions for ${pName}?`);
+    if (!confirmed) return;
+
+    const updatedPatient = {
+      ...selectedPatient,
+      status: "Active"
+    };
+
+    try {
+      await api.updatePatient(selectedPatient.patientId, updatedPatient);
+      setSelectedPatient(updatedPatient);
+      setPatients((prev) => prev.map((p) => (p.patientId === selectedPatient.patientId ? updatedPatient : p)));
+      fetchStats();
+      setShareFeedback(`🔄 Patient ${pName} reactivated to Active Treatment.`);
+      setTimeout(() => setShareFeedback(""), 3500);
+    } catch (err) {
+      alert("Could not update patient status: " + err.message);
+    }
+  };
+
   const handleDeleteVisit = async (visit) => {
     if (!visit || !visit.visitId) return;
     const visitNumStr = visit.visitNumber ? `Visit #${visit.visitNumber}` : "this visit";
@@ -2513,7 +2597,11 @@ _(Saved in patient clinic records)_`;
           <button className={activeTab === "enquiries" ? "active" : ""} onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
             <span className="nav-tab-desktop">📩 6. Online Bookings</span>
             <span className="nav-tab-mobile">📩 Bookings</span>
-            {stats.newEnquiriesCount > 0 && <span className="enq-badge">{stats.newEnquiriesCount}</span>}
+            {enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length > 0 && (
+              <span className="enq-badge">
+                {enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length}
+              </span>
+            )}
           </button>
           <button className={activeTab === "followups" ? "active" : ""} onClick={() => { selectDoctorTab("followups"); fetchPatients(); fetchAllVisits(); fetchTodayVisits(); fetchEnquiries(); }}>
             <span className="nav-tab-desktop">🔔 7. Due Follow-Ups ({todayExpectedList.length})</span>
@@ -2700,7 +2788,9 @@ _(Saved in patient clinic records)_`;
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
                 <div className="card-icon-bubble purple">📩</div>
                 <strong className="card-title">Online Bookings</strong>
-                <span className="card-count-badge purple">{stats.totalEnquiriesCount || enquiries.length}</span>
+                <span className="card-count-badge purple">
+                  {enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length}
+                </span>
               </div>
 
               <div className="mobile-app-card" onClick={() => { selectDoctorTab("followups"); fetchPatients(); fetchAllVisits(); fetchTodayVisits(); fetchEnquiries(); }}>
@@ -3827,10 +3917,17 @@ _(Saved in patient clinic records)_`;
         {activeTab === "enquiries" && (
           <div className="enquiries-view">
             <div className="section-header-row">
-              <div>
-                <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>Website Consultation Leads ({enquiries.length})</h2>
-                <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Clean, organized cards for every consultation request. Convert directly to registered patients, hide/archive, or delete spam.</p>
-              </div>
+              {(() => {
+                const activeCount = enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length;
+                return (
+                  <div>
+                    <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+                      Website Consultation Leads ({activeCount} Active / {enquiries.length} Total)
+                    </h2>
+                    <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Clean, organized cards for every consultation request. Enrolled patients are automatically categorized into Converted / Patients.</p>
+                  </div>
+                );
+              })()}
               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginBottom: "14px" }}>
                 <button className="secondary-btn" onClick={() => handleExportCSV("enquiries")}>
                   📥 Export Leads (CSV)
@@ -3848,8 +3945,8 @@ _(Saved in patient clinic records)_`;
             {/* Segmented Leads Navigation Sub-Tabs */}
             <div className="enquiry-subtabs-bar" style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px", background: "var(--card-bg, #ffffff)", padding: "6px", borderRadius: "12px", border: "1px solid var(--border-color, #e2e8f0)" }}>
               {(() => {
-                const activeCount = enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && e.status !== "Converted" && !String(e.status || "").startsWith("Linked:")).length;
-                const convertedCount = enquiries.filter(e => e.status === "Converted" || String(e.status || "").startsWith("Linked:")).length;
+                const activeCount = enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length;
+                const convertedCount = enquiries.filter(e => isEnquiryEnrolled(e)).length;
                 const hiddenCount = enquiries.filter(e => e.status === "Hidden" || e.status === "Hidden / Spam").length;
                 const allCount = enquiries.length;
                 return (
@@ -3955,7 +4052,7 @@ _(Saved in patient clinic records)_`;
             {(() => {
               const filteredLeads = enquiries.filter(e => {
                 const isHidden = e.status === "Hidden" || e.status === "Hidden / Spam";
-                const isConverted = e.status === "Converted" || String(e.status || "").startsWith("Linked:");
+                const isConverted = isEnquiryEnrolled(e);
 
                 if (enquirySubTab === "active" && (isHidden || isConverted)) return false;
                 if (enquirySubTab === "converted" && !isConverted) return false;
@@ -5629,6 +5726,28 @@ _(Saved in patient clinic records)_`;
                   💬 Chat
                 </a>
 
+                {selectedPatient.status === "Completed" ? (
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    style={{ flex: "1 1 150px", minHeight: "44px", background: "rgba(59, 130, 246, 0.25)", color: "#60a5fa", borderColor: "#3b82f6", fontWeight: "800", padding: "0 14px", fontSize: "13px" }}
+                    onClick={handleReactivatePatient}
+                    title="Reactivate patient back to active treatment"
+                  >
+                    🔄 Reactivate
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    style={{ flex: "1 1 160px", minHeight: "44px", background: "rgba(16, 185, 129, 0.25)", color: "#34d399", borderColor: "#10b981", fontWeight: "800", padding: "0 14px", fontSize: "13px" }}
+                    onClick={handleCompletePatient}
+                    title="Mark treatment as complete and recovered"
+                  >
+                    🎉 Complete Treatment
+                  </button>
+                )}
+
                   <button
                     type="button"
                     className="secondary-btn"
@@ -5642,6 +5761,32 @@ _(Saved in patient clinic records)_`;
             </div>
 
             <div className="profile-body">
+              {/* BIG RECOVERY & TREATMENT COMPLETE CELEBRATION BOX */}
+              {selectedPatient.status === "Completed" && (
+                <div style={{
+                  background: "linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%)",
+                  borderRadius: "14px",
+                  padding: "20px 22px",
+                  color: "#ffffff",
+                  marginBottom: "16px",
+                  boxShadow: "0 8px 24px rgba(4, 120, 87, 0.35)",
+                  border: "2px solid #34d399",
+                  textAlign: "center"
+                }}>
+                  <div style={{ fontSize: "36px", marginBottom: "6px" }}>🎉 🏆 🌟</div>
+                  <h3 style={{ fontSize: "22px", fontWeight: "900", margin: "0 0 6px 0", color: "#ffffff", letterSpacing: "-0.3px" }}>
+                    Treatment Course Completed &amp; Recovered!
+                  </h3>
+                  <p style={{ fontSize: "15px", lineHeight: "1.5", margin: "0 0 10px 0", color: "#ecfdf5", fontWeight: "600" }}>
+                    Your treatment is over and you are recovered with <strong>{selectedPatient.recoveredCondition || selectedPatient.firstVisitReason || selectedPatient.reasonForVisit || selectedPatient.complaint || "your health problem"}</strong>!
+                  </p>
+                  <div style={{ display: "inline-flex", gap: "10px", alignItems: "center", background: "rgba(0,0,0,0.2)", padding: "6px 14px", borderRadius: "20px", fontSize: "12px", color: "#a7f3d0" }}>
+                    <span>Completed on: {selectedPatient.treatmentCompletedDate || "Recently"}</span>
+                    <span>•</span>
+                    <span>Status: Discharged / Recovered</span>
+                  </div>
+                </div>
+              )}
               {/* 2. BOXY TILES GRID (Matching Doctor Dashboard Box Aesthetic) */}
               <div style={{
                 display: "grid",
@@ -7749,8 +7894,8 @@ _(Saved in patient clinic records)_`;
         >
           <span className="nav-icon-4">☰</span>
           <span className="nav-label-4">More</span>
-          {(enquiries.length + todayExpectedList.length) > 0 && (
-            <span className="bottom-nav-badge orange">{enquiries.length + todayExpectedList.length}</span>
+          {(enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length + todayExpectedList.length) > 0 && (
+            <span className="bottom-nav-badge orange">{enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length + todayExpectedList.length}</span>
           )}
         </button>
       </nav>
@@ -7789,8 +7934,8 @@ _(Saved in patient clinic records)_`;
               <button className="more-sheet-item" onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
                 <span className="sheet-icon purple">📩</span>
                 <div className="sheet-info">
-                  <strong>Online Bookings & Enquiries ({enquiries.length})</strong>
-                  <span>Website appointments & patient leads</span>
+                  <strong>Online Bookings &amp; Enquiries ({enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length})</strong>
+                  <span>Website appointments &amp; active leads</span>
                 </div>
                 <span className="more-arrow">›</span>
               </button>

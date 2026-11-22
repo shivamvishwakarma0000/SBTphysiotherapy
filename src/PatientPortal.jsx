@@ -809,6 +809,44 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
             </div>
 
+            {/* BIG RECOVERY & TREATMENT COMPLETE CONGRATULATION BANNER */}
+            {patientProfile?.status === "Completed" && (
+              <div
+                className="patient-treatment-completed-banner"
+                style={{
+                  background: "linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%)",
+                  borderRadius: "16px",
+                  padding: "24px 20px",
+                  color: "#ffffff",
+                  marginBottom: "20px",
+                  boxShadow: "0 10px 25px -5px rgba(5, 150, 105, 0.4)",
+                  border: "2px solid #34d399",
+                  textAlign: "center"
+                }}
+              >
+                <div style={{ fontSize: "44px", marginBottom: "8px" }}>🎉 🏆 🌟</div>
+                <h2 style={{ fontSize: "24px", fontWeight: "900", margin: "0 0 8px 0", color: "#ffffff", letterSpacing: "-0.5px" }}>
+                  Your Treatment is Over &amp; You Are Recovered!
+                </h2>
+                <p style={{ fontSize: "16px", lineHeight: "1.6", margin: "0 0 14px 0", color: "#ecfdf5", fontWeight: "600" }}>
+                  Congratulations <strong>{patientDisplayName}</strong>! Your physiotherapy treatment course is officially completed and you have successfully recovered from <strong>{patientProfile?.recoveredCondition || patientProfile?.firstVisitReason || patientProfile?.reason || patientProfile?.complaint || "your health problem"}</strong>.
+                </p>
+                <div style={{
+                  display: "inline-block",
+                  background: "rgba(255, 255, 255, 0.18)",
+                  backdropFilter: "blur(8px)",
+                  padding: "8px 20px",
+                  borderRadius: "30px",
+                  fontSize: "13.5px",
+                  fontWeight: "700",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255, 255, 255, 0.35)"
+                }}>
+                  🩺 Certified Recovered by Dr. Satyam Vishwakarma • Vindhy Physiotherapy &amp; Rehab Center
+                </div>
+              </div>
+            )}
+
             {/* 2. Desktop Only: Status / Next Appointment Highlight */}
             <div className="app-status-highlight-card desktop-only-widget">
               {(recordsData?.appointments?.length || 0) > 0 ? (
@@ -931,6 +969,17 @@ export default function PatientPortal({ onClose, themeProps }) {
               <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>My Appointments & Bookings</h2>
               <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Review scheduled clinic appointments and submit new appointment requests.</p>
             </div>
+
+            {patientProfile?.status === "Completed" && (
+              <div style={{ background: "#ecfdf5", border: "2px solid #86efac", borderRadius: "14px", padding: "16px 18px", marginBottom: "16px", color: "#166534" }}>
+                <strong style={{ fontSize: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  🎉 Treatment Course Completed &amp; Recovered!
+                </strong>
+                <p style={{ margin: "6px 0 0 0", fontSize: "14px", color: "#15803d" }}>
+                  Your physiotherapy rehabilitation is successfully finished. You do not have mandatory daily visits, but you can always reach Dr. Satyam Vishwakarma if you need routine guidance or SOS consultations.
+                </p>
+              </div>
+            )}
 
             <div className="appointment-booking-card">
               <div className="booking-info">

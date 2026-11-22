@@ -314,6 +314,9 @@ export async function syncToGoogleSheets(action, data) {
   }
 }
 
+// Resilient alias so any caller using syncWithGoogleSheets never throws ReferenceError
+export const syncWithGoogleSheets = syncToGoogleSheets;
+
 /// Restore / Fetch all rows from Google Sheet Webhook (Google Sheets as Source of Truth)
 export async function restoreFromGoogleSheets() {
   const webhookUrl = getWebhookUrl();
@@ -643,16 +646,33 @@ export const api = {
 
     const todayStr = new Date().toISOString().split("T")[0];
     const todayVisits = visits.filter(v => v.date === todayStr).length;
-    const activeTreatments = patients.filter(p => p.status === "Active").length;
+    const activeTreatments = patients.filter(p => p.status === "Active" || (p.status !== "Waiting for Doctor" && p.status !== "Completed" && (p.totalVisits || 0) > 0)).length;
+
+    // Filter genuinely active leads (exclude converted, linked, or already enrolled phone numbers)
+    const enrolledPhones = new Set(
+      patients
+        .map(p => String(p.phone || "").replace(/\D/g, "").slice(-10))
+        .filter(Boolean)
+    );
+    const activeLeads = enquiries.filter(e => {
+      const isHidden = e.status === "Hidden" || e.status === "Hidden / Spam";
+      const isConverted = e.status === "Converted" || String(e.status || "").startsWith("Linked:") || e.linkedPatientId;
+      const cleanEPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+      const isEnrolled = cleanEPhone && enrolledPhones.has(cleanEPhone);
+      return !isHidden && !isConverted && !isEnrolled;
+    });
 
     return {
       ok: true,
       stats: {
-        totalPatients: patients.length,
+        totalPatients: patients.filter(p => p.status !== "Waiting for Doctor" || (p.totalVisits || 0) > 0).length,
         totalVisits: visits.length,
         todayVisits,
         activeTreatments,
-        pendingEnquiries: enquiries.length
+        pendingEnquiries: activeLeads.length,
+        newEnquiriesCount: activeLeads.length,
+        totalEnquiriesCount: enquiries.length,
+        completedPatientsCount: patients.filter(p => (p.status || "").toLowerCase().includes("complete")).length
       }
     };
   },
@@ -857,6 +877,34 @@ export const api = {
 
     patients.unshift(newPatient);
     setLocal(KEYS.PATIENTS, patients);
+
+    // Auto-link and mark any matching consultation lead as Converted/Enrolled
+    try {
+      const cleanPatientPhone = String(newPatient.phone || "").replace(/\D/g, "").slice(-10);
+      const enquiries = getLocal(KEYS.ENQUIRIES, []);
+      let enqUpdated = false;
+      enquiries.forEach(e => {
+        const cleanEPhone = String(e.phone || "").replace(/\D/g, "").slice(-10);
+        if (
+          (cleanPatientPhone && cleanEPhone && cleanPatientPhone === cleanEPhone) ||
+          (payload.convertedEnquiryId && String(e.id || e.enquiryId) === String(payload.convertedEnquiryId))
+        ) {
+          e.status = "Converted";
+          e.linkedPatientId = newPatient.patientId;
+          e.convertedAt = new Date().toISOString();
+          enqUpdated = true;
+          try {
+            supabaseUpsertEnquiry(e).catch(() => {});
+            syncToGoogleSheets("sync_enquiry", e);
+          } catch (_) {}
+        }
+      });
+      if (enqUpdated) {
+        setLocal(KEYS.ENQUIRIES, enquiries);
+      }
+    } catch (e) {
+      console.warn("Auto-linking lead notice:", e);
+    }
 
     // Auto-schedule 2-Hour WhatsApp Follow-up Review for newly enrolled patient
     try {
@@ -1875,6 +1923,39 @@ export const patientApi = {
     const cleanDate = cleanDateOnly(payload.date || payload.appointmentDate || new Date());
     const cleanTime = cleanTimeOnly(payload.time) || "10:00 AM";
 
+    // 1. Collision / Clash Prevention: Check against other appointments and visits on the same date & time
+    const enquiries = getLocal(KEYS.ENQUIRIES, []);
+    const conflictingApt = enquiries.find(e => {
+      if (e.status === "Rejected" || e.status === "Doctor Not Available" || e.status === "Cancelled") return false;
+      const eDate = cleanDateOnly(e.date || e.appointmentDate);
+      const eTime = cleanTimeOnly(e.time);
+      if (!eDate || !eTime) return false;
+      const isSamePatient = (e.patientId && e.patientId === p.patientId) || (e.linkedPatientId && e.linkedPatientId === p.patientId);
+      return eDate === cleanDate && eTime === cleanTime && !isSamePatient;
+    });
+
+    if (conflictingApt) {
+      return {
+        ok: false,
+        error: `Slot Clash: The ${cleanTime} slot on ${cleanDate} is already reserved for another patient. Please pick a different time slot.`
+      };
+    }
+
+    const patients = getLocal(KEYS.PATIENTS, []);
+    const conflictingPatient = patients.find(item => {
+      if (item.patientId === p.patientId) return false;
+      const itemDate = cleanDateOnly(item.followUpDate || item.follow_up_date);
+      const itemTime = cleanTimeOnly(item.followUpTime || item.follow_up_time);
+      return itemDate === cleanDate && itemTime === cleanTime;
+    });
+
+    if (conflictingPatient) {
+      return {
+        ok: false,
+        error: `Slot Clash: The ${cleanTime} slot on ${cleanDate} is already scheduled by doctor for another patient. Please choose a different time slot.`
+      };
+    }
+
     const appointment = {
       id: aptId,
       enquiryId: aptId,
@@ -1893,12 +1974,10 @@ export const patientApi = {
     };
 
     // 1. Save locally to enquiries
-    const enquiries = getLocal(KEYS.ENQUIRIES, []);
     enquiries.unshift(appointment);
     setLocal(KEYS.ENQUIRIES, enquiries);
 
     // 2. Update patient's followUpDate to this new date
-    const patients = getLocal(KEYS.PATIENTS, []);
     const pIdx = patients.findIndex(item => item.patientId === p.patientId);
     if (pIdx >= 0) {
       patients[pIdx].followUpDate = cleanDate;
@@ -1907,7 +1986,7 @@ export const patientApi = {
       localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(patients[pIdx]));
     }
 
-    // 3. Dual sync to Supabase & Google Sheets
+    // 3. Dual sync to Supabase & Google Sheets (Resilient)
     try {
       await supabaseUpsertEnquiry(appointment);
       if (pIdx >= 0) {
@@ -1917,12 +1996,12 @@ export const patientApi = {
       console.warn("Supabase appointment sync warning:", e);
     }
 
-    if (getWebhookUrl()) {
-      syncWithGoogleSheets({
-        action: "createEnquiry",
-        enquiry: appointment,
-        timestamp: new Date().toISOString()
-      }).catch(err => console.warn("Google Sheets appointment sync warning:", err));
+    try {
+      if (getWebhookUrl()) {
+        syncToGoogleSheets("sync_enquiry", appointment).catch(err => console.warn("Google Sheets appointment sync warning:", err));
+      }
+    } catch (e) {
+      console.warn("Google Sheets appointment sync warning:", e);
     }
 
     return { ok: true, appointment, patient: pIdx >= 0 ? patients[pIdx] : p };

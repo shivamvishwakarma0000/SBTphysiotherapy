@@ -1218,21 +1218,25 @@ export default function PatientVisitCalendar({
                           padding: "2px 8px",
                           borderRadius: "20px",
                           background:
-                            apt.status === "Approved" || apt.status === "Confirmed"
+                            apt.status === "Approved" || apt.status === "Confirmed" || apt.status === "Booked"
                               ? "#dcfce7"
                               : apt.status === "Rejected"
                               ? "#fee2e2"
                               : "#fef3c7",
                           color:
-                            apt.status === "Approved" || apt.status === "Confirmed"
+                            apt.status === "Approved" || apt.status === "Confirmed" || apt.status === "Booked"
                               ? "#15803d"
                               : apt.status === "Rejected"
                               ? "#b91c1c"
-                              : "#b45309"
+                              : "#b45309",
+                          border:
+                            apt.status === "Approved" || apt.status === "Confirmed" || apt.status === "Booked"
+                              ? "1px solid #86efac"
+                              : "1px solid #cbd5e1"
                         }}
                       >
-                        {apt.status === "Approved" || apt.status === "Confirmed"
-                          ? "✅ Approved by Doctor"
+                        {apt.status === "Approved" || apt.status === "Confirmed" || apt.status === "Booked"
+                          ? "✅ Booked & Confirmed by Doctor"
                           : apt.status === "Rejected"
                           ? "❌ Doctor Not Available"
                           : "⏳ Pending Doctor Confirmation"}

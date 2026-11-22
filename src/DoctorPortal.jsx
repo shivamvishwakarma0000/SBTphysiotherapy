@@ -6312,13 +6312,14 @@ _(Saved in patient clinic records)_`;
                                   style={{
                                     fontSize: "11px",
                                     fontWeight: "800",
-                                    padding: "2px 8px",
+                                    padding: "3px 10px",
                                     borderRadius: "20px",
                                     background: isApproved ? "#dcfce7" : isRejected ? "#fee2e2" : "#fef3c7",
-                                    color: isApproved ? "#15803d" : isRejected ? "#b91c1c" : "#b45309"
+                                    color: isApproved ? "#15803d" : isRejected ? "#b91c1c" : "#b45309",
+                                    border: isApproved ? "1px solid #86efac" : isRejected ? "1px solid #fca5a5" : "1px solid #fde68a"
                                   }}
                                 >
-                                  {isApproved ? "✅ Approved" : isRejected ? "❌ Doctor Not Available" : "⏳ Pending Doctor Confirmation"}
+                                  {isApproved ? "✅ Booked & Confirmed" : isRejected ? "❌ Doctor Not Available" : "⏳ Pending Doctor Confirmation"}
                                 </span>
                               </div>
                               <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#475569" }}>
@@ -6331,10 +6332,16 @@ _(Saved in patient clinic records)_`;
                                 <>
                                   <button
                                     type="button"
-                                    onClick={() => {
+                                    onClick={async () => {
                                       // 1. Instant UI update & storage sync
-                                      setEnquiries((prev) => prev.map((e) => (String(e.id) === String(aptId) ? { ...e, status: "Approved" } : e)));
-                                      setLeadActionToast(`✅ Appointment on ${aptDate} approved for ${selectedPatient.name}!`);
+                                      setEnquiries((prev) =>
+                                        prev.map((e) =>
+                                          (String(e.id) === String(aptId) || String(e.enquiryId) === String(aptId) || (e.appointmentId && String(e.appointmentId) === String(aptId)))
+                                            ? { ...e, status: "Approved" }
+                                            : e
+                                        )
+                                      );
+                                      setLeadActionToast(`✅ Appointment on ${aptDate} booked & confirmed for ${selectedPatient.name}!`);
                                       setTimeout(() => setLeadActionToast(""), 3500);
 
                                       // 2. Open WhatsApp synchronously before async call so mobile popup blocker never blocks it
@@ -6342,14 +6349,15 @@ _(Saved in patient clinic records)_`;
                                       if (phone10) {
                                         window.open(
                                           `https://wa.me/91${phone10}?text=${encodeURIComponent(
-                                            `Namaste ${selectedPatient.name} ji, your physiotherapy appointment on ${aptDate} at ${aptTime} has been APPROVED by Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center. See you then!`
+                                            `Namaste ${selectedPatient.name} ji, your physiotherapy appointment on ${aptDate} at ${aptTime} has been BOOKED & CONFIRMED by Dr. Satyam Vishwakarma at Vindhy Physiotherapy & Rehab Center. See you then!`
                                           )}`,
                                           "_blank"
                                         );
                                       }
 
-                                      // 3. Persist to API / Supabase / Sheets in background
-                                      api.updateEnquiryStatus(aptId, "Approved", selectedPatient.patientId);
+                                      // 3. Persist to API / Supabase / Sheets
+                                      await api.updateEnquiryStatus(aptId, "Approved", selectedPatient.patientId);
+                                      fetchEnquiries();
                                     }}
                                     style={{
                                       background: "#16a34a",
@@ -6367,9 +6375,15 @@ _(Saved in patient clinic records)_`;
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => {
+                                    onClick={async () => {
                                       // 1. Instant UI update & storage sync
-                                      setEnquiries((prev) => prev.map((e) => (String(e.id) === String(aptId) ? { ...e, status: "Rejected" } : e)));
+                                      setEnquiries((prev) =>
+                                        prev.map((e) =>
+                                          (String(e.id) === String(aptId) || String(e.enquiryId) === String(aptId) || (e.appointmentId && String(e.appointmentId) === String(aptId)))
+                                            ? { ...e, status: "Rejected" }
+                                            : e
+                                        )
+                                      );
                                       setLeadActionToast(`❌ Appointment on ${aptDate} marked Doctor Unavailable.`);
                                       setTimeout(() => setLeadActionToast(""), 3500);
 
@@ -6385,7 +6399,8 @@ _(Saved in patient clinic records)_`;
                                       }
 
                                       // 3. Persist in background
-                                      api.updateEnquiryStatus(aptId, "Rejected", selectedPatient.patientId);
+                                      await api.updateEnquiryStatus(aptId, "Rejected", selectedPatient.patientId);
+                                      fetchEnquiries();
                                     }}
                                     style={{
                                       background: "#ef4444",
@@ -6405,7 +6420,7 @@ _(Saved in patient clinic records)_`;
                               {isApproved && (
                                 <a
                                   href={`https://wa.me/91${String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
-                                    `Namaste ${selectedPatient.name} ji, reminder for your approved physiotherapy visit on ${aptDate} at ${aptTime} with Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center.`
+                                    `Namaste ${selectedPatient.name} ji, reminder for your booked physiotherapy visit on ${aptDate} at ${aptTime} with Dr. Satyam Vishwakarma at Vindhy Physiotherapy & Rehab Center.`
                                   )}`}
                                   target="_blank"
                                   rel="noreferrer"
@@ -6422,7 +6437,7 @@ _(Saved in patient clinic records)_`;
                                     textDecoration: "none"
                                   }}
                                 >
-                                  💬 Message Patient
+                                  💬 WhatsApp Reminder
                                 </a>
                               )}
                             </div>
@@ -7180,7 +7195,8 @@ _(Saved in patient clinic records)_`;
                 </div>
                 <div className="receipt-banner-right">
                   <h3>DR. SATYAM VISHWAKARMA</h3>
-                  <p className="doctor-sub">Lead Consultant Physiotherapist</p>
+                  <p className="doctor-sub">Consultant Physiotherapist</p>
+                  <p className="doctor-sub" style={{ margin: "2px 0", fontWeight: "700", color: "#67e8f9" }}>Reg. No: PHY/11123</p>
                   <span className="doctor-badge">Regd. Clinical Practitioner</span>
                 </div>
               </div>
@@ -7295,12 +7311,13 @@ _(Saved in patient clinic records)_`;
                 <div className="sign-line"></div>
                 <p><strong>Dr. Satyam Vishwakarma</strong></p>
                 <span>Consultant Physiotherapist</span>
-                <span>Vindhy Physio & Rehab Center</span>
+                <span style={{ fontWeight: "700", color: "#0284c7" }}>Reg. No: PHY/11123</span>
+                <span>Vindhy Physiotherapy &amp; Rehab Center</span>
               </div>
 
               <div className="receipt-footer">
-                <p>Thank you for choosing Vindhy Physio & Rehab Center</p>
-                <span>For appointments & medical inquiries: Call 9793093316 | WhatsApp: 9793093316 | Amravati Chauraha, Vindhyachal</span>
+                <p>Thank you for choosing Vindhy Physiotherapy &amp; Rehab Center</p>
+                <span>For appointments &amp; medical inquiries: Call 9793093316 | WhatsApp: 9793093316 | Amravati Chauraha, Vindhyachal</span>
               </div>
             </div>
 

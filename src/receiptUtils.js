@@ -130,12 +130,13 @@ export const buildReceiptPDF = (receipt) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  doc.text("DR. SATYAM VISHWAKARMA", 196, 18, { align: "right" });
+  doc.text("DR. SATYAM VISHWAKARMA", 196, 16, { align: "right" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(180, 210, 220);
-  doc.text("Consultant Physiotherapist", 196, 25, { align: "right" });
-  doc.text("Regd. Clinical Practitioner", 196, 31, { align: "right" });
+  doc.text("Consultant Physiotherapist", 196, 22, { align: "right" });
+  doc.text("Reg. No: PHY/11123", 196, 28, { align: "right" });
+  doc.text("Regd. Clinical Practitioner", 196, 34, { align: "right" });
 
   // Document Title
   const isPackage = String(visit.reason || "").toLowerCase().includes("package") || String(visit.treatmentNotes || "").toLowerCase().includes("package");
@@ -272,7 +273,7 @@ export const buildReceiptPDF = (receipt) => {
   // Doctor Official Signature & Sign-off Box
   try {
     if (DOCTOR_SIGNATURE_B64) {
-      doc.addImage(DOCTOR_SIGNATURE_B64, "PNG", 146, 214, 23, 21);
+      doc.addImage(DOCTOR_SIGNATURE_B64, "PNG", 138.5, 221.5, 38, 13);
     }
   } catch (err) {
     console.log("Could not render signature in PDF:", err);
@@ -287,14 +288,15 @@ export const buildReceiptPDF = (receipt) => {
   doc.setFont("helvetica", "normal");
   doc.setTextColor(71, 85, 105);
   doc.text("Consultant Physiotherapist", 157.5, 245, { align: "center" });
-  doc.text("Vindhy Physio & Rehab Center", 157.5, 249, { align: "center" });
+  doc.text("Reg. No: PHY/11123", 157.5, 249, { align: "center" });
+  doc.text("Vindhy Physiotherapy & Rehab Center", 157.5, 253, { align: "center" });
 
   // Footer
   doc.setFillColor(7, 25, 39);
   doc.rect(0, 276, 210, 21, "F");
   doc.setFontSize(8.5);
   doc.setTextColor(255, 255, 255);
-  doc.text("Thank you for choosing Vindhy Physio & Rehab Center", 105, 283, { align: "center" });
+  doc.text("Thank you for choosing Vindhy Physiotherapy & Rehab Center", 105, 283, { align: "center" });
   doc.setFontSize(7);
   doc.setTextColor(180, 200, 210);
   doc.text("For appointments & medical inquiries: Call 9793093316 | WhatsApp: 9793093316 | Amravati Chauraha, Vindhyachal", 105, 289, { align: "center" });

@@ -1284,7 +1284,9 @@ function AutoEnquiryModal({ isOpen, onClose }) {
   const [form, setForm] = useState({
     name: "",
     phone: "",
-    painArea: "Spine & Back Pain (Sciatica / Slip Disc)"
+    painArea: "Spine & Back Pain (Sciatica / Slip Disc)",
+    appointmentDate: new Date().toISOString().split("T")[0],
+    concern: ""
   });
   const [status, setStatus] = useState("idle"); // idle, loading, success, error, invalid
 
@@ -1329,12 +1331,13 @@ function AutoEnquiryModal({ isOpen, onClose }) {
         age: "",
         phone: cleanPhone,
         painArea: form.painArea,
-        concern: "Website Quick Consultation Callback Request",
-        duration: "Quick Online Callback"
+        appointmentDate: form.appointmentDate || new Date().toISOString().split("T")[0],
+        concern: form.concern.trim() || "Website Consultation Booking Form",
+        duration: "Direct Online Booking"
       });
       setStatus("success");
       try {
-        localStorage.setItem("vindhy_auto_enquiry_ever_shown", "true");
+        sessionStorage.setItem("vindhy_auto_enquiry_dismissed", "true");
       } catch (e) {}
     } catch (err) {
       console.error(err);
@@ -1348,32 +1351,32 @@ function AutoEnquiryModal({ isOpen, onClose }) {
         <button
           className="auto-enquiry-close-btn"
           onClick={onClose}
-          title="Close and explore website"
-          aria-label="Close enquiry popup"
+          title="Close and cancel"
+          aria-label="Close consultation popup"
         >
           ✕
         </button>
 
         <div className="auto-enquiry-badge">
-          <span>🩺 Free Consultation</span>
+          <span>🩺 Consultation Booking</span>
         </div>
 
-        <h3 className="auto-enquiry-title">Need Expert Physio Advice?</h3>
+        <h3 className="auto-enquiry-title">Book Your Physiotherapy Consultation</h3>
         <p className="auto-enquiry-desc">
-          Leave your details for a quick callback & treatment guidance from Dr. Satyam Vishwakarma.
+          Fill your details below. Dr. Satyam Vishwakarma &amp; clinic reception will confirm your slot.
         </p>
 
         {status === "success" ? (
           <div className="auto-enquiry-status success" style={{ textAlign: "center", padding: "16px 12px" }}>
             <div style={{ fontSize: "28px", marginBottom: "6px" }}>🎉</div>
             <div style={{ fontWeight: "800", fontSize: "16px", color: "#10b981", marginBottom: "4px" }}>
-              Enquiry Received!
+              Consultation Request Received!
             </div>
             <p style={{ margin: "0 0 14px 0", fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
-              Dr. Satyam's clinic reception will contact you at <strong>+91 {form.phone}</strong> shortly.
+              Dr. Satyam Vishwakarma and clinic reception will contact you at <strong>+91 {form.phone}</strong> shortly.
             </p>
             <a
-              href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I requested a consultation callback on your website:\n\n👤 Name: ${form.name}\n📞 Phone: +91 ${form.phone}\n🩺 Problem: ${form.painArea}`)}`}
+              href={`https://api.whatsapp.com/send?phone=91${phoneWhatsApp}&text=${encodeURIComponent(`Hello Dr. Satyam Vishwakarma, I booked a consultation on your website:\n\n👤 Name: ${form.name}\n📞 Phone: +91 ${form.phone}\n🩺 Problem: ${form.painArea}\n📅 Preferred Date: ${form.appointmentDate}`)}`}
               target="_blank"
               rel="noreferrer"
               style={{
@@ -1392,7 +1395,7 @@ function AutoEnquiryModal({ isOpen, onClose }) {
                 boxSizing: "border-box"
               }}
             >
-              <WhatsAppIcon /> Chat on WhatsApp Now ➔
+              <WhatsAppIcon /> Open WhatsApp Confirmation ➔
             </a>
             <button
               type="button"
@@ -1407,7 +1410,7 @@ function AutoEnquiryModal({ isOpen, onClose }) {
                 textDecoration: "underline"
               }}
             >
-              Close & Explore Website
+              Close &amp; Explore Website
             </button>
           </div>
         ) : (
@@ -1447,15 +1450,38 @@ function AutoEnquiryModal({ isOpen, onClose }) {
               Pain Area / Clinical Problem *
               <select name="painArea" value={form.painArea} onChange={update}>
                 <option value="Spine & Back Pain (Sciatica / Slip Disc)">Lower Back Pain / Sciatica / Slip Disc</option>
-                <option value="Cervical & Neck Spondylosis">Neck & Cervical Pain / Spondylosis</option>
-                <option value="Knee Pain & Arthritis / ACL">Knee Pain & Arthritis / ACL Rehab</option>
+                <option value="Cervical & Neck Spondylosis">Neck &amp; Cervical Pain / Spondylosis</option>
+                <option value="Knee Pain & Arthritis / ACL">Knee Pain &amp; Arthritis / ACL Rehab</option>
                 <option value="Cupping Therapy / Hijama">Cupping Therapy / Hijama Pain Relief</option>
-                <option value="Frozen Shoulder & Shoulder Pain">Frozen Shoulder & Rotator Cuff</option>
-                <option value="Sports Injury Recovery">Sports Injury & Ligament Recovery</option>
-                <option value="Paralysis & Neuro Rehabilitation">Paralysis & Neuro Recovery</option>
+                <option value="Frozen Shoulder & Shoulder Pain">Frozen Shoulder &amp; Rotator Cuff</option>
+                <option value="Sports Injury Recovery">Sports Injury &amp; Ligament Recovery</option>
+                <option value="Paralysis & Neuro Rehabilitation">Paralysis &amp; Neuro Recovery</option>
                 <option value="Post-Surgical Rehabilitation">Post-Surgical Knee / Spine Rehab</option>
                 <option value="Other Clinical Condition">Other Pain / Clinical Consultation</option>
               </select>
+            </label>
+
+            <label className="auto-enquiry-field">
+              Preferred Date of Visit *
+              <input
+                type="date"
+                name="appointmentDate"
+                required
+                value={form.appointmentDate}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={update}
+              />
+            </label>
+
+            <label className="auto-enquiry-field">
+              Symptoms / Note (Optional)
+              <input
+                type="text"
+                name="concern"
+                value={form.concern}
+                onChange={update}
+                placeholder="e.g. Back stiffness, pain while bending"
+              />
             </label>
 
             {status === "invalid" && (
@@ -1474,15 +1500,7 @@ function AutoEnquiryModal({ isOpen, onClose }) {
               className="auto-enquiry-submit-btn"
               disabled={status === "loading"}
             >
-              {status === "loading" ? "Submitting..." : "Request Callback ➔"}
-            </button>
-
-            <button
-              type="button"
-              className="auto-enquiry-cancel-btn"
-              onClick={onClose}
-            >
-              Explore Website First
+              {status === "loading" ? "Submitting..." : "Confirm Consultation Booking ➔"}
             </button>
           </form>
         )}
@@ -1702,26 +1720,26 @@ function App() {
 
     if (showDoctorPortal || showPatientPortal) return;
 
-    const hasEverShown = localStorage.getItem("vindhy_auto_enquiry_ever_shown") === "true";
-    if (hasEverShown) return;
+    const hasDismissed = sessionStorage.getItem("vindhy_auto_enquiry_dismissed") === "true";
+    if (hasDismissed) return;
 
-    const autoTimer = setTimeout(() => {
-      const stillEverShown = localStorage.getItem("vindhy_auto_enquiry_ever_shown") === "true";
-      const currentlyInPortal = showDoctorPortal || showPatientPortal;
-      if (!stillEverShown && !currentlyInPortal) {
-        try {
-          localStorage.setItem("vindhy_auto_enquiry_ever_shown", "true");
-        } catch (e) {}
+    let triggered = false;
+    const handleScroll = () => {
+      if (triggered) return;
+      if (window.scrollY > 280) {
+        triggered = true;
         setShowAutoEnquiry(true);
+        window.removeEventListener("scroll", handleScroll);
       }
-    }, 5000);
+    };
 
-    return () => clearTimeout(autoTimer);
-  }, [showDoctorPortal, showPatientPortal, isAppInstalled]);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [showDoctorPortal, showPatientPortal]);
 
   const handleCloseAutoEnquiry = () => {
     try {
-      localStorage.setItem("vindhy_auto_enquiry_ever_shown", "true");
+      sessionStorage.setItem("vindhy_auto_enquiry_dismissed", "true");
     } catch (e) {}
     setShowAutoEnquiry(false);
   };

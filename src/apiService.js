@@ -1512,7 +1512,11 @@ export const api = {
 
     // Always update local storage so UI is immediately 100% consistent
     const enquiries = getLocal(KEYS.ENQUIRIES, []);
-    const enq = enquiries.find(e => String(e.id) === String(enquiryId));
+    const enq = enquiries.find(e =>
+      String(e.id) === String(enquiryId) ||
+      String(e.enquiryId) === String(enquiryId) ||
+      (e.appointmentId && String(e.appointmentId) === String(enquiryId))
+    );
     if (enq) {
       enq.status = status;
       if (linkedPatientId) enq.linkedPatientId = linkedPatientId;
@@ -1520,8 +1524,29 @@ export const api = {
       setLocal(KEYS.ENQUIRIES, enquiries);
     }
 
-    // Push status update to Google Sheets
-    syncToGoogleSheets("doctor_hide_enquiry", { enquiryId, id: enquiryId, status, linkedPatientId });
+    // Also update patient's followUpDate if confirmed
+    if (status === "Approved" || status === "Confirmed" || status === "Booked") {
+      const patients = getLocal(KEYS.PATIENTS, []);
+      const p = patients.find(item => item.patientId === linkedPatientId || (enq && (item.patientId === enq.linkedPatientId || item.patientId === enq.patientId)));
+      if (p && enq) {
+        const cleanDate = cleanDateOnly(enq.appointmentDate || enq.date);
+        const cleanTime = cleanTimeOnly(enq.time);
+        if (cleanDate) {
+          p.followUpDate = cleanDate;
+          if (cleanTime) p.followUpTime = cleanTime;
+          setLocal(KEYS.PATIENTS, patients);
+        }
+      }
+    }
+
+    // Dual push status update to Supabase and Google Sheets
+    try {
+      if (enq) {
+        supabaseUpsertEnquiry(enq).catch(() => {});
+      }
+    } catch (_) {}
+
+    syncToGoogleSheets("doctor_update_enquiry_status", { enquiryId, id: enquiryId, status, linkedPatientId });
 
     return serverData || { ok: true, status, linkedPatientId };
   }

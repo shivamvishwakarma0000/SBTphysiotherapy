@@ -235,13 +235,28 @@ function initializeLocalDatabase() {
     });
   }
 
+  const isDummyEntity = (item) => {
+    if (!item) return true;
+    const n = String(item.name || item.patientName || "").toLowerCase().trim();
+    const ph = String(item.phone || "").replace(/\D/g, "");
+    return (
+      n.includes("enrolled lead") ||
+      n.includes("self registered") ||
+      n.includes("dummy") ||
+      n.includes("test patient") ||
+      ph === "9887766554" ||
+      ph === "9999999999" ||
+      ph === "0000000000"
+    );
+  };
+
   // Ensure arrays exist with seed data fallback if empty
   const storedPatients = getLocal(KEYS.PATIENTS, null);
   if (!storedPatients || storedPatients.length === 0) {
-    setLocal(KEYS.PATIENTS, Array.isArray(defaultSeedPatients) ? defaultSeedPatients : []);
+    setLocal(KEYS.PATIENTS, Array.isArray(defaultSeedPatients) ? defaultSeedPatients.filter(p => !isDummyEntity(p)) : []);
   } else {
-    // Clean corrupt null/undefined records
-    const cleanPts = storedPatients.filter(p => p && p.patientId);
+    // Clean corrupt null/undefined records and dummy test patients
+    const cleanPts = storedPatients.filter(p => p && p.patientId && !isDummyEntity(p));
     if (cleanPts.length !== storedPatients.length) {
       setLocal(KEYS.PATIENTS, cleanPts);
     }
@@ -249,9 +264,9 @@ function initializeLocalDatabase() {
 
   const storedVisits = getLocal(KEYS.VISITS, null);
   if (!storedVisits || storedVisits.length === 0) {
-    setLocal(KEYS.VISITS, Array.isArray(defaultSeedVisits) ? defaultSeedVisits : []);
+    setLocal(KEYS.VISITS, Array.isArray(defaultSeedVisits) ? defaultSeedVisits.filter(v => !isDummyEntity(v)) : []);
   } else {
-    const cleanVts = storedVisits.filter(v => v && v.visitId);
+    const cleanVts = storedVisits.filter(v => v && v.visitId && !isDummyEntity(v));
     if (cleanVts.length !== storedVisits.length) {
       setLocal(KEYS.VISITS, cleanVts);
     }
@@ -660,7 +675,22 @@ export const api = {
       }
     }
 
-    const patients = getLocal(KEYS.PATIENTS, []);
+    const isDummyRecord = (p) => {
+      if (!p) return true;
+      const n = String(p.name || "").toLowerCase().trim();
+      const ph = String(p.phone || "").replace(/\D/g, "");
+      return (
+        n.includes("enrolled lead") ||
+        n.includes("self registered") ||
+        n.includes("dummy") ||
+        n.includes("test patient") ||
+        ph === "9887766554" ||
+        ph === "9999999999" ||
+        ph === "0000000000"
+      );
+    };
+
+    const patients = getLocal(KEYS.PATIENTS, []).filter(p => !isDummyRecord(p));
     if (!query) return { ok: true, patients };
 
     const q = query.toLowerCase();

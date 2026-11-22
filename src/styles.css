@@ -12073,25 +12073,56 @@ img, video, canvas, svg {
   animation: liveDotPulse 1.5s infinite;
 }
 
-.calendar-day-cell.is-missed-day {
-  background: #fffbeb !important;
-  border: 1px dashed #f59e0b !important;
+/* Attended / Present Days = GREEN */
+.calendar-day-cell.has-visit,
+.calendar-day-cell.is-attended-day {
+  background: #f0fdf4 !important;
+  border: 1.5px solid #16a34a !important;
+}
+
+.dark .calendar-day-cell.has-visit,
+.dark .calendar-day-cell.is-attended-day,
+[data-theme="dark"] .calendar-day-cell.has-visit,
+[data-theme="dark"] .calendar-day-cell.is-attended-day {
+  background: rgba(22, 163, 74, 0.22) !important;
+  border-color: #22c55e !important;
+}
+
+.completed-pill {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 800 !important;
+}
+
+/* Missed / Absent Days = RED */
+.calendar-day-cell.is-missed-day,
+.calendar-day-cell.is-absent-day {
+  background: #fef2f2 !important;
+  border: 1.5px solid #ef4444 !important;
 }
 
 .dark .calendar-day-cell.is-missed-day,
-[data-theme="dark"] .calendar-day-cell.is-missed-day {
-  background: rgba(245, 158, 11, 0.08) !important;
-  border-color: rgba(245, 158, 11, 0.4) !important;
+.dark .calendar-day-cell.is-absent-day,
+[data-theme="dark"] .calendar-day-cell.is-missed-day,
+[data-theme="dark"] .calendar-day-cell.is-absent-day {
+  background: rgba(239, 68, 68, 0.22) !important;
+  border-color: #f87171 !important;
 }
 
 .missed-pill {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 800 !important;
 }
 
 .legend-dot.missed-indicator {
-  background: #f59e0b;
+  background: #ef4444 !important;
+}
+
+.legend-dot.completed {
+  background: #16a34a !important;
 }
 
 .legend-dot.all-indicator {

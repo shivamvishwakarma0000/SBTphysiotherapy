@@ -19,6 +19,7 @@ export default function PatientVisitCalendar({
   patientName = "",
   patientId = "",
   phone = "",
+  condition = "",
   onSelectVisit = null,
   onScheduleAppointment = null,
   onSaveAppointment = null,
@@ -327,99 +328,6 @@ export default function PatientVisitCalendar({
 
   const nextFollowUpKey = nextFollowUpInfo ? nextFollowUpInfo.dateKey : null;
 
-  // Calculate Missing / Gap days during the patient's active treatment course
-  const missingDaysMap = useMemo(() => {
-    const missing = {};
-
-    // Collect timestamps of all visited dates and potential course start dates
-    const startTimestamps = [];
-    (visits || []).forEach((v) => {
-      const dObj = keyToDateObj(parseToKey(v.date));
-      if (dObj && !isNaN(dObj.getTime())) {
-        startTimestamps.push(dObj.getTime());
-      }
-    });
-
-    if (isDailyCourse && dailyCourseStartDate) {
-      const sObj = keyToDateObj(parseToKey(dailyCourseStartDate));
-      if (sObj && !isNaN(sObj.getTime())) {
-        startTimestamps.push(sObj.getTime());
-      }
-    }
-
-    if (startTimestamps.length === 0) return missing;
-
-    const minTime = Math.min(...startTimestamps);
-    const todayTime = keyToDateObj(todayKey)?.getTime() || Date.now();
-    // Scan up to today (only past days are considered missed)
-    const maxScanTime = todayTime;
-
-    const ONE_DAY = 24 * 60 * 60 * 1000;
-    // Iterate day-by-day from the day after start up to today
-    for (let t = minTime + ONE_DAY; t < maxScanTime; t += ONE_DAY) {
-      const curDate = new Date(t);
-      // Skip Sundays (clinic typically closed or elective)
-      if (curDate.getDay() === 0) continue;
-
-      const d = String(curDate.getDate()).padStart(2, "0");
-      const m = String(curDate.getMonth() + 1).padStart(2, "0");
-      const y = curDate.getFullYear();
-      const k = `${d}/${m}/${y}`;
-
-      if (!attendedDateSet.has(k)) {
-        missing[k] = {
-          dateKey: k,
-          dateObj: curDate,
-          reason: "Missed scheduled therapy session during rehabilitation course"
-        };
-      }
-    }
-
-    // Also check if any past follow-up date had no visit logged
-    (visits || []).forEach((v) => {
-      if (v.followUpDate) {
-        const fuKey = parseToKey(v.followUpDate);
-        const fuObj = keyToDateObj(fuKey);
-        if (fuObj && fuObj.getTime() < todayTime && !attendedDateSet.has(fuKey)) {
-          missing[fuKey] = {
-            dateKey: fuKey,
-            dateObj: fuObj,
-            reason: `Missed follow-up scheduled from Visit #${v.visitNumber || 1}`
-          };
-        }
-      }
-    });
-
-    // Also check if any past appointment had no clinic visit logged
-    (allMergedAppointments || []).forEach((a) => {
-      if (!a) return;
-      const apptKey = parseToKey(a.appointmentDate || a.date);
-      const apptObj = keyToDateObj(apptKey);
-      if (apptObj && apptObj.getTime() < todayTime && !attendedDateSet.has(apptKey)) {
-        missing[apptKey] = {
-          dateKey: apptKey,
-          dateObj: apptObj,
-          reason: `Missed scheduled appointment on ${apptKey}`
-        };
-      }
-    });
-
-    // Assign chronological missed index (e.g., Missed #1, Missed #2)
-    const sortedMissingKeys = Object.keys(missing).sort((ka, kb) => {
-      const ta = missing[ka].dateObj?.getTime() || 0;
-      const tb = missing[kb].dateObj?.getTime() || 0;
-      return ta - tb;
-    });
-
-    sortedMissingKeys.forEach((key, idx) => {
-      missing[key].missedIndex = idx + 1;
-    });
-
-    return missing;
-  }, [visits, allMergedAppointments, attendedDateSet, todayKey, isDailyCourse, dailyCourseStartDate]);
-
-  const missingDaysCount = Object.keys(missingDaysMap).length;
-
   const dailyCourseSpan = useMemo(() => {
     if (!isDailyCourse) return null;
     const sKey = parseToKey(dailyCourseStartDate) || todayKey;
@@ -429,13 +337,14 @@ export default function PatientVisitCalendar({
     let eObj = eKey ? keyToDateObj(eKey) : null;
 
     if (!eObj || isNaN(eObj.getTime())) {
-      let days = 7;
+      let days = 30; // default 30 days treatment plan
       const dur = String(dailyCourseDuration || "").toLowerCase();
       if (dur.includes("5 day")) days = 5;
       else if (dur.includes("7 day") || dur.includes("1 week")) days = 7;
       else if (dur.includes("10 day")) days = 10;
       else if (dur.includes("15 day")) days = 15;
       else if (dur.includes("30 day") || dur.includes("1 month")) days = 30;
+      else if (dur.includes("60 day") || dur.includes("2 month")) days = 60;
 
       eObj = new Date(sObj.getTime());
       eObj.setDate(eObj.getDate() + (days - 1));
@@ -472,6 +381,171 @@ export default function PatientVisitCalendar({
       remainingCount: Math.max(0, totalDays - attendedInCourse)
     };
   }, [isDailyCourse, dailyCourseStartDate, dailyCourseEndDate, dailyCourseDuration, todayKey, attendedDateSet]);
+
+  // Calculate Missing / Absent days during the patient's active treatment course
+  const missingDaysMap = useMemo(() => {
+    const missing = {};
+    const todayTime = keyToDateObj(todayKey)?.getTime() || Date.now();
+
+    // 1. If dailyCourseSpan is set (e.g. 30 days treatment plan):
+    if (dailyCourseSpan && dailyCourseSpan.reservedDates.length > 0) {
+      dailyCourseSpan.reservedDates.forEach(k => {
+        const dObj = keyToDateObj(k);
+        if (dObj && dObj.getTime() <= todayTime) {
+          if (!attendedDateSet.has(k)) {
+            missing[k] = {
+              dateKey: k,
+              dateObj: dObj,
+              reason: "Absent / Missed scheduled physical therapy session"
+            };
+          }
+        }
+      });
+    } else {
+      // Collect timestamps of all visited dates
+      const startTimestamps = [];
+      (visits || []).forEach((v) => {
+        const dObj = keyToDateObj(parseToKey(v.date));
+        if (dObj && !isNaN(dObj.getTime())) {
+          startTimestamps.push(dObj.getTime());
+        }
+      });
+      if (startTimestamps.length > 0) {
+        const minTime = Math.min(...startTimestamps);
+        const ONE_DAY = 24 * 60 * 60 * 1000;
+        for (let t = minTime + ONE_DAY; t < todayTime; t += ONE_DAY) {
+          const curDate = new Date(t);
+          const d = String(curDate.getDate()).padStart(2, "0");
+          const m = String(curDate.getMonth() + 1).padStart(2, "0");
+          const y = curDate.getFullYear();
+          const k = `${d}/${m}/${y}`;
+          if (!attendedDateSet.has(k)) {
+            missing[k] = {
+              dateKey: k,
+              dateObj: curDate,
+              reason: "Missed scheduled therapy session"
+            };
+          }
+        }
+      }
+    }
+
+    // Also check past follow-ups
+    (visits || []).forEach((v) => {
+      if (v.followUpDate) {
+        const fuKey = parseToKey(v.followUpDate);
+        const fuObj = keyToDateObj(fuKey);
+        if (fuObj && fuObj.getTime() < todayTime && !attendedDateSet.has(fuKey)) {
+          missing[fuKey] = {
+            dateKey: fuKey,
+            dateObj: fuObj,
+            reason: `Missed follow-up scheduled from Visit #${v.visitNumber || 1}`
+          };
+        }
+      }
+    });
+
+    // Also check if any past appointment had no clinic visit logged
+    (allMergedAppointments || []).forEach((a) => {
+      if (!a) return;
+      const apptKey = parseToKey(a.appointmentDate || a.date);
+      const apptObj = keyToDateObj(apptKey);
+      if (apptObj && apptObj.getTime() < todayTime && !attendedDateSet.has(apptKey)) {
+        missing[apptKey] = {
+          dateKey: apptKey,
+          dateObj: apptObj,
+          reason: `Missed scheduled appointment on ${apptKey}`
+        };
+      }
+    });
+
+    // Assign chronological missed index
+    const sortedMissingKeys = Object.keys(missing).sort((ka, kb) => {
+      const ta = missing[ka].dateObj?.getTime() || 0;
+      const tb = missing[kb].dateObj?.getTime() || 0;
+      return ta - tb;
+    });
+
+    sortedMissingKeys.forEach((key, idx) => {
+      missing[key].missedIndex = idx + 1;
+    });
+
+    return missing;
+  }, [visits, allMergedAppointments, attendedDateSet, todayKey, dailyCourseSpan]);
+
+  const missingDaysCount = Object.keys(missingDaysMap).length;
+
+  // Compute Attendance % and Predicted Clinical Recovery % based on Condition & Sessions
+  const { attendancePercentage, attendedDaysCount, totalScheduledElapsed, predictedRecoveryPct, conditionLabel } = useMemo(() => {
+    const todayTime = keyToDateObj(todayKey)?.getTime() || Date.now();
+    let totalElapsed = 0;
+    let attendedInPeriod = 0;
+
+    if (dailyCourseSpan && dailyCourseSpan.reservedDates.length > 0) {
+      const elapsedDates = dailyCourseSpan.reservedDates.filter(k => {
+        const dObj = keyToDateObj(k);
+        return dObj && dObj.getTime() <= todayTime;
+      });
+      totalElapsed = Math.max(1, elapsedDates.length);
+      attendedInPeriod = elapsedDates.filter(k => attendedDateSet.has(k)).length;
+    } else {
+      const totalDays = attendedDateSet.size + missingDaysCount;
+      totalElapsed = Math.max(1, totalDays);
+      attendedInPeriod = attendedDateSet.size;
+    }
+
+    const attendancePct = Math.round((attendedInPeriod / totalElapsed) * 100);
+
+    // Condition-based benchmark for predicted recovery calculation
+    const condStr = String(condition || visits[0]?.reason || "").toLowerCase();
+    let benchmarkSessions = 18;
+    let condName = "General Physiotherapy";
+
+    if (condStr.includes("spine") || condStr.includes("back") || condStr.includes("sciatica") || condStr.includes("disc")) {
+      benchmarkSessions = 20;
+      condName = "Spine & Back Pain";
+    } else if (condStr.includes("cervical") || condStr.includes("neck")) {
+      benchmarkSessions = 14;
+      condName = "Cervical & Neck Spondylosis";
+    } else if (condStr.includes("knee") || condStr.includes("acl") || condStr.includes("arthritis")) {
+      benchmarkSessions = 22;
+      condName = "Knee & Joint Rehab";
+    } else if (condStr.includes("cup") || condStr.includes("hijama")) {
+      benchmarkSessions = 5;
+      condName = "Cupping Therapy";
+    } else if (condStr.includes("shoulder") || condStr.includes("frozen")) {
+      benchmarkSessions = 20;
+      condName = "Frozen Shoulder";
+    } else if (condStr.includes("paralysis") || condStr.includes("stroke") || condStr.includes("neuro")) {
+      benchmarkSessions = 35;
+      condName = "Neuro Rehabilitation";
+    } else if (condStr.includes("sport") || condStr.includes("ligament")) {
+      benchmarkSessions = 15;
+      condName = "Sports Injury Recovery";
+    } else if (condStr.includes("post-op") || condStr.includes("post-surg") || condStr.includes("surgery")) {
+      benchmarkSessions = 25;
+      condName = "Post-Surgical Rehab";
+    }
+
+    const target = (dailyCourseSpan && dailyCourseSpan.totalDays > 0) ? dailyCourseSpan.totalDays : benchmarkSessions;
+    const completed = visits.length;
+
+    let recovery = 15; // baseline intake done
+    if (completed > 0) {
+      recovery = Math.round((completed / target) * 100);
+      if (attendancePct >= 90 && completed > 2) recovery += 5;
+      else if (attendancePct < 60 && completed > 2) recovery -= 5;
+      recovery = Math.max(20, Math.min(95, recovery));
+    }
+
+    return {
+      attendancePercentage: Math.min(100, attendancePct),
+      attendedDaysCount: attendedInPeriod,
+      totalScheduledElapsed: totalElapsed,
+      predictedRecoveryPct: recovery,
+      conditionLabel: condName
+    };
+  }, [dailyCourseSpan, todayKey, attendedDateSet, missingDaysCount, condition, visits]);
 
   // Group visits, follow-ups, missing days, and appointments by DD/MM/YYYY date key
   const calendarMap = useMemo(() => {
@@ -741,52 +815,60 @@ export default function PatientVisitCalendar({
         </div>
       )}
 
-      {/* 2. SUMMARY METRICS RIBBON (How Many Visits, When Visited, Missing Days, Next Follow-Up) */}
-      <div className="calendar-metrics-ribbon">
-        {/* Metric 1: Total Completed Visits */}
-        <div className="cal-metric-card metric-completed">
-          <div className="metric-icon-wrap green">🩺</div>
+      {/* 2. SUMMARY METRICS RIBBON (Attended Sessions, Missed Sessions, Attendance %, Predicted Recovery %) */}
+      <div className="calendar-metrics-ribbon" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", margin: "14px 0" }}>
+        {/* Metric 1: Attended Visits (GREEN) */}
+        <div className="cal-metric-card metric-completed" style={{ borderLeft: "4px solid #16a34a" }}>
+          <div className="metric-icon-wrap green" style={{ background: "rgba(22, 163, 74, 0.15)", color: "#16a34a" }}>✓</div>
           <div className="metric-info">
-            <span className="metric-label">Completed Visits</span>
+            <span className="metric-label" style={{ color: "#16a34a", fontWeight: "800" }}>Present / Attended</span>
             <strong className="metric-value">{visits.length} Sessions</strong>
-            <span className="metric-sub">{attendedDateSet.size} Distinct Days Visited</span>
+            <span className="metric-sub" style={{ color: "#16a34a", fontWeight: "700" }}>{attendedDateSet.size} Green Days Logged</span>
           </div>
         </div>
 
-        {/* Metric 2: Attended Days */}
-        <div className="cal-metric-card metric-attended">
-          <div className="metric-icon-wrap blue">✅</div>
+        {/* Metric 2: Missed / Absent (RED) */}
+        <div className="cal-metric-card metric-missed" style={{ borderLeft: "4px solid #ef4444" }}>
+          <div className="metric-icon-wrap red" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}>✕</div>
           <div className="metric-info">
-            <span className="metric-label">Attendance Record</span>
-            <strong className="metric-value">{attendedDateSet.size} Days Logged</strong>
-            <span className="metric-sub">
-              {visits.length > 0 ? `Started ${cleanDateOnly(visits[visits.length - 1]?.date)}` : "No visits yet"}
-            </span>
+            <span className="metric-label" style={{ color: "#ef4444", fontWeight: "800" }}>Absent / Missed</span>
+            <strong className="metric-value" style={{ color: "#dc2626" }}>{missingDaysCount} Days Missed</strong>
+            <span className="metric-sub" style={{ color: "#ef4444", fontWeight: "700" }}>{missingDaysCount === 0 ? "Perfect Attendance!" : "Red Days on Calendar"}</span>
           </div>
         </div>
 
-        {/* Metric 3: Missing / Gap Days */}
-        <div className="cal-metric-card metric-missed">
-          <div className="metric-icon-wrap amber">⚠️</div>
+        {/* Metric 3: Attendance Adherence (%) */}
+        <div className="cal-metric-card metric-attended" style={{ borderLeft: "4px solid #0284c7" }}>
+          <div className="metric-icon-wrap blue" style={{ background: "rgba(2, 132, 199, 0.15)", color: "#0284c7" }}>📊</div>
           <div className="metric-info">
-            <span className="metric-label">Missed Sessions</span>
-            <strong className="metric-value">
-              {missingDaysCount > 0 ? `Missing ${missingDaysCount}` : "0 Missed"}
+            <span className="metric-label">Attendance Rate</span>
+            <strong className="metric-value" style={{ color: "#0284c7" }}>{attendancePercentage}% Present</strong>
+            <span className="metric-sub">{attendedDaysCount} of {totalScheduledElapsed} Scheduled Days</span>
+          </div>
+        </div>
+
+        {/* Metric 4: Clinical Recovery Progress (PREDICTED) */}
+        <div className="cal-metric-card metric-recovery" style={{ borderLeft: "4px solid #8b5cf6" }}>
+          <div className="metric-icon-wrap purple" style={{ background: "rgba(139, 92, 246, 0.15)", color: "#8b5cf6" }}>🎯</div>
+          <div className="metric-info">
+            <span className="metric-label">Clinical Recovery</span>
+            <strong className="metric-value" style={{ color: "#7c3aed" }}>
+              {predictedRecoveryPct}% <span style={{ fontSize: "11px", fontWeight: "700", opacity: 0.9 }}>(Predicted)</span>
             </strong>
-            <span className="metric-sub">
-              {missingDaysCount === 0 ? "Perfect 100% attendance!" : `${missingDaysCount} Unattended therapy ${missingDaysCount === 1 ? "day" : "days"}`}
+            <span className="metric-sub" style={{ fontSize: "11px" }}>
+              Condition: {conditionLabel}
             </span>
           </div>
         </div>
 
-        {/* Metric 4: Next Follow-Up */}
-        <div className={`cal-metric-card metric-followup ${nextFollowUpKey ? "has-followup" : ""}`}>
+        {/* Metric 5: Next Follow-Up */}
+        <div className={`cal-metric-card metric-followup ${nextFollowUpKey ? "has-followup" : ""}`} style={{ borderLeft: "4px solid #6366f1" }}>
           <div className="metric-icon-wrap indigo">
             <span className="beacon-icon-static">🔔</span>
           </div>
           <div className="metric-info">
             <div className="metric-followup-header">
-              <span className="metric-label">Next Follow-Up</span>
+              <span className="metric-label">Next Target Follow-Up</span>
               {nextFollowUpKey && (
                 <span className="followup-live-beacon" title="Next Follow-up active alert">
                   <span className="beacon-dot"></span>
@@ -818,8 +900,8 @@ export default function PatientVisitCalendar({
           className={`legend-item ${filterType === "completed" ? "active-legend" : ""}`}
           onClick={() => setFilterType(filterType === "completed" ? "all" : "completed")}
         >
-          <span className="legend-dot completed"></span>
-          <span className="legend-text">Visited Days</span>
+          <span className="legend-dot completed" style={{ background: "#16a34a" }}></span>
+          <span className="legend-text">Green (Present / Attended)</span>
           <span className="legend-count">({visits.length})</span>
         </div>
 
@@ -827,8 +909,8 @@ export default function PatientVisitCalendar({
           className={`legend-item ${filterType === "missed" ? "active-legend" : ""}`}
           onClick={() => setFilterType(filterType === "missed" ? "all" : "missed")}
         >
-          <span className="legend-dot missed-indicator"></span>
-          <span className="legend-text">Missing Days</span>
+          <span className="legend-dot missed-indicator" style={{ background: "#ef4444" }}></span>
+          <span className="legend-text">Red (Absent / Missed)</span>
           <span className="legend-count">({missingDaysCount})</span>
         </div>
 
@@ -876,11 +958,11 @@ export default function PatientVisitCalendar({
               return (
                 <div
                   key={`${cell.dateKey}-${idx}`}
-                  className={`calendar-day-cell ${cell.isCurrentMonth ? "in-month" : "out-month"} ${isSelected ? "selected" : ""} ${isToday ? "is-today" : ""} ${hasVisits ? "has-visit" : ""} ${isMissedDay && !hasVisits ? "is-missed-day" : ""} ${isNextFollowUp ? "is-next-followup blinking-cell" : ""}`}
+                  className={`calendar-day-cell ${cell.isCurrentMonth ? "in-month" : "out-month"} ${isSelected ? "selected" : ""} ${isToday ? "is-today" : ""} ${hasVisits ? "has-visit is-attended-day" : ""} ${isMissedDay && !hasVisits ? "is-missed-day is-absent-day" : ""} ${isNextFollowUp ? "is-next-followup blinking-cell" : ""}`}
                   onClick={() => setSelectedDateStr(cell.dateKey)}
                   role="button"
                   tabIndex={0}
-                  title={`Date: ${cell.dateKey}${isNextFollowUp ? " (⚡ NEXT CLINICAL FOLLOW-UP)" : ""}${isMissedDay && !hasVisits ? " (⚠️ Missed Therapy Session)" : ""}`}
+                  title={`Date: ${cell.dateKey}${hasVisits ? " (✅ Present / Attended)" : ""}${isMissedDay && !hasVisits ? " (❌ Absent / Missed Therapy Session)" : ""}`}
                 >
                   <div className="day-cell-top">
                     <span className="day-number">{cell.dayNumber}</span>
@@ -888,7 +970,7 @@ export default function PatientVisitCalendar({
                   </div>
 
                   <div className="day-cell-badges">
-                    {/* 1. Attended Visit Pill */}
+                    {/* 1. Attended Visit Pill (GREEN) */}
                     {hasVisits && (
                       <div
                         className="day-event-pill completed-pill"
@@ -897,29 +979,29 @@ export default function PatientVisitCalendar({
                         <span className="pill-dot">✓</span>
                         <span className="pill-text">
                           <span className="cal-pill-desktop">
-                            Visit #{data.visits[0].visitNumber || 1}
+                            ✓ Present (#{data.visits[0].visitNumber || 1})
                             {data.visits.length > 1 ? ` (+${data.visits.length - 1})` : ""}
                           </span>
                           <span className="cal-pill-mobile">
-                            #{data.visits[0].visitNumber || 1}
+                            ✓ P#{data.visits[0].visitNumber || 1}
                           </span>
                         </span>
                       </div>
                     )}
 
-                    {/* 2. Missed Session Pill: If missed and not visited, written missed ONLY! */}
+                    {/* 2. Missed / Absent Session Pill (RED) */}
                     {isMissedDay && !hasVisits && (
                       <div
                         className="day-event-pill missed-pill"
-                        title={`Missed session #${data.missed?.missedIndex || ""} on ${cell.dateKey}. Therapy gap detected.`}
+                        title={`Absent on ${cell.dateKey}. Therapy gap detected.`}
                       >
-                        <span className="pill-dot">⚠️</span>
+                        <span className="pill-dot">✕</span>
                         <span className="pill-text">
                           <span className="cal-pill-desktop">
-                            {data.missed?.missedIndex ? `Missed #${data.missed.missedIndex}` : "Missed Day"}
+                            ✕ Absent
                           </span>
                           <span className="cal-pill-mobile">
-                            M{data.missed?.missedIndex || ""}
+                            ✕ Abs
                           </span>
                         </span>
                       </div>
@@ -955,10 +1037,10 @@ export default function PatientVisitCalendar({
                           fontWeight: "700"
                         }}
                       >
-                        <span className="pill-dot">🔄</span>
+                        <span className="pill-dot">🗓️</span>
                         <span className="pill-text">
-                          <span className="cal-pill-desktop">Daily Slot Reserved</span>
-                          <span className="cal-pill-mobile">Reserved</span>
+                          <span className="cal-pill-desktop">Reserved</span>
+                          <span className="cal-pill-mobile">Slot</span>
                         </span>
                       </div>
                     )}

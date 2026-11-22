@@ -1133,6 +1133,8 @@ export default function PatientPortal({ onClose, themeProps }) {
                 patientName={patientProfile?.name}
                 patientId={patientProfile?.patientId}
                 phone={patientProfile?.phone}
+                condition={patientProfile?.firstVisitReason || patientProfile?.reason || patientProfile?.complaint || "Physiotherapy"}
+                readOnly={true}
                 isDailyCourse={!!patientProfile?.isDailyCourse}
                 dailyCourseDuration={patientProfile?.dailyCourseDuration || ""}
                 dailyCourseStartDate={patientProfile?.dailyCourseStartDate || patientProfile?.enrollmentDate || ""}

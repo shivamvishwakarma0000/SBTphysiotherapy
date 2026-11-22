@@ -191,7 +191,7 @@ function FacebookIcon() {
   );
 }
 
-function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, showDownloadBtn, themeProps }) {
+function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, themeProps }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDark = true;
 
@@ -243,21 +243,6 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, sh
               <span className="rect-btn-text">Patient Portal</span>
               <span className="rect-btn-text-short">Patient</span>
             </button>
-
-            {showDownloadBtn && (
-              <button
-                className="header-rect-btn download-arrow-icon-btn"
-                onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
-                title="Download Clinic App"
-                aria-label="Download App"
-              >
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-              </button>
-            )}
 
             <button
               className="header-rect-btn doctor-portal-rect-btn desktop-only-portal-btn"
@@ -697,17 +682,14 @@ function Heritage() {
 }
 
 function Assessment() {
-  const [selectedPainArea, setSelectedPainArea] = useState("Spine & Back Pain");
+  const [selectedPainArea, setSelectedPainArea] = useState("Spine & Back Pain (Sciatica / Slip Disc)");
   const [customPainArea, setCustomPainArea] = useState("");
-  const [selectedDuration, setSelectedDuration] = useState("1-3 months");
-  const [customDuration, setCustomDuration] = useState("");
   const [highlightCard, setHighlightCard] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
-    age: "",
     phone: "",
-    appointmentDate: "",
+    appointmentDate: new Date().toISOString().split("T")[0],
     concern: ""
   });
   const [lastSubmittedLead, setLastSubmittedLead] = useState(null);
@@ -743,7 +725,6 @@ function Assessment() {
   }, []);
 
   const finalPainArea = selectedPainArea === "custom" ? (customPainArea || "Custom Condition") : selectedPainArea;
-  const finalDuration = selectedDuration === "custom" ? (customDuration || "Custom Duration") : selectedDuration;
 
   const canSubmit = useMemo(() => form.name.trim().length > 1 && /^[6-9]\d{9}$/.test(form.phone.trim()), [form]);
 
@@ -761,23 +742,22 @@ function Assessment() {
     setStatus("loading");
     const cleanName = form.name.trim();
     const payload = {
-      ...form,
       name: cleanName,
       patientName: cleanName,
-      age: form.age.trim(),
+      age: "",
       painArea: finalPainArea,
-      duration: finalDuration,
-      phone: form.phone.trim()
+      duration: "Direct Online Booking",
+      appointmentDate: form.appointmentDate || new Date().toISOString().split("T")[0],
+      phone: form.phone.trim(),
+      concern: form.concern.trim() || "Consultation Request"
     };
 
     try {
       await api.createEnquiry(payload);
       setLastSubmittedLead(payload);
       setStatus("success");
-      setForm({ name: "", age: "", phone: "", appointmentDate: "", concern: "" });
+      setForm({ name: "", phone: "", appointmentDate: new Date().toISOString().split("T")[0], concern: "" });
       setCustomPainArea("");
-      setCustomDuration("");
-      // Automatically dismiss the success message after 7 seconds so the form returns to clean state
       setTimeout(() => {
         setStatus((cur) => (cur === "success" ? "" : cur));
       }, 7000);
@@ -807,97 +787,13 @@ function Assessment() {
         </div>
         <form className={`assessment-card ${highlightCard ? "highlight-focus" : ""}`} onSubmit={submit}>
           <div className="form-heading-row">
-            <h3>Consultation Request</h3>
-            <span className="form-subnote">Direct Clinic Triage</span>
+            <h3>Quick Consultation Booking</h3>
+            <span className="form-subnote">1-Step Booking</span>
           </div>
           <div className="form-grid">
-            {/* Condition Dropdown with Custom option */}
-            <label>
-              Pain Area / Clinical Condition *
-              <select
-                value={selectedPainArea}
-                onChange={(e) => setSelectedPainArea(e.target.value)}
-              >
-                {!["Spine & Back Pain", "Cup Therapy / Cupping", "Neuro Rehabilitation", "Paralysis Rehabilitation", "Stroke Recovery", "CP (Child) Therapy", "Sports Injury Rehab", "Post-Surgical Rehab", "Neck & Cervical", "Shoulder & Rotator Cuff", "Elbow & Forearm", "Wrist & Hand", "Upper Back & Thoracic", "Lower Back & Sciatica", "Hip & Pelvis", "Knee & ACL", "Ankle & Foot", "Sports Trauma", "Paralysis & Neuro Care", "Post-Surgery Recovery", "General Physiotherapy"].includes(selectedPainArea) && selectedPainArea !== "custom" && (
-                  <option value={selectedPainArea}>{selectedPainArea}</option>
-                )}
-                <option value="Spine & Back Pain">Spine & Back Pain (Slip Disc / Sciatica)</option>
-                <option value="Cup Therapy / Cupping">Cup Therapy / Cupping Therapy</option>
-                <option value="Neuro Rehabilitation">Neuro Rehabilitation (Parkinson's / Balance)</option>
-                <option value="Paralysis Rehabilitation">Paralysis Rehabilitation & Gait Retraining</option>
-                <option value="Stroke Recovery">Stroke Recovery & Mobility</option>
-                <option value="CP (Child) Therapy">CP (Child) Therapy / Pediatric Rehab</option>
-                <option value="Sports Injury Rehab">Sports Injury & Ligament Recovery</option>
-                <option value="Post-Surgical Rehab">Post-Surgical Knee / Shoulder Rehab</option>
-                <option value="Neck & Cervical">Neck & Cervical Spondylosis</option>
-                <option value="Shoulder & Rotator Cuff">Shoulder & Rotator Cuff / Frozen Shoulder</option>
-                <option value="Elbow & Forearm">Elbow & Forearm (Tennis / Golfer's Elbow)</option>
-                <option value="Wrist & Hand">Wrist & Hand (Carpal Tunnel / Tendonitis)</option>
-                <option value="Upper Back & Thoracic">Upper Back & Thoracic Pain</option>
-                <option value="Lower Back & Sciatica">Lower Back & Sciatica (L4-L5 Disc)</option>
-                <option value="Hip & Pelvis">Hip & Pelvis Pain</option>
-                <option value="Knee & ACL">Knee & ACL / Arthritis Rehabilitation</option>
-                <option value="Ankle & Foot">Ankle & Foot (Sprain / Plantar Fasciitis)</option>
-                <option value="Sports Trauma">Sports Trauma & Performance Recovery</option>
-                <option value="Paralysis & Neuro Care">Paralysis & Neuro Care</option>
-                <option value="Post-Surgery Recovery">Post-Surgery Recovery</option>
-                <option value="General Physiotherapy">General Physiotherapy / Body Aches</option>
-                <option value="custom">✏️ Other / Custom Condition (Write Your Own)...</option>
-              </select>
-            </label>
-
-            {/* Custom Condition */}
-            {selectedPainArea === "custom" && (
-              <label>
-                Enter Your Specific Condition / Pain Region *
-                <input
-                  type="text"
-                  required
-                  value={customPainArea}
-                  onChange={(e) => setCustomPainArea(e.target.value)}
-                  placeholder="e.g. Sharp pain in lower ribs when bending"
-                />
-              </label>
-            )}
-
-            {/* Duration Dropdown with Custom option */}
-            <label>
-              Duration of Symptoms *
-              <select
-                value={selectedDuration}
-                onChange={(e) => setSelectedDuration(e.target.value)}
-              >
-                <option value="Less than a week">Less than a week (Acute)</option>
-                <option value="1-4 weeks">1 to 4 weeks</option>
-                <option value="1-3 months">1 to 3 months</option>
-                <option value="3-6 months">3 to 6 months</option>
-                <option value="Chronic 6+ months">Chronic (6+ months / years)</option>
-                <option value="custom">✏️ Custom Duration (Write Your Own)...</option>
-              </select>
-            </label>
-
-            {/* Custom Duration */}
-            {selectedDuration === "custom" && (
-              <label>
-                Enter Custom Duration *
-                <input
-                  type="text"
-                  required
-                  value={customDuration}
-                  onChange={(e) => setCustomDuration(e.target.value)}
-                  placeholder="e.g. 2 years, since cricket match yesterday"
-                />
-              </label>
-            )}
-
             <label>
               Patient Full Name *
               <input name="name" value={form.name} onChange={update} placeholder="e.g. Rajesh Sharma" autoComplete="name" required />
-            </label>
-
-            <label>
-              Patient Age (Years) *
-              <input name="age" type="number" min="1" max="120" value={form.age} onChange={update} placeholder="e.g. 38" required />
             </label>
 
             <label>
@@ -907,23 +803,64 @@ function Assessment() {
                 <input name="phone" value={form.phone} onChange={update} inputMode="numeric" maxLength="10" placeholder="9876543210" autoComplete="tel" required />
               </div>
             </label>
-            <label className="wide">
-              Preferred Date of Visit
+
+            <label>
+              Pain Area / Clinical Problem *
+              <select
+                value={selectedPainArea}
+                onChange={(e) => setSelectedPainArea(e.target.value)}
+              >
+                <option value="Spine & Back Pain (Sciatica / Slip Disc)">Lower Back & Spine (Sciatica / Slip Disc)</option>
+                <option value="Neck & Cervical Spondylosis">Neck & Cervical Spondylosis</option>
+                <option value="Knee & ACL / Arthritis Rehabilitation">Knee Pain & Arthritis / ACL Recovery</option>
+                <option value="Cup Therapy / Cupping">Cupping Therapy / Hijama Pain Relief</option>
+                <option value="Shoulder & Rotator Cuff">Frozen Shoulder & Rotator Cuff</option>
+                <option value="Paralysis & Neuro Care">Paralysis & Neuro Rehabilitation</option>
+                <option value="Sports Injury Rehab">Sports Injury & Ligament Recovery</option>
+                <option value="Post-Surgical Rehab">Post-Surgical Knee / Spine Rehab</option>
+                <option value="General Physiotherapy">General Body Pain / Other Condition</option>
+                <option value="custom">✏️ Other Condition (Write Your Own)...</option>
+              </select>
+            </label>
+
+            {selectedPainArea === "custom" && (
+              <label>
+                Specify Your Condition *
+                <input
+                  type="text"
+                  required
+                  value={customPainArea}
+                  onChange={(e) => setCustomPainArea(e.target.value)}
+                  placeholder="e.g. Sharp pain in lower ribs"
+                />
+              </label>
+            )}
+
+            <label>
+              Preferred Date of Visit *
               <input
                 name="appointmentDate"
                 type="date"
+                required
                 value={form.appointmentDate}
                 min={new Date().toISOString().split("T")[0]}
                 onChange={update}
               />
             </label>
+
             <label className="wide">
-              Tell Us About Your Symptoms / Medical History
-              <textarea name="concern" value={form.concern} onChange={update} placeholder="Describe how pain started, surgical history, or previous treatments..." rows="3" />
+              Symptoms / Note (Optional)
+              <input
+                type="text"
+                name="concern"
+                value={form.concern}
+                onChange={update}
+                placeholder="e.g. Pain since 2 weeks, worse while sitting"
+              />
             </label>
           </div>
-          <button className="primary-btn form-submit" type="submit">Submit Consultation Request</button>
-          {status === "invalid" && <p className="form-status">Please enter a valid patient name, age, and 10-digit Indian mobile number.</p>}
+          <button className="primary-btn form-submit" type="submit">Confirm Consultation Booking ➔</button>
+          {status === "invalid" && <p className="form-status">Please enter patient name and a valid 10-digit Indian mobile number.</p>}
           {status === "loading" && <p className="form-status">Submitting consultation request...</p>}
           {status === "success" && (
             <div className="form-status-box success" style={{ position: "relative", background: "rgba(16, 185, 129, 0.12)", border: "1.5px solid #10b981", borderRadius: "10px", padding: "14px 16px", marginTop: "14px", color: "var(--text-primary)" }}>
@@ -1828,7 +1765,6 @@ function App() {
           onOpenDoctorPortal={openDoctorPortal}
           onOpenPatientPortal={openPatientPortal}
           onOpenDownloadApp={() => setShowDownloadModal(true)}
-          showDownloadBtn={canShowDownloadBtn}
           themeProps={themeProps}
         />
         <main>

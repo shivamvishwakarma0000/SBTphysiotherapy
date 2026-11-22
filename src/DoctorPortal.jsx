@@ -311,13 +311,57 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [manualFollowUpDate, setManualFollowUpDate] = useState("");
   const [manualFollowUpTime, setManualFollowUpTime] = useState("10:30 AM");
   const [billingPlanType, setBillingPlanType] = useState("daily"); // "daily", "package", "prepaid"
-  const [selectedPlanDays, setSelectedPlanDays] = useState(7);
-  const [selectedPlanLabel, setSelectedPlanLabel] = useState("7 Days (1 Week)");
-  const [selectedPlanPrice, setSelectedPlanPrice] = useState(1400); // 7 * 200 = 1400 default
-  const [customDaysInput, setCustomDaysInput] = useState("21");
+  const [selectedPlanDays, setSelectedPlanDays] = useState(30);
+  const [selectedPlanLabel, setSelectedPlanLabel] = useState("30 Days Treatment Plan");
+  const [selectedPlanPrice, setSelectedPlanPrice] = useState(6000); // 30 * 200 = 6000 default
+  const [customDaysInput, setCustomDaysInput] = useState("30");
   const [isCustomDaysActive, setIsCustomDaysActive] = useState(false);
   const [planJustConfirmed, setPlanJustConfirmed] = useState(false);
   const [showAllReceipts, setShowAllReceipts] = useState(false);
+
+  // Manual Date Range Treatment Plan States
+  const getTodayInputStr = () => new Date().toISOString().split("T")[0];
+  const getFutureInputStr = (days = 30) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split("T")[0];
+  };
+  const [manualPlanStart, setManualPlanStart] = useState(getTodayInputStr());
+  const [manualPlanEnd, setManualPlanEnd] = useState(getFutureInputStr(30));
+
+  const calculatedPlanDays = useMemo(() => {
+    if (!manualPlanStart || !manualPlanEnd) return 30;
+    const s = new Date(manualPlanStart);
+    const e = new Date(manualPlanEnd);
+    const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return isNaN(diff) || diff < 1 ? 1 : diff;
+  }, [manualPlanStart, manualPlanEnd]);
+
+  const formatInputDateToDisplay = (isoStr) => {
+    if (!isoStr) return "";
+    const [y, m, d] = isoStr.split("-");
+    if (!y || !m || !d) return isoStr;
+    return `${d}/${m}/${y}`;
+  };
+
+  const isDummyPatient = (p) => {
+    if (!p) return true;
+    const n = String(p.name || "").toLowerCase().trim();
+    const ph = String(p.phone || "").replace(/\D/g, "");
+    return (
+      n.includes("enrolled lead") ||
+      n.includes("self registered") ||
+      n.includes("dummy") ||
+      n.includes("test patient") ||
+      ph === "9887766554" ||
+      ph === "9999999999" ||
+      ph === "0000000000"
+    );
+  };
+
+  useEffect(() => {
+    setSelectedPlanPrice(calculatedPlanDays * 200);
+  }, [calculatedPlanDays]);
 
   // Custom Webhook Settings State
   const [customWebhookInput, setCustomWebhookInput] = useState(() => getWebhookUrl());
@@ -1445,21 +1489,31 @@ export default function DoctorPortal({ onClose, themeProps }) {
     }
   };
 
-  const handleToggleDailyCourse = async (enable, duration = "Ongoing Daily Rehab", totalDays = 7, packagePrice = null) => {
+  const handleToggleDailyCourse = async (
+    enable,
+    duration = "Custom Rehab Plan",
+    totalDays = 30,
+    packagePrice = null,
+    customStartFormatted = null,
+    customEndFormatted = null
+  ) => {
     if (!selectedPatient) return;
     try {
       const now = new Date();
       const startD = String(now.getDate()).padStart(2, "0");
       const startM = String(now.getMonth() + 1).padStart(2, "0");
       const startY = now.getFullYear();
-      const startFormatted = `${startD}/${startM}/${startY}`;
+      const fallbackStart = `${startD}/${startM}/${startY}`;
 
       const endDateObj = new Date();
-      endDateObj.setDate(endDateObj.getDate() + (totalDays || 7));
+      endDateObj.setDate(endDateObj.getDate() + (totalDays || 30));
       const endD = String(endDateObj.getDate()).padStart(2, "0");
       const endM = String(endDateObj.getMonth() + 1).padStart(2, "0");
       const endY = endDateObj.getFullYear();
-      const endFormatted = `${endD}/${endM}/${endY}`;
+      const fallbackEnd = `${endD}/${endM}/${endY}`;
+
+      const startFormatted = customStartFormatted || fallbackStart;
+      const endFormatted = customEndFormatted || fallbackEnd;
 
       const nextDate = new Date();
       nextDate.setDate(nextDate.getDate() + 1);
@@ -1470,14 +1524,14 @@ export default function DoctorPortal({ onClose, themeProps }) {
       const tomorrowStr = `${d}/${m}/${y}`;
 
       const finalPkgPrice = packagePrice !== null && packagePrice !== undefined 
-        ? (parseInt(packagePrice, 10) || getDefaultPackagePrice(totalDays))
-        : (selectedPlanPrice || getDefaultPackagePrice(totalDays));
+        ? (parseInt(packagePrice, 10) || (totalDays * 200))
+        : (selectedPlanPrice || (totalDays * 200));
       const perSessionRate = totalDays > 0 ? Math.round(finalPkgPrice / totalDays) : 200;
 
       const updates = {
         isDailyCourse: enable,
         dailyCourseDuration: enable ? duration : "",
-        dailyCourseStartDate: enable ? (selectedPatient.dailyCourseStartDate || startFormatted) : "",
+        dailyCourseStartDate: enable ? startFormatted : "",
         dailyCourseEndDate: enable ? endFormatted : "",
         dailyCourseTotalDays: enable ? totalDays : 0,
         packageTotalPrice: enable ? finalPkgPrice : 0,
@@ -1496,11 +1550,11 @@ export default function DoctorPortal({ onClose, themeProps }) {
       if (enable) {
         setPlanJustConfirmed(true);
         setLeadActionToast(
-          `🔒 ${duration} locked for ${selectedPatient.name} (Total: ₹${finalPkgPrice} • ₹${perSessionRate}/session)! Click 'Send Schedule on WhatsApp' to dispatch.`
+          `🔒 ${duration} locked from ${startFormatted} to ${endFormatted} (${totalDays} Days)! All daily attendance will be automatically tracked in the calendar.`
         );
       } else {
         setPlanJustConfirmed(false);
-        setLeadActionToast(`⏹️ Daily Course paused for ${selectedPatient.name}.`);
+        setLeadActionToast(`⏹️ Treatment Course ended for ${selectedPatient.name}.`);
       }
       setTimeout(() => setLeadActionToast(""), 4500);
     } catch (err) {
@@ -1594,15 +1648,40 @@ export default function DoctorPortal({ onClose, themeProps }) {
         }
         setSelectedPatient(data.patient);
         setPatientVisits(data.visits);
+
+        if (data.patient?.dailyCourseStartDate) {
+          const parts = String(data.patient.dailyCourseStartDate).split("/");
+          if (parts.length === 3) {
+            setManualPlanStart(`${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`);
+          } else if (data.patient.dailyCourseStartDate.includes("-")) {
+            setManualPlanStart(data.patient.dailyCourseStartDate);
+          }
+        } else {
+          setManualPlanStart(new Date().toISOString().split("T")[0]);
+        }
+
+        if (data.patient?.dailyCourseEndDate) {
+          const parts = String(data.patient.dailyCourseEndDate).split("/");
+          if (parts.length === 3) {
+            setManualPlanEnd(`${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`);
+          } else if (data.patient.dailyCourseEndDate.includes("-")) {
+            setManualPlanEnd(data.patient.dailyCourseEndDate);
+          }
+        } else {
+          const d = new Date();
+          d.setDate(d.getDate() + (data.patient?.dailyCourseTotalDays || 30));
+          setManualPlanEnd(d.toISOString().split("T")[0]);
+        }
+
         if (data.patient?.dailyCourseTotalDays) {
           const d = data.patient.dailyCourseTotalDays;
           setSelectedPlanDays(d);
           setSelectedPlanLabel(data.patient.dailyCourseDuration || `${d} Days Plan`);
           setSelectedPlanPrice(data.patient.packageTotalPrice || getDefaultPackagePrice(d));
         } else {
-          setSelectedPlanDays(7);
-          setSelectedPlanLabel("7 Days (1 Week)");
-          setSelectedPlanPrice(1400);
+          setSelectedPlanDays(30);
+          setSelectedPlanLabel("30 Days Treatment Plan");
+          setSelectedPlanPrice(6000);
         }
         setIsCustomDaysActive(false);
         setPlanJustConfirmed(false);
@@ -1617,6 +1696,25 @@ export default function DoctorPortal({ onClose, themeProps }) {
       }
     } catch (err) {
       alert("Failed to load patient profile.");
+    }
+  };
+
+  const handleDirectEnrollFromQueue = async (patient) => {
+    if (!patient) return;
+    try {
+      await api.finalizeConsultation(patient.patientId, {
+        reason: patient.firstVisitReason || "Physiotherapy Consultation",
+        complaint: patient.complaint || "Initial consultation completed.",
+        diagnosis: "Clinical Evaluation - Active Rehabilitation",
+        treatmentNotes: "Patient enrolled directly from waiting room.",
+        fee: "₹500"
+      });
+      setPatients(prev => prev.map(p => p.patientId === patient.patientId ? { ...p, status: "Active", totalVisits: Math.max(1, (p.totalVisits || 0) + 1) } : p));
+      setLeadActionToast(`✅ ${patient.name} (${patient.patientId}) enrolled and moved to Enrolled Patients!`);
+      setTimeout(() => setLeadActionToast(""), 4000);
+      await Promise.all([fetchPatients(), fetchStats()]);
+    } catch (err) {
+      alert("Failed to enroll patient: " + err.message);
     }
   };
 
@@ -1790,9 +1888,11 @@ export default function DoctorPortal({ onClose, themeProps }) {
         followUpDate: convertingLeadForm.followUpDate
       });
 
-      // 3. Mark Enquiry Converted
+      // 3. Mark Enquiry Converted and immediately remove/delete from Online Bookings
       if (convertingLead && convertingLead.id) {
         await api.updateEnquiryStatus(convertingLead.id, "Converted", createdPatient.patientId);
+        await api.deleteEnquiry(convertingLead.id).catch(() => {});
+        setEnquiries(prev => prev.filter(e => String(e.id) !== String(convertingLead.id)));
       }
 
       setConvertingLead(null);
@@ -1812,16 +1912,15 @@ export default function DoctorPortal({ onClose, themeProps }) {
     if (!enquiry || !enquiry.id || !targetPatient) return;
     const status = `Linked: ${targetPatient.patientId}`;
 
-    // Optimistic UI update
-    setEnquiries(prev => prev.map(e => String(e.id) === String(enquiry.id) ? { ...e, status, linkedPatientId: targetPatient.patientId } : e));
+    // Remove from active online bookings so it does not linger
+    setEnquiries(prev => prev.filter(e => String(e.id) !== String(enquiry.id)));
     setLinkingEnquiry(null);
 
     try {
-      const res = await api.updateEnquiryStatus(enquiry.id, status, targetPatient.patientId);
-      if (res.ok) {
-        fetchEnquiries();
-        alert(`✓ Enquiry linked successfully to ${targetPatient.name} (${targetPatient.patientId}) without creating duplicate records.`);
-      }
+      await api.updateEnquiryStatus(enquiry.id, status, targetPatient.patientId);
+      await api.deleteEnquiry(enquiry.id).catch(() => {});
+      fetchEnquiries();
+      alert(`✓ Enquiry linked successfully to ${targetPatient.name} (${targetPatient.patientId}) without creating duplicate records.`);
     } catch (err) {
       console.error("Failed to link enquiry:", err);
       alert("Failed to link enquiry: " + err.message);
@@ -2397,15 +2496,15 @@ _(Saved in patient clinic records)_`;
           <button className={activeTab === "waiting" ? "active" : ""} onClick={() => selectDoctorTab("waiting")}>
             <span className="nav-tab-desktop">⏳ 3. Waiting Queue</span>
             <span className="nav-tab-mobile">⏳ Waiting</span>
-            {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length > 0 && (
+            {patients.filter(p => !isDummyPatient(p) && p.status === "Waiting for Doctor" && (p.totalVisits || 0) === 0).length > 0 && (
               <span className="enq-badge" style={{ background: "#f59e0b" }}>
-                {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length}
+                {patients.filter(p => !isDummyPatient(p) && p.status === "Waiting for Doctor" && (p.totalVisits || 0) === 0).length}
               </span>
             )}
           </button>
           <button className={activeTab === "patients" ? "active" : ""} onClick={() => { selectDoctorTab("patients"); fetchPatients(); }}>
-            <span className="nav-tab-desktop">👥 4. Enrolled Patients ({patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length})</span>
-            <span className="nav-tab-mobile">👥 Enrolled ({patients.filter(p => p.status !== "Waiting for Doctor" && (p.totalVisits || 0) > 0).length})</span>
+            <span className="nav-tab-desktop">👥 4. Enrolled Patients ({patients.filter(p => !isDummyPatient(p) && (p.status !== "Waiting for Doctor" || (p.totalVisits || 0) > 0)).length})</span>
+            <span className="nav-tab-mobile">👥 Enrolled ({patients.filter(p => !isDummyPatient(p) && (p.status !== "Waiting for Doctor" || (p.totalVisits || 0) > 0)).length})</span>
           </button>
           <button className={activeTab === "today" ? "active" : ""} onClick={() => { selectDoctorTab("today"); fetchTodayVisits(); }}>
             <span className="nav-tab-desktop">📅 5. Today's Visits ({todayVisits.length})</span>
@@ -2988,7 +3087,7 @@ _(Saved in patient clinic records)_`;
             <div className="section-header-row">
               <div>
                 <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 4px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
-                  ⏳ Clinic Waiting Room ({patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length})
+                  ⏳ Clinic Waiting Room ({patients.filter(p => !isDummyPatient(p) && p.status === "Waiting for Doctor" && (p.totalVisits || 0) === 0).length})
                 </h2>
                 <p style={{ color: "#e2e8f0", fontSize: "13px", margin: 0, opacity: 0.95 }}>
                   Enrolled patients waiting in clinic. Click to start consultation, diagnose, and print receipt.
@@ -3000,7 +3099,7 @@ _(Saved in patient clinic records)_`;
             </div>
 
             <div className="waiting-patients-grid">
-              {patients.filter(p => p.status === "Waiting for Doctor" || p.totalVisits === 0).map(p => (
+              {patients.filter(p => !isDummyPatient(p) && p.status === "Waiting for Doctor" && (p.totalVisits || 0) === 0).map(p => (
                 <div className="waiting-patient-card" key={p.patientId}>
                   <div className="waiting-card-header">
                     <div className="waiting-badge-row">
@@ -3031,13 +3130,21 @@ _(Saved in patient clinic records)_`;
                     )}
                   </div>
 
-                  <div className="waiting-card-actions" style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "14px" }}>
+                  <div className="waiting-card-actions" style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "14px", flexWrap: "wrap" }}>
                     <button
                       className="primary-btn consult-start-btn"
-                      style={{ flex: 1, padding: "10px 16px", fontSize: "13.5px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                      style={{ flex: "1 1 180px", padding: "10px 16px", fontSize: "13.5px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
                       onClick={() => handleOpenConsultationModal(p)}
                     >
                       🩺 Consult &amp; Issue Receipt
+                    </button>
+                    <button
+                      className="secondary-btn"
+                      style={{ flex: "1 1 160px", background: "#ecfdf5", color: "#047857", borderColor: "#86efac", fontSize: "12.5px", fontWeight: "800", padding: "10px 12px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                      onClick={() => handleDirectEnrollFromQueue(p)}
+                      title="Directly mark enrolled & active"
+                    >
+                      ✅ Mark Enrolled &amp; Active
                     </button>
                     <button
                       className="secondary-btn delete-action"
@@ -3051,7 +3158,7 @@ _(Saved in patient clinic records)_`;
                 </div>
               ))}
 
-              {patients.filter(p => p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0).length === 0 && (
+              {patients.filter(p => !isDummyPatient(p) && p.status === "Waiting for Doctor" && (p.totalVisits || 0) === 0).length === 0 && (
                 <div className="empty-waiting-card">
                   <span style={{ fontSize: "40px" }}>🎉</span>
                   <h3>Waiting Room is Empty!</h3>
@@ -3061,6 +3168,7 @@ _(Saved in patient clinic records)_`;
                   </button>
                 </div>
               )}
+            </div>
 
               {/* ⭐ 2-Hour Post-Consultation WhatsApp Review Automation Section */}
               <div className="review-queue-panel" style={{ marginTop: "24px", borderTop: "1px dashed var(--line, #334155)", paddingTop: "20px" }}>
@@ -3258,8 +3366,7 @@ _(Saved in patient clinic records)_`;
 
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* ================= 3. ENROLLED PATIENTS DIRECTORY ================= */}
         {activeTab === "patients" && (
@@ -6043,235 +6150,100 @@ _(Saved in patient clinic records)_`;
                         </div>
                       )
                     ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
-                        {/* Duration Selection Pills (7, 10, 15, 30, 60 days + Custom Days) */}
-                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                          {[
-                            { days: 7, label: "7 Days (1 Week)", btnText: "⚡ 7 Days" },
-                            { days: 10, label: "10 Days Plan", btnText: "⚡ 10 Days" },
-                            { days: 15, label: "15 Days Course", btnText: "⚡ 15 Days" },
-                            { days: 30, label: "1 Month (30 Days)", btnText: "📅 30 Days" },
-                            { days: 60, label: "2 Months (60 Days)", btnText: "📅 60 Days" }
-                          ].map((plan) => {
-                            const isSelected = !isCustomDaysActive && selectedPlanDays === plan.days;
-                            const isMonthly = plan.days >= 30;
-                            return (
-                              <button
-                                key={`plan-${plan.days}`}
-                                type="button"
-                                onClick={() => handleSelectPlanPill(plan.days, plan.label)}
-                                style={{
-                                  background: isSelected
-                                    ? (isMonthly ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #0284c7, #0369a1)")
-                                    : "#ffffff",
-                                  color: isSelected ? "#ffffff" : "#1e293b",
-                                  border: isSelected
-                                    ? (isMonthly ? "1.5px solid #059669" : "1.5px solid #0369a1")
-                                    : "1.5px solid #cbd5e1",
-                                  padding: "8px 12px",
-                                  borderRadius: "8px",
-                                  fontSize: "12px",
-                                  fontWeight: isSelected ? "800" : "700",
-                                  cursor: "pointer",
-                                  boxShadow: isSelected ? "0 3px 8px rgba(2, 132, 199, 0.3)" : "none",
-                                  transition: "all 0.15s ease",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px"
-                                }}
-                              >
-                                <span>{plan.btnText}</span>
-                                {isSelected && <span style={{ fontSize: "11px" }}>✓</span>}
-                              </button>
-                            );
-                          })}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+                        <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", borderRadius: "10px", padding: "14px" }}>
+                          <div style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>🗓️ Treatment Course Plan (Select Start &amp; End Dates)</span>
+                          </div>
+                          <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 12px 0" }}>
+                            Set the treatment date span manually. The calendar tracks attendance automatically: if an assessment or receipt is created on that date, it is marked Green (Present); otherwise Red (Absent).
+                          </p>
 
-                          {/* Same Size Button for Custom Days */}
-                          <button
-                            type="button"
-                            onClick={handleSelectCustomDays}
-                            style={{
-                              background: isCustomDaysActive
-                                ? "linear-gradient(135deg, #8b5cf6, #7c3aed)"
-                                : "#ffffff",
-                              color: isCustomDaysActive ? "#ffffff" : "#1e293b",
-                              border: isCustomDaysActive
-                                ? "1.5px solid #7c3aed"
-                                : "1.5px solid #cbd5e1",
-                              padding: "8px 12px",
-                              borderRadius: "8px",
-                              fontSize: "12px",
-                              fontWeight: isCustomDaysActive ? "800" : "700",
-                              cursor: "pointer",
-                              boxShadow: isCustomDaysActive ? "0 3px 8px rgba(139, 92, 246, 0.3)" : "none",
-                              transition: "all 0.15s ease",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px"
-                            }}
-                          >
-                            <span>✏️ Custom Days</span>
-                            {isCustomDaysActive && <span style={{ fontSize: "11px" }}>✓</span>}
-                          </button>
-                        </div>
-
-                        {/* Inline Input when Custom Days is selected */}
-                        {isCustomDaysActive && (
-                          <div
-                            style={{
-                              background: "#f5f3ff",
-                              border: "1.5px solid #c4b5fd",
-                              borderRadius: "8px",
-                              padding: "8px 12px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "10px",
-                              flexWrap: "wrap"
-                            }}
-                          >
-                            <span style={{ fontSize: "12px", fontWeight: "700", color: "#5b21b6" }}>
-                              Enter Duration:
-                            </span>
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
+                            <div>
+                              <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "4px" }}>
+                                📅 Start Date *
+                              </label>
                               <input
-                                type="number"
-                                min="1"
-                                max="365"
-                                value={customDaysInput}
-                                onChange={(e) => handleCustomDaysChange(e.target.value)}
-                                style={{
-                                  width: "70px",
-                                  padding: "5px 8px",
-                                  borderRadius: "6px",
-                                  border: "1.5px solid #7c3aed",
-                                  fontWeight: "800",
-                                  fontSize: "13px",
-                                  color: "#0f172a",
-                                  background: "#ffffff"
-                                }}
+                                type="date"
+                                value={manualPlanStart}
+                                onChange={(e) => setManualPlanStart(e.target.value)}
+                                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid #0284c7", fontSize: "13.5px", fontWeight: "700", background: "#ffffff" }}
                               />
-                              <span style={{ fontSize: "12.5px", fontWeight: "700", color: "#5b21b6" }}>Days</span>
                             </div>
-                            <span style={{ fontSize: "12px", color: "#6b21a8" }}>
-                              Total schedule: <strong>{selectedPlanDays} Consecutive Daily Sessions</strong>
-                            </span>
-                          </div>
-                        )}
 
-                        {/* Editable Package Price Section with per-session rate badge */}
-                        <div
-                          style={{
-                            background: "#ffffff",
-                            border: "1.5px solid #a7f3d0",
-                            borderRadius: "10px",
-                            padding: "10px 14px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: "10px",
-                            flexWrap: "wrap",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
-                          }}
-                        >
-                          <div>
-                            <span style={{ fontSize: "12px", fontWeight: "800", color: "#065f46", textTransform: "uppercase", display: "block" }}>
-                              💰 Package Fee for {selectedPlanLabel} (Editable)
-                            </span>
-                            <span style={{ fontSize: "11.5px", color: "#047857" }}>
-                              Reference rate: ₹200/day. You can edit total amount below:
-                            </span>
+                            <div>
+                              <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "4px" }}>
+                                🏁 End Date *
+                              </label>
+                              <input
+                                type="date"
+                                value={manualPlanEnd}
+                                onChange={(e) => setManualPlanEnd(e.target.value)}
+                                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1.5px solid #0284c7", fontSize: "13.5px", fontWeight: "700", background: "#ffffff" }}
+                              />
+                            </div>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <div
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                background: "#f0fdf4",
-                                border: "1.5px solid #10b981",
-                                borderRadius: "8px",
-                                padding: "4px 8px"
-                              }}
-                            >
-                              <span style={{ fontWeight: "800", color: "#065f46", fontSize: "14px", marginRight: "4px" }}>₹</span>
+
+                          {/* Duration & Fee Summary */}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", background: "#ffffff", border: "1.5px solid #86efac", padding: "10px 14px", borderRadius: "8px", marginBottom: "12px" }}>
+                            <div>
+                              <strong style={{ fontSize: "13.5px", color: "#166534", display: "block" }}>
+                                Total Course: {calculatedPlanDays} Consecutive Days
+                              </strong>
+                              <span style={{ fontSize: "12px", color: "#15803d" }}>
+                                {formatInputDateToDisplay(manualPlanStart)} ➔ {formatInputDateToDisplay(manualPlanEnd)}
+                              </span>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ fontSize: "12px", color: "#166534", fontWeight: "700" }}>Total Fee: ₹</span>
                               <input
                                 type="number"
                                 min="0"
                                 step="50"
                                 value={selectedPlanPrice}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value, 10);
-                                  setSelectedPlanPrice(isNaN(val) ? 0 : val);
-                                  setPlanJustConfirmed(false);
-                                }}
-                                style={{
-                                  width: "90px",
-                                  border: "none",
-                                  background: "transparent",
-                                  fontSize: "14px",
-                                  fontWeight: "800",
-                                  color: "#065f46",
-                                  outline: "none"
-                                }}
+                                onChange={(e) => setSelectedPlanPrice(parseInt(e.target.value, 10) || 0)}
+                                style={{ width: "90px", padding: "4px 8px", borderRadius: "6px", border: "1.5px solid #16a34a", fontWeight: "800", fontSize: "13px" }}
                               />
+                              <span style={{ fontSize: "11.5px", color: "#15803d", fontWeight: "700" }}>
+                                (₹{calculatedPlanDays > 0 ? Math.round(selectedPlanPrice / calculatedPlanDays) : 200}/session)
+                              </span>
                             </div>
-                            <span
-                              style={{
-                                fontSize: "12px",
-                                fontWeight: "800",
-                                background: "#dcfce7",
-                                color: "#15803d",
-                                border: "1px solid #86efac",
-                                padding: "4px 8px",
-                                borderRadius: "6px"
-                              }}
-                              title="Calculated daily visit fee"
-                            >
-                              ₹{selectedPlanDays > 0 ? Math.round(selectedPlanPrice / selectedPlanDays) : 200}/session
-                            </span>
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDailyCourse(
+                              true,
+                              `${calculatedPlanDays} Days Treatment Plan`,
+                              calculatedPlanDays,
+                              selectedPlanPrice,
+                              formatInputDateToDisplay(manualPlanStart),
+                              formatInputDateToDisplay(manualPlanEnd)
+                            )}
+                            style={{
+                              width: "100%",
+                              minHeight: "44px",
+                              background: "linear-gradient(135deg, #10b981, #059669)",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: "10px",
+                              padding: "10px 16px",
+                              fontSize: "13.5px",
+                              fontWeight: "800",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "8px",
+                              boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
+                              transition: "all 0.2s ease"
+                            }}
+                          >
+                            <span>🔒 Lock &amp; Activate {calculatedPlanDays} Days Schedule in Calendar</span>
+                          </button>
                         </div>
-
-                        {/* Confirmation and Slot Locking Action Button */}
-                        {(() => {
-                          const previewEnd = new Date();
-                          previewEnd.setDate(previewEnd.getDate() + (selectedPlanDays || 7));
-                          const ped = String(previewEnd.getDate()).padStart(2, "0");
-                          const pem = String(previewEnd.getMonth() + 1).padStart(2, "0");
-                          const pey = previewEnd.getFullYear();
-                          const previewEndStr = `${ped}/${pem}/${pey}`;
-
-                          return (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleDailyCourse(true, selectedPlanLabel, selectedPlanDays, selectedPlanPrice)}
-                                style={{
-                                  width: "100%",
-                                  minHeight: "44px",
-                                  background: "linear-gradient(135deg, #10b981, #059669)",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "10px",
-                                  padding: "10px 16px",
-                                  fontSize: "13.5px",
-                                  fontWeight: "800",
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: "8px",
-                                  boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
-                                  transition: "all 0.2s ease"
-                                }}
-                              >
-                                <span>🔒 Confirm Plan &amp; Lock Slots ({selectedPlanLabel} • Total ₹{selectedPlanPrice})</span>
-                              </button>
-                              <div style={{ fontSize: "11.5px", color: "#065f46", textAlign: "center", fontWeight: "600" }}>
-                                📅 Auto-reserves daily slots through <strong>{previewEndStr}</strong>. Confirming unlocks WhatsApp send.
-                              </div>
-                            </div>
-                          );
-                        })()}
                       </div>
                     )}
                   </div>
@@ -6529,6 +6501,7 @@ _(Saved in patient clinic records)_`;
                   patientName={selectedPatient.name}
                   patientId={selectedPatient.patientId}
                   phone={selectedPatient.phone}
+                  condition={selectedPatient.firstVisitReason || selectedPatient.reason || selectedPatient.complaint || "Physiotherapy"}
                   isDoctorView={true}
                   isDailyCourse={!!selectedPatient.isDailyCourse}
                   dailyCourseDuration={selectedPatient.dailyCourseDuration || ""}

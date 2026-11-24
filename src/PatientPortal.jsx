@@ -1211,17 +1211,16 @@ export default function PatientPortal({ onClose, themeProps }) {
               <p style={{ color: "#e2e8f0", fontSize: "13.5px", margin: 0, opacity: 0.95 }}>Review scheduled clinic appointments and submit new appointment requests.</p>
             </div>
 
-            {patientProfile?.status === "Completed" && (
-              <div style={{ background: "#ecfdf5", border: "2px solid #86efac", borderRadius: "14px", padding: "16px 18px", marginBottom: "16px", color: "#166534" }}>
-                <strong style={{ fontSize: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+            {patientProfile?.status === "Completed" ? (
+              <div style={{ background: "#ecfdf5", border: "2px solid #86efac", borderRadius: "14px", padding: "18px 20px", marginBottom: "20px", color: "#166534" }}>
+                <strong style={{ fontSize: "17px", display: "flex", alignItems: "center", gap: "8px" }}>
                   🎉 Treatment Course Completed &amp; Recovered!
                 </strong>
-                <p style={{ margin: "6px 0 0 0", fontSize: "14px", color: "#15803d" }}>
-                  Your physiotherapy rehabilitation is successfully finished. You do not have mandatory daily visits, but you can always reach Dr. Satyam Vishwakarma if you need routine guidance or SOS consultations.
+                <p style={{ margin: "8px 0 0 0", fontSize: "14px", color: "#15803d", lineHeight: "1.5" }}>
+                  Your physiotherapy rehabilitation is successfully finished. Routine daily visits are complete. If you ever need advice, routine checkups, or SOS consultations, you can directly message or call Dr. Satyam Vishwakarma at <strong>+91 9793093316</strong>.
                 </p>
               </div>
-            )}
-
+            ) : (
             <div className="appointment-booking-card" style={{ background: "#ffffff", border: "2px solid #0284c7", borderRadius: "18px", padding: "20px 22px", marginBottom: "20px", boxShadow: "0 4px 16px rgba(2, 132, 199, 0.1)" }}>
               <div className="booking-info" style={{ marginBottom: "16px" }}>
                 <span style={{ fontSize: "11px", fontWeight: "800", background: "#e0f2fe", color: "#0369a1", padding: "3px 9px", borderRadius: "6px", textTransform: "uppercase" }}>
@@ -1452,6 +1451,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 </a>
               </div>
             </div>
+            )}
 
             {/* DOCTOR PRESCRIBED NEXT FOLLOW-UP SCHEDULE (ONLY UPCOMING OR TODAY) */}
             {(() => {
@@ -2107,25 +2107,40 @@ export default function PatientPortal({ onClose, themeProps }) {
                   </p>
                 </div>
                 {(() => {
-                  const totalSettledAmount = sortedVisits.reduce((acc, v) => {
-                    const feeStr = v.fee ?? v.amount ?? v.charges ?? (v.isPrepaid ? 0 : 500);
-                    const num = parseInt(cleanFeeAmount(feeStr, "500"), 10);
-                    return acc + (isNaN(num) ? 500 : num);
+                  let totalSettledAmount = sortedVisits.reduce((acc, v) => {
+                    const feeStr = v.fee ?? v.amount ?? v.charges;
+                    if (feeStr !== undefined && feeStr !== null && feeStr !== "" && feeStr !== "0" && feeStr !== 0) {
+                      const num = parseInt(cleanFeeAmount(feeStr, "0"), 10);
+                      if (!isNaN(num) && num > 0) return acc + num;
+                    }
+                    if (!v.isPrepaid) {
+                      const num = parseInt(cleanFeeAmount(v.fee ?? "500", "500"), 10);
+                      return acc + (isNaN(num) ? 500 : num);
+                    }
+                    return acc;
                   }, 0);
+
+                  if (totalSettledAmount === 0) {
+                    if (patientProfile?.dailyCoursePrice && Number(patientProfile.dailyCoursePrice) > 0) {
+                      totalSettledAmount = Number(patientProfile.dailyCoursePrice);
+                    } else if (sortedVisits.length > 0) {
+                      totalSettledAmount = sortedVisits.length * 500;
+                    }
+                  }
 
                   return (
                     <div
                       style={{
-                        background: "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)",
+                        background: "#ffffff",
                         padding: "10px 18px",
                         borderRadius: "12px",
-                        border: "2px solid #10b981",
+                        border: "2.5px solid #10b981",
                         textAlign: "right",
-                        boxShadow: "0 2px 10px rgba(16, 185, 129, 0.2)",
-                        minWidth: "130px"
+                        boxShadow: "0 4px 14px rgba(16, 185, 129, 0.25)",
+                        minWidth: "140px"
                       }}
                     >
-                      <span style={{ fontSize: "11px", fontWeight: "800", color: "#047857", display: "block", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: "900", color: "#047857", display: "block", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                         Total Settled
                       </span>
                       <strong style={{ fontSize: "22px", fontWeight: "900", color: "#065f46" }}>
@@ -2847,11 +2862,35 @@ export default function PatientPortal({ onClose, themeProps }) {
               <button
                 className="more-sheet-item"
                 onClick={() => selectTab("treatment")}
+                style={{ padding: "12px 14px" }}
               >
                 <span className="more-item-icon blue">📋</span>
                 <div className="more-item-text">
-                  <strong>Treatment Plan & Clinical Diagnosis</strong>
-                  <span>Doctor recommendations, diagnosis & staging</span>
+                  <strong style={{ fontSize: "14px" }}>Treatment Plan &amp; Clinical Diagnosis</strong>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              <button
+                className="more-sheet-item"
+                onClick={() => selectTab("exercises")}
+                style={{ padding: "12px 14px" }}
+              >
+                <span className="more-item-icon cyan">🏃</span>
+                <div className="more-item-text">
+                  <strong style={{ fontSize: "14px" }}>My Exercises &amp; Rehabilitation Guide</strong>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              <button
+                className="more-sheet-item"
+                onClick={() => selectTab("receipts")}
+                style={{ padding: "12px 14px" }}
+              >
+                <span className="more-item-icon emerald">🧾</span>
+                <div className="more-item-text">
+                  <strong style={{ fontSize: "14px" }}>Official Receipts &amp; Billing Slips</strong>
                 </div>
                 <span className="more-arrow">›</span>
               </button>
@@ -2859,11 +2898,11 @@ export default function PatientPortal({ onClose, themeProps }) {
               <button
                 className="more-sheet-item"
                 onClick={() => selectTab("security")}
+                style={{ padding: "12px 14px" }}
               >
                 <span className="more-item-icon purple">🔐</span>
                 <div className="more-item-text">
-                  <strong>Recovery PIN & Password</strong>
-                  <span>View confidential recovery PIN or change password</span>
+                  <strong style={{ fontSize: "14px" }}>Recovery PIN &amp; Password Settings</strong>
                 </div>
                 <span className="more-arrow">›</span>
               </button>
@@ -2871,11 +2910,32 @@ export default function PatientPortal({ onClose, themeProps }) {
               <button
                 className="more-sheet-item"
                 onClick={() => { setShowMoreSheet(false); openContact(); }}
+                style={{ padding: "12px 14px" }}
               >
                 <span className="more-item-icon green-phone">📞</span>
                 <div className="more-item-text">
-                  <strong>Contact Clinic & Doctor</strong>
-                  <span>WhatsApp direct message & reception phone</span>
+                  <strong style={{ fontSize: "14px" }}>Contact Clinic &amp; Doctor</strong>
+                </div>
+                <span className="more-arrow">›</span>
+              </button>
+
+              <button
+                type="button"
+                className="more-sheet-item"
+                onClick={() => {
+                  setShowMoreSheet(false);
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(regs => {
+                      for (let reg of regs) reg.update();
+                    });
+                  }
+                  window.location.reload(true);
+                }}
+                style={{ padding: "12px 14px" }}
+              >
+                <span className="more-item-icon teal">🔄</span>
+                <div className="more-item-text">
+                  <strong style={{ fontSize: "14px", color: "#0284c7" }}>Refresh App &amp; Sync Updates</strong>
                 </div>
                 <span className="more-arrow">›</span>
               </button>
@@ -2894,11 +2954,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                   } catch (err) {}
                   if (onClose) onClose();
                 }}
+                style={{ padding: "12px 14px" }}
               >
                 <span className="more-item-icon indigo">🌐</span>
                 <div className="more-item-text">
-                  <strong>Exit to Clinic Website</strong>
-                  <span>Return to public clinic home page</span>
+                  <strong style={{ fontSize: "14px" }}>Exit to Clinic Website</strong>
                 </div>
                 <span className="more-arrow">›</span>
               </button>
@@ -2912,6 +2972,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   setShowMoreSheet(false);
                   handleLogout();
                 }}
+                style={{ marginTop: "4px" }}
               >
                 <span className="logout-icon">🔒</span>
                 <span>Logout Patient Session</span>

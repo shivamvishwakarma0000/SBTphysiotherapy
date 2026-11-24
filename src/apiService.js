@@ -316,6 +316,10 @@ export async function syncToGoogleSheets(action, data) {
 
 // Resilient alias so any caller using syncWithGoogleSheets never throws ReferenceError
 export const syncWithGoogleSheets = syncToGoogleSheets;
+if (typeof window !== "undefined") {
+  window.syncWithGoogleSheets = syncToGoogleSheets;
+  window.syncToGoogleSheets = syncToGoogleSheets;
+}
 
 /// Restore / Fetch all rows from Google Sheet Webhook (Google Sheets as Source of Truth)
 export async function restoreFromGoogleSheets() {

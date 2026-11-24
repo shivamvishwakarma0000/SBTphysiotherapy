@@ -17,7 +17,7 @@ const navItems = [
   ["Clinical Services", "#treatments"],
   ["Body Map", "#body-map"],
   ["Rehab Pathways", "#programs"],
-  ["BHU Heritage", "#heritage"],
+  ["Patient FAQs & Guide", "#faqs"],
   ["Consultation", "#consultation"],
   ["Contact", "#contact"]
 ];
@@ -329,19 +329,43 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, th
               >
                 <span>🔒</span> Doctor Portal
               </button>
-              <a
-                href="#consultation"
-                className="mobile-drawer-cta"
-                onClick={handleNavClick}
+              <button
+                type="button"
+                className="mobile-drawer-btn refresh-sync-btn"
+                style={{
+                  background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                  color: "#ffffff",
+                  border: "none",
+                  fontWeight: "800",
+                  padding: "12px 16px",
+                  borderRadius: "10px",
+                  boxShadow: "0 2px 8px rgba(2, 132, 199, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  cursor: "pointer"
+                }}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (typeof window !== "undefined") {
+                    if ("caches" in window) {
+                      caches.keys().then((names) => {
+                        names.forEach((name) => caches.delete(name));
+                      });
+                    }
+                    if (navigator.serviceWorker) {
+                      navigator.serviceWorker.getRegistrations().then((regs) => {
+                        regs.forEach((r) => r.unregister());
+                      });
+                    }
+                    window.location.reload(true);
+                  }
+                }}
+                title="Force refresh app and clear cache for latest updates"
               >
-                Book In-Clinic Consultation
-              </a>
-              <a
-                href={`tel:${phonePrimary}`}
-                className="mobile-drawer-call"
-              >
-                <CallIcon /> Call +91 9793093316
-              </a>
+                <span>🔄</span> Refresh App &amp; Sync Updates
+              </button>
             </div>
           </div>
         </div>
@@ -648,33 +672,159 @@ function Programs() {
   );
 }
 
-function Heritage() {
+function PatientFAQSection() {
+  const [openIdx, setOpenIdx] = useState(0);
+
+  const faqs = [
+    {
+      q: "What clinical conditions are treated by Dr. Satyam Vishwakarma at Vindhy Physio?",
+      a: "Dr. Satyam Vishwakarma specializes in evidence-based rehabilitation for spine & lower back pain (sciatica, disc herniation, slip disc), cervical spondylosis & neck stiffness, knee osteoarthritis & ACL post-operative recovery, frozen shoulder (adhesive capsulitis), paralysis & stroke neuro-rehabilitation, pediatric motor therapy (CP), sports injuries, and clinical cupping (hijama) for myofascial decompression."
+    },
+    {
+      q: "How does the online Patient Portal & daily attendance calendar work?",
+      a: "When you begin physical therapy at Vindhy Physio & Rehab Center, your digital profile tracks consecutive daily attendance in real-time. Each attended session turns green on your personalized interactive calendar. You can review attended session dates, treatment milestones, recovery percentages, and download clinic-authenticated receipts directly on your phone."
+    },
+    {
+      q: "How are session fees and rehabilitation packages structured?",
+      a: "Our clinic provides 100% fee transparency. Standard daily sessions are billed at ₹500, or you can opt for custom subsidized rehabilitation packages (e.g., 15-day or 30-day comprehensive recovery courses) with reserved consecutive daily slots. Official digital receipts with clinic registration PHY/11123 and doctor authentication are generated for every session."
+    },
+    {
+      q: "What qualifications and clinical experience does Dr. Satyam Vishwakarma hold?",
+      a: "Dr. Satyam Vishwakarma holds Doctor of Physical Therapy (DPT) and Bachelor of Physiotherapy (BPT) degrees, complemented by Certificate Course in Yoga Practices (CCYP) from Banaras Hindu University (BHU). This unique synthesis unites rigorous modern orthopedic diagnostics with functional movement biomechanics for lasting recovery."
+    },
+    {
+      q: "How do I schedule or confirm my next physiotherapy appointment?",
+      a: "You can book appointments directly via the website consultation form, select preferred slots inside your Patient Portal, or message our clinic desk via WhatsApp (+91 9793093316). Dr. Satyam confirms your slot with an official reminder."
+    }
+  ];
+
   return (
-    <section id="heritage" className="section heritage-section">
-      <div className="heritage-grid">
-        <div className="heritage-content">
-          <p className="eyebrow">BANARAS HINDU UNIVERSITY DEPTH</p>
-          <h2>Clinical diagnostic rigor paired with therapeutic movement science.</h2>
-          <p>
-            <strong>DR. SATYAM VISHWAKARMA</strong> combines clinical physiotherapy education (DPT, BPT) with CCYP training from Banaras Hindu University (BHU), creating an integrative model of care focused on musculoskeletal health, neuromuscular retraining, and long-term functional recovery.
+    <section id="faqs" className="section faq-guide-section" style={{ padding: "64px 20px", background: "var(--bg-secondary, #f8fafc)" }}>
+      {/* Anchor for heritage backwards compatibility */}
+      <div id="heritage" style={{ position: "relative", top: "-80px" }}></div>
+      <div style={{ maxWidth: "880px", margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: "36px" }}>
+          <p className="eyebrow" style={{ color: "#0284c7", fontWeight: "800", letterSpacing: "1px", textTransform: "uppercase", fontSize: "12px", marginBottom: "8px" }}>
+            PATIENT INFORMATION &amp; CLINICAL GUIDE
           </p>
-          <div className="credential-row">
-            <span>DPT</span>
-            <span>BPT</span>
-            <span>CCYP (BHU)</span>
-            <span>Consultant Physiotherapist</span>
-          </div>
+          <h2 style={{ fontSize: "28px", fontWeight: "900", color: "#0f172a", margin: "0 0 12px 0", letterSpacing: "-0.5px" }}>
+            Frequently Asked Questions &amp; Patient Guide
+          </h2>
+          <p style={{ color: "#64748b", fontSize: "15px", maxWidth: "640px", margin: "0 auto", lineHeight: "1.6" }}>
+            Everything you need to know about starting physical therapy, tracking attendance in the digital portal, treatment packages, and Dr. Satyam Vishwakarma's BHU-backed clinical approach.
+          </p>
         </div>
-        <div className="timeline">
-          {timeline.map(([title, copy]) => (
-            <article key={title}>
-              <span className="timeline-node"></span>
-              <div className="timeline-box">
-                <h3>{title}</h3>
-                <p>{copy}</p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {faqs.map((faq, idx) => {
+            const isOpen = openIdx === idx;
+            return (
+              <div
+                key={idx}
+                style={{
+                  background: "#ffffff",
+                  border: isOpen ? "2px solid #0284c7" : "1.5px solid #e2e8f0",
+                  borderRadius: "14px",
+                  overflow: "hidden",
+                  boxShadow: isOpen ? "0 6px 20px rgba(2, 132, 199, 0.1)" : "0 2px 6px rgba(0,0,0,0.03)",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenIdx(isOpen ? -1 : idx)}
+                  style={{
+                    width: "100%",
+                    padding: "18px 20px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "14px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "left"
+                  }}
+                >
+                  <span style={{ fontSize: "15.5px", fontWeight: "800", color: isOpen ? "#0284c7" : "#0f172a", lineHeight: "1.4" }}>
+                    {faq.q}
+                  </span>
+                  <span
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "50%",
+                      background: isOpen ? "#e0f2fe" : "#f1f5f9",
+                      color: isOpen ? "#0284c7" : "#64748b",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: "13px",
+                      fontWeight: "900",
+                      flexShrink: 0,
+                      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease"
+                    }}
+                  >
+                    ▼
+                  </span>
+                </button>
+                {isOpen && (
+                  <div style={{ padding: "0 20px 18px 20px", color: "#334155", fontSize: "14px", lineHeight: "1.7", borderTop: "1px solid #f1f5f9", paddingTop: "14px" }}>
+                    {faq.a}
+                  </div>
+                )}
               </div>
-            </article>
-          ))}
+            );
+          })}
+        </div>
+
+        {/* Doctor Heritage & Credentials highlight box */}
+        <div
+          style={{
+            marginTop: "32px",
+            background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+            borderRadius: "16px",
+            padding: "22px 24px",
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "16px"
+          }}
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+              <span style={{ background: "#0284c7", color: "#ffffff", padding: "3px 9px", borderRadius: "6px", fontSize: "11px", fontWeight: "800" }}>
+                CCYP BHU HERITAGE
+              </span>
+              <span style={{ fontSize: "12px", color: "#94a3b8" }}>Reg. No: PHY/11123</span>
+            </div>
+            <h4 style={{ margin: "0 0 4px 0", fontSize: "17px", fontWeight: "800", color: "#f8fafc" }}>
+              Dr. Satyam Vishwakarma (DPT, BPT, CCYP BHU)
+            </h4>
+            <p style={{ margin: 0, fontSize: "13px", color: "#cbd5e1", maxWidth: "560px", lineHeight: "1.5" }}>
+              Evidence-based musculoskeletal &amp; neuromuscular rehabilitation at Amravati Chauraha, Vindhyachal, Mirzapur.
+            </p>
+          </div>
+          <a
+            href="#consultation"
+            style={{
+              background: "linear-gradient(135deg, #10b981, #059669)",
+              color: "#ffffff",
+              padding: "10px 20px",
+              borderRadius: "10px",
+              fontWeight: "800",
+              fontSize: "13.5px",
+              textDecoration: "none",
+              boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            <span>📅</span> Book Clinic Consultation
+          </a>
         </div>
       </div>
     </section>
@@ -1792,7 +1942,7 @@ function App() {
           <Treatments />
           <BodyMap />
           <Programs />
-          <Heritage />
+          <PatientFAQSection />
           <Assessment />
           <Testimonials />
         </main>

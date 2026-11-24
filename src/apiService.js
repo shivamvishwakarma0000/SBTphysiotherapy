@@ -1537,7 +1537,7 @@ export const api = {
     }
   },
 
-  async updateEnquiryStatus(enquiryId, status, linkedPatientId = null) {
+  async updateEnquiryStatus(enquiryId, status, linkedPatientId = null, confirmedTime = null) {
     const token = this.getToken();
     let serverData = null;
     if (token) {
@@ -1548,7 +1548,7 @@ export const api = {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ status, linkedPatientId })
+          body: JSON.stringify({ status, linkedPatientId, confirmedTime })
         });
         if (res.ok) {
           serverData = await res.json();
@@ -1567,6 +1567,7 @@ export const api = {
     );
     if (enq) {
       enq.status = status;
+      if (confirmedTime) enq.time = confirmedTime;
       if (linkedPatientId) enq.linkedPatientId = linkedPatientId;
       enq.updatedAt = new Date().toISOString();
       setLocal(KEYS.ENQUIRIES, enquiries);
@@ -1578,7 +1579,7 @@ export const api = {
       const p = patients.find(item => item.patientId === linkedPatientId || (enq && (item.patientId === enq.linkedPatientId || item.patientId === enq.patientId)));
       if (p && enq) {
         const cleanDate = cleanDateOnly(enq.appointmentDate || enq.date);
-        const cleanTime = cleanTimeOnly(enq.time);
+        const cleanTime = cleanTimeOnly(confirmedTime || enq.time);
         if (cleanDate) {
           p.followUpDate = cleanDate;
           if (cleanTime) p.followUpTime = cleanTime;
@@ -1594,9 +1595,9 @@ export const api = {
       }
     } catch (_) {}
 
-    syncToGoogleSheets("doctor_update_enquiry_status", { enquiryId, id: enquiryId, status, linkedPatientId });
+    syncToGoogleSheets("doctor_update_enquiry_status", { enquiryId, id: enquiryId, status, linkedPatientId, confirmedTime });
 
-    return serverData || { ok: true, status, linkedPatientId };
+    return serverData || { ok: true, status, linkedPatientId, confirmedTime };
   }
 };
 

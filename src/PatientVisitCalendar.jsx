@@ -784,19 +784,21 @@ export default function PatientVisitCalendar({
             </button>
           </div>
 
-          <button
-            type="button"
-            className="cal-schedule-action-btn"
-            onClick={() => {
-              if (isDoctorView && onScheduleAppointment) {
-                onScheduleAppointment();
-              } else {
-                openSchedulerForDate(selectedDateStr);
-              }
-            }}
-          >
-            <span>+ {isDoctorView ? "Log Clinic Visit" : "Schedule Visit"}</span>
-          </button>
+          {isDoctorView && (
+            <button
+              type="button"
+              className="cal-schedule-action-btn"
+              onClick={() => {
+                if (onScheduleAppointment) {
+                  onScheduleAppointment();
+                } else {
+                  openSchedulerForDate(selectedDateStr);
+                }
+              }}
+            >
+              <span>+ Log Clinic Visit</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -854,124 +856,148 @@ export default function PatientVisitCalendar({
         </div>
       )}
 
-      {/* 2. SUMMARY METRICS RIBBON (Attended Sessions, Missed Sessions, Attendance %, Predicted Recovery %) */}
-      <div className="calendar-metrics-ribbon" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", margin: "14px 0" }}>
-        {/* Metric 1: Attended Visits (GREEN) */}
-        <div className="cal-metric-card metric-completed" style={{ borderLeft: "4px solid #16a34a" }}>
-          <div className="metric-icon-wrap green" style={{ background: "rgba(22, 163, 74, 0.15)", color: "#16a34a" }}>✓</div>
-          <div className="metric-info">
-            <span className="metric-label" style={{ color: "#16a34a", fontWeight: "800" }}>Present / Attended</span>
-            <strong className="metric-value">{visits.length} Sessions</strong>
-            <span className="metric-sub" style={{ color: "#16a34a", fontWeight: "700" }}>{attendedDateSet.size} Green Days Logged</span>
+      {/* 2. SEPARATE CARD A: ATTENDANCE ADHERENCE & CLINICAL RECOVERY METRICS */}
+      <div className="cal-section-panel metrics-panel" style={{ background: "#ffffff", border: "1.5px solid #cbd5e1", borderRadius: "14px", padding: "16px 18px", margin: "14px 0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "6px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "18px" }}>📊</span>
+            <strong style={{ fontSize: "14.5px", color: "#0f172a" }}>Attendance Adherence &amp; Recovery Metrics</strong>
           </div>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Live Clinical Adherence Tracking</span>
         </div>
-
-        {/* Metric 2: Missed / Absent (RED) */}
-        <div className="cal-metric-card metric-missed" style={{ borderLeft: "4px solid #ef4444" }}>
-          <div className="metric-icon-wrap red" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}>✕</div>
-          <div className="metric-info">
-            <span className="metric-label" style={{ color: "#ef4444", fontWeight: "800" }}>Absent / Missed</span>
-            <strong className="metric-value" style={{ color: "#dc2626" }}>{missingDaysCount} Days Missed</strong>
-            <span className="metric-sub" style={{ color: "#ef4444", fontWeight: "700" }}>{missingDaysCount === 0 ? "Perfect Attendance!" : "Red Days on Calendar"}</span>
-          </div>
-        </div>
-
-        {/* Metric 3: Attendance Adherence (%) */}
-        <div className="cal-metric-card metric-attended" style={{ borderLeft: "4px solid #0284c7" }}>
-          <div className="metric-icon-wrap blue" style={{ background: "rgba(2, 132, 199, 0.15)", color: "#0284c7" }}>📊</div>
-          <div className="metric-info">
-            <span className="metric-label">Attendance Rate</span>
-            <strong className="metric-value" style={{ color: "#0284c7" }}>{attendancePercentage}% Present</strong>
-            <span className="metric-sub">{attendedDaysCount} of {totalScheduledElapsed} Scheduled Days</span>
-          </div>
-        </div>
-
-        {/* Metric 4: Clinical Recovery Progress (PREDICTED) */}
-        <div className="cal-metric-card metric-recovery" style={{ borderLeft: "4px solid #8b5cf6" }}>
-          <div className="metric-icon-wrap purple" style={{ background: "rgba(139, 92, 246, 0.15)", color: "#8b5cf6" }}>🎯</div>
-          <div className="metric-info">
-            <span className="metric-label">Clinical Recovery</span>
-            <strong className="metric-value" style={{ color: "#7c3aed" }}>
-              {predictedRecoveryPct}% <span style={{ fontSize: "11px", fontWeight: "700", opacity: 0.9 }}>(Predicted)</span>
-            </strong>
-            <span className="metric-sub" style={{ fontSize: "11px" }}>
-              Condition: {conditionLabel}
-            </span>
-          </div>
-        </div>
-
-        {/* Metric 5: Next Follow-Up */}
-        <div className={`cal-metric-card metric-followup ${nextFollowUpKey ? "has-followup" : ""}`} style={{ borderLeft: "4px solid #6366f1" }}>
-          <div className="metric-icon-wrap indigo">
-            <span className="beacon-icon-static">🔔</span>
-          </div>
-          <div className="metric-info">
-            <div className="metric-followup-header">
-              <span className="metric-label">Next Target Follow-Up</span>
-              {nextFollowUpKey && (
-                <span className="followup-live-beacon" title="Next Follow-up active alert">
-                  <span className="beacon-dot"></span>
-                  <span className="beacon-text-desktop"> ACTIVE</span>
-                </span>
-              )}
+        <div className="calendar-metrics-ribbon" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px" }}>
+          {/* Metric 1: Attended Visits (GREEN) */}
+          <div className="cal-metric-card metric-completed" style={{ borderLeft: "4px solid #16a34a" }}>
+            <div className="metric-icon-wrap green" style={{ background: "rgba(22, 163, 74, 0.15)", color: "#16a34a" }}>✓</div>
+            <div className="metric-info">
+              <span className="metric-label" style={{ color: "#16a34a", fontWeight: "800" }}>Present / Attended</span>
+              <strong className="metric-value">{visits.length} Sessions</strong>
+              <span className="metric-sub" style={{ color: "#16a34a", fontWeight: "700" }}>{attendedDateSet.size} Green Days Logged</span>
             </div>
-            <strong className="metric-value text-indigo">
-              {nextFollowUpKey ? nextFollowUpKey : "As Advised"}
-            </strong>
-            <span className="metric-sub followup-highlight-tag">
-              {nextFollowUpKey ? `⚡ ${followUpCountdownText}` : "Schedule with Dr. Satyam"}
-            </span>
+          </div>
+
+          {/* Metric 2: Missed / Absent (RED) */}
+          <div className="cal-metric-card metric-missed" style={{ borderLeft: "4px solid #ef4444" }}>
+            <div className="metric-icon-wrap red" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}>✕</div>
+            <div className="metric-info">
+              <span className="metric-label" style={{ color: "#ef4444", fontWeight: "800" }}>Absent / Missed</span>
+              <strong className="metric-value" style={{ color: "#dc2626" }}>{missingDaysCount} Days Missed</strong>
+              <span className="metric-sub" style={{ color: "#ef4444", fontWeight: "700" }}>{missingDaysCount === 0 ? "Perfect Attendance!" : "Red Days on Calendar"}</span>
+            </div>
+          </div>
+
+          {/* Metric 3: Attendance Adherence (%) */}
+          <div className="cal-metric-card metric-attended" style={{ borderLeft: "4px solid #0284c7" }}>
+            <div className="metric-icon-wrap blue" style={{ background: "rgba(2, 132, 199, 0.15)", color: "#0284c7" }}>📊</div>
+            <div className="metric-info">
+              <span className="metric-label">Attendance Rate</span>
+              <strong className="metric-value" style={{ color: "#0284c7" }}>{attendancePercentage}% Present</strong>
+              <span className="metric-sub">{attendedDaysCount} of {totalScheduledElapsed} Scheduled Days</span>
+            </div>
+          </div>
+
+          {/* Metric 4: Clinical Recovery Progress (PREDICTED) */}
+          <div className="cal-metric-card metric-recovery" style={{ borderLeft: "4px solid #8b5cf6" }}>
+            <div className="metric-icon-wrap purple" style={{ background: "rgba(139, 92, 246, 0.15)", color: "#8b5cf6" }}>🎯</div>
+            <div className="metric-info">
+              <span className="metric-label">Clinical Recovery</span>
+              <strong className="metric-value" style={{ color: "#7c3aed" }}>
+                {predictedRecoveryPct}% <span style={{ fontSize: "11px", fontWeight: "700", opacity: 0.9 }}>(Predicted)</span>
+              </strong>
+              <span className="metric-sub" style={{ fontSize: "11px" }}>
+                Condition: {conditionLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* Metric 5: Next Follow-Up */}
+          <div className={`cal-metric-card metric-followup ${nextFollowUpKey ? "has-followup" : ""}`} style={{ borderLeft: "4px solid #6366f1" }}>
+            <div className="metric-icon-wrap indigo">
+              <span className="beacon-icon-static">🔔</span>
+            </div>
+            <div className="metric-info">
+              <div className="metric-followup-header">
+                <span className="metric-label">Next Target Follow-Up</span>
+                {nextFollowUpKey && (
+                  <span className="followup-live-beacon" title="Next Follow-up active alert">
+                    <span className="beacon-dot"></span>
+                    <span className="beacon-text-desktop"> ACTIVE</span>
+                  </span>
+                )}
+              </div>
+              <strong className="metric-value text-indigo">
+                {nextFollowUpKey ? nextFollowUpKey : "As Advised"}
+              </strong>
+              <span className="metric-sub followup-highlight-tag">
+                {nextFollowUpKey ? `⚡ ${followUpCountdownText}` : "Schedule with Dr. Satyam"}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 3. Status Legend Filter Pills */}
-      <div className="clinical-calendar-legend">
-        <div
-          className={`legend-item ${filterType === "all" ? "active-legend" : ""}`}
-          onClick={() => setFilterType("all")}
-        >
-          <span className="legend-dot all-indicator"></span>
-          <span className="legend-text">All Activity</span>
+      {/* 3. SEPARATE CARD B: RECOVERY & ACTIVITY STATUS COLOR GRID (LEGEND) */}
+      <div className="cal-section-panel legend-panel" style={{ background: "#ffffff", border: "1.5px solid #cbd5e1", borderRadius: "14px", padding: "14px 18px", margin: "14px 0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+          <span style={{ fontSize: "18px" }}>🎨</span>
+          <strong style={{ fontSize: "14.5px", color: "#0f172a" }}>Recovery &amp; Attendance Color Code Grid</strong>
         </div>
+        <div className="clinical-calendar-legend" style={{ margin: 0 }}>
+          <div
+            className={`legend-item ${filterType === "all" ? "active-legend" : ""}`}
+            onClick={() => setFilterType("all")}
+          >
+            <span className="legend-dot all-indicator"></span>
+            <span className="legend-text">All Activity</span>
+          </div>
 
-        <div
-          className={`legend-item ${filterType === "completed" ? "active-legend" : ""}`}
-          onClick={() => setFilterType(filterType === "completed" ? "all" : "completed")}
-        >
-          <span className="legend-dot completed" style={{ background: "#16a34a" }}></span>
-          <span className="legend-text">Green (Present / Attended)</span>
-          <span className="legend-count">({visits.length})</span>
-        </div>
+          <div
+            className={`legend-item ${filterType === "completed" ? "active-legend" : ""}`}
+            onClick={() => setFilterType(filterType === "completed" ? "all" : "completed")}
+          >
+            <span className="legend-dot completed" style={{ background: "#16a34a" }}></span>
+            <span className="legend-text">Green (Present / Attended)</span>
+            <span className="legend-count">({visits.length})</span>
+          </div>
 
-        <div
-          className={`legend-item ${filterType === "missed" ? "active-legend" : ""}`}
-          onClick={() => setFilterType(filterType === "missed" ? "all" : "missed")}
-        >
-          <span className="legend-dot missed-indicator" style={{ background: "#ef4444" }}></span>
-          <span className="legend-text">Red (Absent / Missed)</span>
-          <span className="legend-count">({missingDaysCount})</span>
-        </div>
+          <div
+            className={`legend-item ${filterType === "missed" ? "active-legend" : ""}`}
+            onClick={() => setFilterType(filterType === "missed" ? "all" : "missed")}
+          >
+            <span className="legend-dot missed-indicator" style={{ background: "#ef4444" }}></span>
+            <span className="legend-text">Red (Absent / Missed)</span>
+            <span className="legend-count">({missingDaysCount})</span>
+          </div>
 
-        <div
-          className={`legend-item ${filterType === "followup" ? "active-legend" : ""}`}
-          onClick={() => setFilterType(filterType === "followup" ? "all" : "followup")}
-        >
-          <span className="legend-dot upcoming followup-pulse-dot"></span>
-          <span className="legend-text">Next Follow-Up</span>
-          <span className="legend-count">
-            {nextFollowUpKey ? `(🔔 ${nextFollowUpKey})` : "(0)"}
-          </span>
-        </div>
+          <div
+            className={`legend-item ${filterType === "followup" ? "active-legend" : ""}`}
+            onClick={() => setFilterType(filterType === "followup" ? "all" : "followup")}
+          >
+            <span className="legend-dot upcoming followup-pulse-dot"></span>
+            <span className="legend-text">Next Follow-Up</span>
+            <span className="legend-count">
+              {nextFollowUpKey ? `(🔔 ${nextFollowUpKey})` : "(0)"}
+            </span>
+          </div>
 
-        <div className="legend-item" onClick={handleToday}>
-          <span className="legend-dot today-indicator"></span>
-          <span className="legend-text">Today ({todayKey})</span>
+          <div className="legend-item" onClick={handleToday}>
+            <span className="legend-dot today-indicator"></span>
+            <span className="legend-text">Today ({todayKey})</span>
+          </div>
         </div>
       </div>
 
-      {/* 4. Main Calendar Layout: Grid + Selected Date Drill-Down */}
-      <div className="clinical-calendar-layout">
+      {/* 4. SEPARATE CARD C: MONTH CALENDAR GRID & DAILY DRILL-DOWN */}
+      <div className="cal-section-panel calendar-panel" style={{ background: "#ffffff", border: "1.5px solid #cbd5e1", borderRadius: "14px", padding: "16px 18px", margin: "14px 0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "6px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "18px" }}>📅</span>
+            <strong style={{ fontSize: "14.5px", color: "#0f172a" }}>Monthly Attendance &amp; Rehabilitation Calendar</strong>
+          </div>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Select any day to inspect clinical notes</span>
+        </div>
+
+        <div className="clinical-calendar-layout">
         {/* Left: The Month Grid */}
         <div className="calendar-month-grid-wrapper">
           <div className="calendar-weekdays-header">
@@ -1018,11 +1044,11 @@ export default function PatientVisitCalendar({
                         <span className="pill-dot">✓</span>
                         <span className="pill-text">
                           <span className="cal-pill-desktop">
-                            ✓ Present (#{data.visits[0].visitNumber || 1})
+                            Present (#{data.visits[0].visitNumber || 1})
                             {data.visits.length > 1 ? ` (+${data.visits.length - 1})` : ""}
                           </span>
                           <span className="cal-pill-mobile">
-                            ✓ P#{data.visits[0].visitNumber || 1}
+                            P#{data.visits[0].visitNumber || 1}
                           </span>
                         </span>
                       </div>
@@ -1037,10 +1063,10 @@ export default function PatientVisitCalendar({
                         <span className="pill-dot">✕</span>
                         <span className="pill-text">
                           <span className="cal-pill-desktop">
-                            ✕ Absent
+                            Absent
                           </span>
                           <span className="cal-pill-mobile">
-                            ✕ Abs
+                            Abs
                           </span>
                         </span>
                       </div>
@@ -1524,6 +1550,7 @@ export default function PatientVisitCalendar({
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* 5. INTERACTIVE SCHEDULE VISIT & DATE PICKER MODAL */}

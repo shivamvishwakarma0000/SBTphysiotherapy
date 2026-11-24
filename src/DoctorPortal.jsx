@@ -319,6 +319,66 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [planJustConfirmed, setPlanJustConfirmed] = useState(false);
   const [showAllReceipts, setShowAllReceipts] = useState(false);
 
+  // Doctor Appointment Timing Approval Modal State
+  const [timingModalData, setTimingModalData] = useState(null);
+
+  const openTimingApprovalModal = (item) => {
+    const rawDate = item.appointmentDate || item.date || new Date();
+    const rawTime = item.time || (selectedPatient ? selectedPatient.followUpTime : "") || "10:30 AM";
+    const pName = item.name || item.patientName || (selectedPatient ? selectedPatient.name : "Patient");
+    const pPhone = item.phone || (selectedPatient ? selectedPatient.phone : "");
+    const pId = item.patientId || item.linkedPatientId || (selectedPatient ? selectedPatient.patientId : null);
+    const aptId = item.id || item.enquiryId || item.appointmentId;
+
+    setTimingModalData({
+      aptId,
+      patientId: pId,
+      patientName: pName,
+      phone: pPhone,
+      date: cleanDateOnly(rawDate),
+      time: cleanTimeOnly(rawTime) || "10:30 AM",
+      reason: item.service || item.reason || item.painArea || "Physiotherapy Rehabilitation Session"
+    });
+  };
+
+  const handleConfirmTimingApproval = async () => {
+    if (!timingModalData) return;
+    const { aptId, patientId, patientName, phone, date, time } = timingModalData;
+    const cleanPhone = String(phone || "").replace(/\D/g, "").slice(-10);
+
+    // 1. Optimistic state update in enquiries
+    setEnquiries(prev => prev.map(item => 
+      (String(item.id) === String(aptId) || String(item.enquiryId) === String(aptId) || (item.appointmentId && String(item.appointmentId) === String(aptId)))
+        ? { ...item, status: "Approved", time }
+        : item
+    ));
+
+    // 2. If viewing a selected patient, update their profile followUpTime/followUpDate
+    if (selectedPatient && (selectedPatient.patientId === patientId || !patientId)) {
+      setSelectedPatient(prev => prev ? { ...prev, followUpDate: date, followUpTime: time } : prev);
+    }
+
+    setLeadActionToast(`✅ Appointment on ${date} at ${time} approved for ${patientName}!`);
+    setTimeout(() => setLeadActionToast(""), 4000);
+
+    // 3. Open WhatsApp synchronously before awaiting async calls so browser pop-up blocker doesn't block it
+    if (cleanPhone) {
+      const waMsg = `Namaste ${patientName} ji, your physiotherapy appointment on ${date} at ${time} has been APPROVED by Dr. Satyam Vishwakarma at Vindhy Physiotherapy & Rehab Center (Reg: PHY/11123). Please arrive 5 minutes before your scheduled slot. See you soon!`;
+      window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMsg)}`, "_blank");
+    }
+
+    // 4. Close modal
+    setTimingModalData(null);
+
+    // 5. Persist to API / Supabase / Google Sheets
+    try {
+      await api.updateEnquiryStatus(aptId, "Approved", patientId, time);
+      fetchEnquiries();
+    } catch (err) {
+      console.error("Error updating appointment approval timing:", err);
+    }
+  };
+
   // Manual Date Range Treatment Plan States
   const getTodayInputStr = () => new Date().toISOString().split("T")[0];
   const getFutureInputStr = (days = 30) => {
@@ -4236,20 +4296,7 @@ _(Saved in patient clinic records)_`;
                             <div style={{ width: "100%", display: "flex", gap: "6px", marginBottom: "4px" }}>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setEnquiries(prev => prev.map(item => item.id === e.id ? { ...item, status: "Approved" } : item));
-                                  setLeadActionToast(`✅ Appointment booking approved for ${patientName}!`);
-                                  setTimeout(() => setLeadActionToast(""), 3500);
-                                  if (cleanPhone) {
-                                    window.open(
-                                      `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
-                                        `Namaste ${patientName} ji, your physiotherapy appointment on ${cleanDateOnly(e.appointmentDate) || "requested date"} has been APPROVED by Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center.`
-                                      )}`,
-                                      "_blank"
-                                    );
-                                  }
-                                  api.updateEnquiryStatus(e.id, "Approved");
-                                }}
+                                onClick={() => openTimingApprovalModal({ ...e, name: patientName, phone: cleanPhone })}
                                 style={{
                                   flex: 1,
                                   background: "#16a34a",
@@ -4263,7 +4310,7 @@ _(Saved in patient clinic records)_`;
                                   boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)"
                                 }}
                               >
-                                ✅ Approve Slot
+                                ✅ Approve &amp; Set Time
                               </button>
                               <button
                                 type="button"
@@ -4930,25 +4977,7 @@ _(Saved in patient clinic records)_`;
                         <div style={{ display: "flex", gap: "6px" }}>
                           <button
                             type="button"
-                            onClick={async () => {
-                              try {
-                                await api.updateEnquiryStatus(item.appointmentId, "Approved");
-                                setEnquiries(prev => prev.map(e => (e.id === item.appointmentId || e.enquiryId === item.appointmentId) ? { ...e, status: "Approved" } : e));
-                                setLeadActionToast(`✅ Appointment booking approved for ${item.patientName}!`);
-                                setTimeout(() => setLeadActionToast(""), 3500);
-                                if (cleanPhone) {
-                                  window.open(
-                                    `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
-                                      `Namaste ${item.patientName} ji, your physiotherapy appointment for TODAY (${todayKey} at ${item.time}) has been APPROVED by Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center.`
-                                    )}`,
-                                    "_blank"
-                                  );
-                                }
-                              } catch (err) {
-                                console.error(err);
-                                alert("Failed to approve appointment.");
-                              }
-                            }}
+                            onClick={() => openTimingApprovalModal({ ...item, appointmentId: item.appointmentId, id: item.appointmentId, date: todayKey, phone: cleanPhone })}
                             style={{
                               flex: 1,
                               background: "#16a34a",
@@ -4962,7 +4991,7 @@ _(Saved in patient clinic records)_`;
                               boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)"
                             }}
                           >
-                            ✅ Approve Slot
+                            ✅ Approve &amp; Set Time
                           </button>
                           <button
                             type="button"
@@ -6477,33 +6506,7 @@ _(Saved in patient clinic records)_`;
                                 <>
                                   <button
                                     type="button"
-                                    onClick={async () => {
-                                      // 1. Instant UI update & storage sync
-                                      setEnquiries((prev) =>
-                                        prev.map((e) =>
-                                          (String(e.id) === String(aptId) || String(e.enquiryId) === String(aptId) || (e.appointmentId && String(e.appointmentId) === String(aptId)))
-                                            ? { ...e, status: "Approved" }
-                                            : e
-                                        )
-                                      );
-                                      setLeadActionToast(`✅ Appointment on ${aptDate} booked & confirmed for ${selectedPatient.name}!`);
-                                      setTimeout(() => setLeadActionToast(""), 3500);
-
-                                      // 2. Open WhatsApp synchronously before async call so mobile popup blocker never blocks it
-                                      const phone10 = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
-                                      if (phone10) {
-                                        window.open(
-                                          `https://wa.me/91${phone10}?text=${encodeURIComponent(
-                                            `Namaste ${selectedPatient.name} ji, your physiotherapy appointment on ${aptDate} at ${aptTime} has been BOOKED & CONFIRMED by Dr. Satyam Vishwakarma at Vindhy Physiotherapy & Rehab Center. See you then!`
-                                          )}`,
-                                          "_blank"
-                                        );
-                                      }
-
-                                      // 3. Persist to API / Supabase / Sheets
-                                      await api.updateEnquiryStatus(aptId, "Approved", selectedPatient.patientId);
-                                      fetchEnquiries();
-                                    }}
+                                    onClick={() => openTimingApprovalModal({ id: aptId, appointmentId: aptId, enquiryId: aptId, appointmentDate: aptDate, date: aptDate, time: aptTime, name: selectedPatient.name, phone: selectedPatient.phone, patientId: selectedPatient.patientId, service: apt.service || apt.reason })}
                                     style={{
                                       background: "#16a34a",
                                       color: "#ffffff",
@@ -6516,7 +6519,7 @@ _(Saved in patient clinic records)_`;
                                       boxShadow: "0 2px 6px rgba(22, 163, 74, 0.3)"
                                     }}
                                   >
-                                    ✅ Approve &amp; WhatsApp
+                                    ✅ Approve &amp; Set Time
                                   </button>
                                   <button
                                     type="button"
@@ -8128,6 +8131,146 @@ _(Saved in patient clinic records)_`;
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Doctor Appointment Timing Selection Modal */}
+      {timingModalData && (
+        <div className="add-visit-modal-overlay" style={{ zIndex: 10000 }}>
+          <div
+            className="add-visit-card"
+            style={{
+              maxWidth: "520px",
+              width: "95%",
+              background: "#ffffff",
+              borderRadius: "18px",
+              border: "2px solid #0284c7",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+              padding: "24px",
+              boxSizing: "border-box",
+              color: "#0f172a"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1.5px solid #f1f5f9", paddingBottom: "12px" }}>
+              <div>
+                <span style={{ fontSize: "11px", fontWeight: "800", background: "#dcfce7", color: "#15803d", padding: "3px 9px", borderRadius: "6px", textTransform: "uppercase" }}>
+                  ⏱️ Schedule &amp; Confirm Timing
+                </span>
+                <h3 style={{ margin: "4px 0 2px 0", fontSize: "19px", fontWeight: "800", color: "#0f172a" }}>
+                  {timingModalData.patientName}
+                </h3>
+                <p style={{ margin: 0, fontSize: "12.5px", color: "#64748b" }}>
+                  Date: <strong style={{ color: "#0284c7" }}>{timingModalData.date}</strong> • Reason: {timingModalData.reason}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTimingModalData(null)}
+                style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "15px" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "700", color: "#334155", marginBottom: "8px" }}>
+                Select Consultation / Therapy Time:
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "12px" }}>
+                {[
+                  "09:30 AM", "10:30 AM", "11:30 AM",
+                  "12:30 PM", "04:00 PM", "04:30 PM",
+                  "05:00 PM", "05:30 PM", "06:00 PM",
+                  "06:30 PM", "07:00 PM", "07:30 PM"
+                ].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTimingModalData(prev => ({ ...prev, time: t }))}
+                    style={{
+                      padding: "8px 6px",
+                      borderRadius: "8px",
+                      border: timingModalData.time === t ? "2px solid #0284c7" : "1.5px solid #cbd5e1",
+                      background: timingModalData.time === t ? "#e0f2fe" : "#ffffff",
+                      color: timingModalData.time === t ? "#0369a1" : "#1e293b",
+                      fontWeight: timingModalData.time === t ? "800" : "600",
+                      fontSize: "12.5px",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease"
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ marginTop: "10px" }}>
+                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "#64748b", marginBottom: "4px" }}>
+                  Or Custom Time Slot:
+                </label>
+                <input
+                  type="text"
+                  value={timingModalData.time || ""}
+                  onChange={(e) => setTimingModalData(prev => ({ ...prev, time: e.target.value }))}
+                  placeholder="e.g. 10:45 AM or 05:15 PM"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ background: "#f8fafc", border: "1px dashed #94a3b8", borderRadius: "10px", padding: "10px 14px", marginBottom: "18px", fontSize: "12px", color: "#475569" }}>
+              💬 <strong>WhatsApp Notification:</strong> Clicking confirm will approve the session at <strong>{timingModalData.time}</strong> on <strong>{timingModalData.date}</strong> and open WhatsApp to notify the patient.
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={handleConfirmTimingApproval}
+                style={{
+                  flex: 2,
+                  background: "linear-gradient(135deg, #16a34a, #15803d)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "10px",
+                  padding: "11px 16px",
+                  fontSize: "13.5px",
+                  fontWeight: "800",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <span>✅ Confirm &amp; WhatsApp ({timingModalData.time})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimingModalData(null)}
+                style={{
+                  flex: 1,
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "10px",
+                  padding: "11px 16px",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

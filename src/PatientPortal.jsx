@@ -29,7 +29,7 @@ export default function PatientPortal({ onClose, themeProps }) {
   const [patientProfile, setPatientProfile] = useState(() => patientApi.getStoredPatient() || null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard", "appointments", "visits", "receipts", "treatment", "exercises", "security"
-  const [visitViewMode, setVisitViewMode] = useState("calendar"); // "calendar" or "timeline"
+  const [visitViewMode, setVisitViewMode] = useState("timeline"); // default view is "timeline" as required
   const [recordsData, setRecordsData] = useState({
     visits: [],
     appointments: [],
@@ -42,6 +42,52 @@ export default function PatientPortal({ onClose, themeProps }) {
       nextFollowUp: null
     }
   });
+
+  // Notifications state
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [readNotifKeys, setReadNotifKeys] = useState(() => {
+    try {
+      const pid = patientApi.getStoredPatient()?.patientId || "guest";
+      return JSON.parse(localStorage.getItem(`vpr_read_notifs_${pid}`) || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  // Inline appointment booking state for Appointments tab
+  const [schedInlineDate, setSchedInlineDate] = useState("");
+  const [schedInlineTime, setSchedInlineTime] = useState("10:00 AM");
+  const [schedInlineReason, setSchedInlineReason] = useState("Follow-up Rehabilitation Session");
+  const [schedInlineLoading, setSchedInlineLoading] = useState(false);
+  const [schedInlineSuccess, setSchedInlineSuccess] = useState("");
+
+  const isDateUpcomingOrToday = (dateStr) => {
+    if (!dateStr) return false;
+    const clean = cleanDateOnly(dateStr);
+    if (!clean) return false;
+    let d, m, y;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(clean)) {
+      const parts = clean.split("/");
+      d = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      y = parseInt(parts[2], 10);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+      const parts = clean.split("-");
+      y = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      d = parseInt(parts[2], 10);
+    } else {
+      const parsed = new Date(clean);
+      if (isNaN(parsed.getTime())) return false;
+      y = parsed.getFullYear();
+      m = parsed.getMonth();
+      d = parsed.getDate();
+    }
+    const targetDate = new Date(y, m, d, 23, 59, 59);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    return targetDate >= today;
+  };
 
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const [patientRefreshDone, setPatientRefreshDone] = useState(false);
@@ -478,6 +524,72 @@ export default function PatientPortal({ onClose, themeProps }) {
 
   const latestVisit = sortedVisits[0] || null;
 
+  // Real-time clinical notifications list for the patient
+  const notificationsList = useMemo(() => {
+    const list = [];
+    if (!patientProfile?.patientId) return list;
+
+    // 1. Approved / Confirmed appointments
+    (recordsData?.appointments || []).forEach((appt) => {
+      const isApproved = appt.status === "Approved" || appt.status === "Confirmed" || appt.status === "Booked";
+      if (isApproved) {
+        list.push({
+          id: `appt-approved-${appt.id || appt.appointmentId || appt.date}-${appt.time || ""}`,
+          type: "approved",
+          icon: "✅",
+          title: "Appointment Approved & Confirmed!",
+          message: `Dr. Satyam Vishwakarma has confirmed your session on ${cleanDateOnly(appt.appointmentDate || appt.date)}${appt.time ? ` at ${cleanTimeOnly(appt.time)}` : ""}.`,
+          date: cleanDateOnly(appt.appointmentDate || appt.date),
+          time: cleanTimeOnly(appt.time),
+          actionTab: "appointments"
+        });
+      }
+    });
+
+    // 2. Upcoming doctor follow-up target
+    const fp = patientProfile?.followUpDate;
+    if (fp && isDateUpcomingOrToday(fp)) {
+      list.push({
+        id: `followup-${fp}-${patientProfile.followUpTime || ""}`,
+        type: "followup",
+        icon: "🔔",
+        title: "Upcoming Doctor Follow-Up",
+        message: `Dr. Satyam Vishwakarma scheduled your clinical follow-up for ${cleanDateOnly(fp)}${patientProfile.followUpTime ? ` at ${patientProfile.followUpTime}` : ""}.`,
+        date: cleanDateOnly(fp),
+        time: patientProfile.followUpTime || "",
+        actionTab: "appointments"
+      });
+    }
+
+    // 3. New receipts generated
+    if (recordsData?.visits && recordsData.visits.length > 0) {
+      const latestV = recordsData.visits[0];
+      list.push({
+        id: `receipt-${latestV.visitId || latestV.date}`,
+        type: "receipt",
+        icon: "🧾",
+        title: "New Clinic Slip & Receipt",
+        message: `Visit #${latestV.visitNumber || recordsData.visits.length} official clinic receipt (${cleanDateOnly(latestV.date)}) is ready to view and download.`,
+        date: cleanDateOnly(latestV.date),
+        time: latestV.time || "",
+        actionTab: "receipts"
+      });
+    }
+
+    return list;
+  }, [patientProfile, recordsData]);
+
+  const unreadNotifCount = notificationsList.filter(n => !readNotifKeys.includes(n.id)).length;
+
+  const markAllNotificationsAsRead = () => {
+    const allKeys = notificationsList.map(n => n.id);
+    setReadNotifKeys(allKeys);
+    try {
+      const pid = patientProfile?.patientId || "guest";
+      localStorage.setItem(`vpr_read_notifs_${pid}`, JSON.stringify(allKeys));
+    } catch (_) {}
+  };
+
   return (
     <div className="patient-portal-root">
 
@@ -506,6 +618,135 @@ export default function PatientPortal({ onClose, themeProps }) {
               <span className="user-name">{patientFirstName}</span>
               <span className="user-id">{patientProfile?.patientId || "VPR"}</span>
             </div>
+          </div>
+
+          {/* Notification Center Bell */}
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              className="portal-notif-btn"
+              onClick={() => {
+                const nextState = !showNotifDropdown;
+                setShowNotifDropdown(nextState);
+                if (nextState) {
+                  markAllNotificationsAsRead();
+                }
+              }}
+              title="Clinical Updates & Notifications"
+              style={{
+                position: "relative",
+                background: showNotifDropdown ? "rgba(2, 132, 199, 0.25)" : "rgba(255, 255, 255, 0.08)",
+                border: "1.5px solid rgba(255, 255, 255, 0.2)",
+                borderRadius: "10px",
+                width: "36px",
+                height: "36px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                color: "#ffffff"
+              }}
+            >
+              <span style={{ fontSize: "17px" }}>🔔</span>
+              {unreadNotifCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-5px",
+                    right: "-5px",
+                    background: "#ef4444",
+                    color: "#ffffff",
+                    borderRadius: "999px",
+                    fontSize: "11px",
+                    fontWeight: "900",
+                    minWidth: "18px",
+                    height: "18px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 4px",
+                    border: "2px solid #0f172a",
+                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.5)"
+                  }}
+                >
+                  {unreadNotifCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifDropdown && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "44px",
+                  right: "0",
+                  width: "320px",
+                  maxWidth: "90vw",
+                  background: "#ffffff",
+                  borderRadius: "14px",
+                  border: "1.5px solid #cbd5e1",
+                  boxShadow: "0 16px 36px -4px rgba(0, 0, 0, 0.25)",
+                  zIndex: 9999,
+                  overflow: "hidden",
+                  color: "#0f172a"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "16px" }}>🔔</span>
+                    <strong style={{ fontSize: "13.5px", color: "#0f172a" }}>Clinical Notifications</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      markAllNotificationsAsRead();
+                      setShowNotifDropdown(false);
+                    }}
+                    style={{ fontSize: "11px", color: "#0284c7", background: "none", border: "none", fontWeight: "700", cursor: "pointer" }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+                <div style={{ maxHeight: "320px", overflowY: "auto", padding: "8px" }}>
+                  {notificationsList.length === 0 ? (
+                    <div style={{ padding: "20px 14px", textAlign: "center", color: "#64748b", fontSize: "13px" }}>
+                      <span>🎉</span>
+                      <p style={{ margin: "6px 0 0 0" }}>No new notifications. You are all up to date!</p>
+                    </div>
+                  ) : (
+                    notificationsList.map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={() => {
+                          if (notif.actionTab) setActiveTab(notif.actionTab);
+                          setShowNotifDropdown(false);
+                        }}
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: "10px",
+                          marginBottom: "6px",
+                          background: notif.type === "approved" ? "#f0fdf4" : notif.type === "followup" ? "#eff6ff" : "#f8fafc",
+                          border: notif.type === "approved" ? "1px solid #86efac" : notif.type === "followup" ? "1px solid #93c5fd" : "1px solid #e2e8f0",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px" }}>
+                          <span>{notif.icon}</span>
+                          <strong style={{ fontSize: "12.5px", color: notif.type === "approved" ? "#15803d" : notif.type === "followup" ? "#1e40af" : "#0f172a" }}>
+                            {notif.title}
+                          </strong>
+                        </div>
+                        <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: "1.4" }}>
+                          {notif.message}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <button
@@ -981,29 +1222,238 @@ export default function PatientPortal({ onClose, themeProps }) {
               </div>
             )}
 
-            <div className="appointment-booking-card">
-              <div className="booking-info">
-                <h3 className="appointment-schedule-title" style={{ color: "#0f172a" }}>Need to schedule your next session?</h3>
-                <p style={{ color: "#334155" }}>
-                  You can directly message Dr. Satyam Vishwakarma or clinic reception to reserve your preferred morning or evening physiotherapy slot.
+            <div className="appointment-booking-card" style={{ background: "#ffffff", border: "2px solid #0284c7", borderRadius: "18px", padding: "20px 22px", marginBottom: "20px", boxShadow: "0 4px 16px rgba(2, 132, 199, 0.1)" }}>
+              <div className="booking-info" style={{ marginBottom: "16px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "800", background: "#e0f2fe", color: "#0369a1", padding: "3px 9px", borderRadius: "6px", textTransform: "uppercase" }}>
+                  🗓️ Schedule Your Next Visit
+                </span>
+                <h3 className="appointment-schedule-title" style={{ color: "#0f172a", fontSize: "18.5px", fontWeight: "800", margin: "6px 0 4px 0" }}>
+                  Need to schedule your next session?
+                </h3>
+                <p style={{ color: "#475569", fontSize: "13.5px", margin: 0 }}>
+                  Choose your preferred clinic date and time slot below. Your appointment will be booked instantly and sent to Dr. Satyam Vishwakarma for confirmation.
                 </p>
               </div>
-              <div className="booking-actions">
+
+              {/* Interactive Calendar Date & Slot Selector */}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!schedInlineDate) {
+                    alert("Please select your preferred appointment date.");
+                    return;
+                  }
+                  setSchedInlineLoading(true);
+                  setSchedInlineSuccess("");
+                  try {
+                    const parts = schedInlineDate.split("-");
+                    const ddmmyyyy = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : schedInlineDate;
+                    const res = await patientApi.scheduleAppointment({
+                      date: ddmmyyyy,
+                      appointmentDate: ddmmyyyy,
+                      time: schedInlineTime || "10:00 AM",
+                      reason: schedInlineReason || "Follow-up Rehabilitation Session",
+                      status: "Pending Approval",
+                      requestedBy: "Patient"
+                    });
+                    if (res && res.ok === false) {
+                      alert("⚠️ Booking Notice: " + (res.error || "Slot conflict detected. Please select another slot."));
+                      return;
+                    }
+                    setSchedInlineSuccess(`✅ Appointment requested for ${ddmmyyyy} at ${schedInlineTime}! Status is ⏳ Pending Doctor Confirmation. Dr. Satyam Vishwakarma will review and confirm your session shortly.`);
+                    await loadPatientData();
+                  } catch (err) {
+                    console.error("Booking error:", err);
+                    alert("Error scheduling appointment: " + (err.message || "Please try again."));
+                  } finally {
+                    setSchedInlineLoading(false);
+                  }
+                }}
+                style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", borderRadius: "14px", padding: "16px 18px", marginBottom: "16px" }}
+              >
+                {/* 1. Date Selection with Quick Chips & Calendar Picker */}
+                <div style={{ marginBottom: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                    <label style={{ fontSize: "13px", fontWeight: "800", color: "#1e293b" }}>
+                      📅 1. Choose Appointment Date:
+                    </label>
+                    <span style={{ fontSize: "11.5px", color: "#64748b" }}>Pick from calendar or quick chips</span>
+                  </div>
+
+                  {/* Quick Date Presets */}
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
+                    {(() => {
+                      const now = new Date();
+                      const addDays = (n) => {
+                        const d = new Date(now);
+                        d.setDate(d.getDate() + n);
+                        return d.toISOString().split("T")[0];
+                      };
+                      const quickDays = [
+                        { label: "Today", val: addDays(0) },
+                        { label: "Tomorrow", val: addDays(1) },
+                        { label: "In 2 Days", val: addDays(2) },
+                        { label: "In 3 Days", val: addDays(3) },
+                        { label: "Next Week", val: addDays(7) }
+                      ];
+                      return quickDays.map((q) => (
+                        <button
+                          key={q.label}
+                          type="button"
+                          onClick={() => setSchedInlineDate(q.val)}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "8px",
+                            border: schedInlineDate === q.val ? "2px solid #0284c7" : "1px solid #cbd5e1",
+                            background: schedInlineDate === q.val ? "#e0f2fe" : "#ffffff",
+                            color: schedInlineDate === q.val ? "#0369a1" : "#475569",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            cursor: "pointer"
+                          }}
+                        >
+                          {q.label}
+                        </button>
+                      ));
+                    })()}
+                  </div>
+
+                  {/* Standard Calendar Date Input (Minimum: Today) */}
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split("T")[0]}
+                    value={schedInlineDate}
+                    onChange={(e) => setSchedInlineDate(e.target.value)}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #0284c7",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                      color: "#0f172a",
+                      background: "#ffffff",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+
+                {/* 2. Preferred Timing Slot */}
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: "800", color: "#1e293b", marginBottom: "6px" }}>
+                    🕒 2. Preferred Therapy Timing:
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(95px, 1fr))", gap: "6px", marginBottom: "6px" }}>
+                    {[
+                      "09:30 AM", "10:30 AM", "11:30 AM", "12:30 PM",
+                      "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM"
+                    ].map((slot) => (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => setSchedInlineTime(slot)}
+                        style={{
+                          padding: "7px 4px",
+                          borderRadius: "8px",
+                          border: schedInlineTime === slot ? "2px solid #0284c7" : "1px solid #cbd5e1",
+                          background: schedInlineTime === slot ? "#e0f2fe" : "#ffffff",
+                          color: schedInlineTime === slot ? "#0369a1" : "#334155",
+                          fontSize: "12px",
+                          fontWeight: schedInlineTime === slot ? "800" : "600",
+                          cursor: "pointer",
+                          textAlign: "center"
+                        }}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Reason / Treatment Focus */}
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: "800", color: "#1e293b", marginBottom: "6px" }}>
+                    🎯 3. Rehabilitation Focus / Reason:
+                  </label>
+                  <select
+                    value={schedInlineReason}
+                    onChange={(e) => setSchedInlineReason(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "13px",
+                      color: "#0f172a",
+                      background: "#ffffff",
+                      boxSizing: "border-box"
+                    }}
+                  >
+                    <option value="Follow-up Rehabilitation Session">Follow-up Rehabilitation Session</option>
+                    <option value="Spine & Lower Back Pain Therapy">Spine &amp; Lower Back Pain Therapy</option>
+                    <option value="Cervical / Neck Mobilization">Cervical / Neck Mobilization</option>
+                    <option value="Knee & Joint Mobility Therapy">Knee &amp; Joint Mobility Therapy</option>
+                    <option value="Shoulder / Frozen Shoulder Session">Shoulder / Frozen Shoulder Session</option>
+                    <option value="Post-Surgical Functional Recovery">Post-Surgical Functional Recovery</option>
+                    <option value="Routine Clinical Consultation">Routine Clinical Consultation</option>
+                  </select>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={schedInlineLoading}
+                  style={{
+                    width: "100%",
+                    background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "12px 18px",
+                    fontSize: "14px",
+                    fontWeight: "800",
+                    cursor: schedInlineLoading ? "wait" : "pointer",
+                    boxShadow: "0 4px 12px rgba(2, 132, 199, 0.3)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px"
+                  }}
+                >
+                  <span>{schedInlineLoading ? "Booking & Alerting Doctor..." : "📅 Confirm & Request Visit"}</span>
+                </button>
+              </form>
+
+              {/* Success Notification Banner */}
+              {schedInlineSuccess && (
+                <div style={{ background: "#ecfdf5", border: "1.5px solid #86efac", borderRadius: "10px", padding: "12px 14px", marginBottom: "14px", color: "#166534", fontSize: "13px", lineHeight: "1.4" }}>
+                  <strong>{schedInlineSuccess}</strong>
+                </div>
+              )}
+
+              {/* Direct WhatsApp & Phone Action Buttons */}
+              <div className="booking-actions" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <a
                   href={`https://wa.me/919793093316?text=Hello%20Dr.%20Satyam,%20I%20am%20${encodeURIComponent(patientProfile.name)}%20(ID:%20${patientProfile.patientId}).%20I%20would%20like%20to%20schedule%20my%20next%20physiotherapy%20visit.`}
                   target="_blank"
                   rel="noreferrer"
                   className="patient-primary-btn"
+                  style={{ flex: 1, minHeight: "38px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 14px", fontSize: "12.5px", fontWeight: "700", borderRadius: "8px", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "#ffffff", textDecoration: "none", border: "none" }}
                 >
                   💬 Schedule via WhatsApp
                 </a>
-                <a href="tel:+919793093316" className="patient-secondary-btn">
+                <a
+                  href="tel:+919793093316"
+                  className="patient-secondary-btn"
+                  style={{ flex: 1, minHeight: "38px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 14px", fontSize: "12.5px", fontWeight: "700", borderRadius: "8px", background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#ffffff", textDecoration: "none", border: "none" }}
+                >
                   📞 Call +91 9793093316
                 </a>
               </div>
             </div>
 
-            {/* DOCTOR PRESCRIBED NEXT FOLLOW-UP SCHEDULE (From Latest Active Visit) */}
+            {/* DOCTOR PRESCRIBED NEXT FOLLOW-UP SCHEDULE (ONLY UPCOMING OR TODAY) */}
             {(() => {
               const visitWithFollowUp = sortedVisits.find(v => {
                 const s = v?.followUpDate ? String(v.followUpDate).trim() : "";
@@ -1011,7 +1461,8 @@ export default function PatientPortal({ onClose, themeProps }) {
                   s.toLowerCase() !== "none" && 
                   s.toLowerCase() !== "sos" && 
                   !s.toLowerCase().includes("as advised") && 
-                  !s.toLowerCase().includes("completed");
+                  !s.toLowerCase().includes("completed") &&
+                  isDateUpcomingOrToday(s);
               });
 
               if (!visitWithFollowUp) return null;
@@ -1631,21 +2082,21 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div
                 className="patient-billing-summary-banner"
                 style={{
-                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(2, 132, 199, 0.14))",
-                  border: "1.5px solid rgba(16, 185, 129, 0.4)",
+                  background: "linear-gradient(135deg, #09202c 0%, #16364a 100%)",
+                  border: "1.5px solid #0284c7",
                   borderRadius: "16px",
-                  padding: "16px 20px",
+                  padding: "18px 22px",
                   marginBottom: "20px",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                   flexWrap: "wrap",
-                  gap: "12px",
-                  boxShadow: "0 4px 14px rgba(0,0,0,0.15)"
+                  gap: "14px",
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.2)"
                 }}
               >
                 <div>
-                  <span style={{ fontSize: "11px", fontWeight: "800", color: "#10b981", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: "800", color: "#34d399", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                     ⭐ Official Billing & Treatment Portfolio
                   </span>
                   <h3 style={{ margin: "2px 0 4px 0", fontSize: "17.5px", fontWeight: "800", color: "#f8fafc" }}>
@@ -1655,12 +2106,34 @@ export default function PatientPortal({ onClose, themeProps }) {
                     Active Plan: <strong style={{ color: "#38bdf8" }}>{patientProfile?.isDailyCourse ? (patientProfile?.dailyCourseDuration || "Daily Rehabilitation Course") : "Per-Day Pay-As-You-Go"}</strong>
                   </p>
                 </div>
-                <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "8px 16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.1)", textAlign: "right" }}>
-                  <span style={{ fontSize: "11px", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Total Settled</span>
-                  <strong style={{ fontSize: "19px", fontWeight: "800", color: "#34d399" }}>
-                    ₹{sortedVisits.reduce((acc, v) => acc + parseInt(cleanFeeAmount(v.fee, "0"), 10), 0)}
-                  </strong>
-                </div>
+                {(() => {
+                  const totalSettledAmount = sortedVisits.reduce((acc, v) => {
+                    const feeStr = v.fee ?? v.amount ?? v.charges ?? (v.isPrepaid ? 0 : 500);
+                    const num = parseInt(cleanFeeAmount(feeStr, "500"), 10);
+                    return acc + (isNaN(num) ? 500 : num);
+                  }, 0);
+
+                  return (
+                    <div
+                      style={{
+                        background: "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)",
+                        padding: "10px 18px",
+                        borderRadius: "12px",
+                        border: "2px solid #10b981",
+                        textAlign: "right",
+                        boxShadow: "0 2px 10px rgba(16, 185, 129, 0.2)",
+                        minWidth: "130px"
+                      }}
+                    >
+                      <span style={{ fontSize: "11px", fontWeight: "800", color: "#047857", display: "block", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        Total Settled
+                      </span>
+                      <strong style={{ fontSize: "22px", fontWeight: "900", color: "#065f46" }}>
+                        ₹{totalSettledAmount.toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

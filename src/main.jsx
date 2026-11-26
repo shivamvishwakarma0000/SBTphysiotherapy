@@ -7,6 +7,7 @@ import ErrorBoundary from "./ErrorBoundary";
 import { api } from "./apiService";
 import { useTheme } from "./useTheme";
 import ThemeToggle from "./ThemeToggle";
+import AppUpdateNotifier from "./AppUpdateNotifier";
 
 const phonePrimary = "9793093316";
 const phoneWhatsApp = "9793093316";
@@ -1932,6 +1933,7 @@ function App() {
 
   return (
     <div className={`app-root ${themeProps.resolvedTheme}`}>
+        <AppUpdateNotifier />
         <Header
           onOpenDoctorPortal={openDoctorPortal}
           onOpenPatientPortal={openPatientPortal}

@@ -1,5 +1,5 @@
 // Vindhy Physio & Rehab Center Service Worker
-const CACHE_NAME = 'vindhy-physio-v1';
+const CACHE_NAME = 'vindhy-physio-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -17,7 +17,12 @@ self.addEventListener('install', (event) => {
       return cache.addAll(STATIC_ASSETS).catch(() => {});
     })
   );
-  self.skipWaiting();
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {
@@ -36,8 +41,14 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Pass-through fetch handler required for PWA installability on Android / Chromium
   if (event.request.method !== 'GET') return;
+  
+  // Never cache version.json or dynamic api requests
+  const url = event.request.url;
+  if (url.includes('version.json') || url.includes('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   
   event.respondWith(
     fetch(event.request).catch(() => {

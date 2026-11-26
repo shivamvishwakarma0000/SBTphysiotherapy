@@ -13759,4 +13759,29 @@ img, video, canvas, svg {
   margin-bottom: 12px;
 }
 
+/* ================= APP UPDATE TOP BANNER ================= */
+@keyframes slideDownFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.app-update-top-banner {
+  animation: slideDownFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (max-width: 480px) {
+  .app-update-top-banner {
+    top: 8px !important;
+    width: calc(100% - 16px) !important;
+    padding: 10px 12px !important;
+  }
+}
+
+
 

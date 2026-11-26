@@ -1069,7 +1069,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     // 3. Check enquiries / online bookings where appointmentDate === todayKey
     (enquiries || []).forEach((e) => {
       if (!e) return;
-      if (e.status === "Hidden" || e.status === "Hidden / Spam" || e.status === "Rejected") return;
+      if (e.status === "Hidden" || e.status === "Hidden / Spam" || e.status === "Rejected" || e.status === "Completed") return;
       const aptDate = normalizeDateStr(e.appointmentDate || e.date);
       if (aptDate !== todayKey) return;
 
@@ -2147,6 +2147,24 @@ export default function DoctorPortal({ onClose, themeProps }) {
       await fetchTodayVisits();
       await fetchAllVisits();
 
+      // Also mark any appointment for this patient on this visit date (or any confirmed appointment) as Completed
+      const visitDateClean = cleanDateOnly(payload.date || new Date());
+      const cleanPtPhone = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
+      setEnquiries((prev) =>
+        prev.map((e) => {
+          const matchPatient =
+            e.linkedPatientId === selectedPatient.patientId ||
+            e.patientId === selectedPatient.patientId ||
+            (cleanPtPhone && e.phone && String(e.phone).replace(/\D/g, "").slice(-10) === cleanPtPhone);
+          const eDate = cleanDateOnly(e.appointmentDate || e.date);
+          if (matchPatient && (eDate === visitDateClean || e.status === "Approved" || e.status === "Confirmed")) {
+            api.updateEnquiryStatus(e.id || e.enquiryId, "Completed", selectedPatient.patientId).catch(() => {});
+            return { ...e, status: "Completed" };
+          }
+          return e;
+        })
+      );
+
       // Automatically issue official receipt slip immediately
       if (data.visit) {
         setActiveReceipt({ patient: selectedPatient, visit: data.visit });
@@ -2181,6 +2199,23 @@ export default function DoctorPortal({ onClose, themeProps }) {
       await api.updatePatient(selectedPatient.patientId, updatedPatient);
       setSelectedPatient(updatedPatient);
       setPatients((prev) => prev.map((p) => (p.patientId === selectedPatient.patientId ? updatedPatient : p)));
+
+      // Also resolve and mark all appointments for this completed patient as Completed so no pending appointments linger
+      const cleanPhone = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
+      setEnquiries((prev) =>
+        prev.map((e) => {
+          const match =
+            e.linkedPatientId === selectedPatient.patientId ||
+            e.patientId === selectedPatient.patientId ||
+            (cleanPhone && e.phone && String(e.phone).replace(/\D/g, "").slice(-10) === cleanPhone);
+          if (match && e.status !== "Completed") {
+            api.updateEnquiryStatus(e.id || e.enquiryId, "Completed", selectedPatient.patientId).catch(() => {});
+            return { ...e, status: "Completed" };
+          }
+          return e;
+        })
+      );
+
       fetchStats();
       setShareFeedback(`🎉 Treatment for ${pName} marked as COMPLETED & RECOVERED!`);
       setTimeout(() => setShareFeedback(""), 4500);
@@ -2765,9 +2800,9 @@ _(Saved in patient clinic records)_`;
           <button className={activeTab === "enquiries" ? "active" : ""} onClick={() => { selectDoctorTab("enquiries"); fetchEnquiries(); }}>
             <span className="nav-tab-desktop">📩 6. Online Bookings</span>
             <span className="nav-tab-mobile">📩 Bookings</span>
-            {enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length > 0 && (
+            {enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && e.status !== "Completed" && !isEnquiryEnrolled(e)).length > 0 && (
               <span className="enq-badge">
-                {enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length}
+                {enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && e.status !== "Completed" && !isEnquiryEnrolled(e)).length}
               </span>
             )}
           </button>
@@ -4112,7 +4147,7 @@ _(Saved in patient clinic records)_`;
           <div className="enquiries-view">
             <div className="section-header-row">
               {(() => {
-                const activeCount = enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length;
+                const activeCount = enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && e.status !== "Completed" && !isEnquiryEnrolled(e)).length;
                 return (
                   <div>
                     <h2 style={{ color: "#ffffff", fontWeight: "800", fontSize: "20px", margin: "0 0 6px 0", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
@@ -4139,8 +4174,8 @@ _(Saved in patient clinic records)_`;
             {/* Segmented Leads Navigation Sub-Tabs */}
             <div className="enquiry-subtabs-bar" style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px", background: "var(--card-bg, #ffffff)", padding: "6px", borderRadius: "12px", border: "1px solid var(--border-color, #e2e8f0)" }}>
               {(() => {
-                const activeCount = enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && !isEnquiryEnrolled(e)).length;
-                const convertedCount = enquiries.filter(e => isEnquiryEnrolled(e)).length;
+                const activeCount = enquiries.filter(e => e.status !== "Hidden" && e.status !== "Hidden / Spam" && e.status !== "Completed" && !isEnquiryEnrolled(e)).length;
+                const convertedCount = enquiries.filter(e => isEnquiryEnrolled(e) || e.status === "Completed").length;
                 const hiddenCount = enquiries.filter(e => e.status === "Hidden" || e.status === "Hidden / Spam").length;
                 const allCount = enquiries.length;
                 return (
@@ -4246,9 +4281,9 @@ _(Saved in patient clinic records)_`;
             {(() => {
               const filteredLeads = enquiries.filter(e => {
                 const isHidden = e.status === "Hidden" || e.status === "Hidden / Spam";
-                const isConverted = isEnquiryEnrolled(e);
+                const isConverted = isEnquiryEnrolled(e) || e.status === "Completed";
 
-                if (enquirySubTab === "active" && (isHidden || isConverted)) return false;
+                if (enquirySubTab === "active" && (isHidden || isConverted || e.status === "Completed")) return false;
                 if (enquirySubTab === "converted" && !isConverted) return false;
                 if (enquirySubTab === "hidden" && !isHidden) return false;
 
@@ -4426,8 +4461,8 @@ _(Saved in patient clinic records)_`;
 
                         {/* Action Buttons Toolbar */}
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "auto", paddingTop: "10px", borderTop: "1px solid var(--border-color, #f1f5f9)" }}>
-                          {e.status === "Pending Approval" && (
-                            <div style={{ width: "100%", display: "flex", gap: "6px", marginBottom: "4px" }}>
+                          {(e.status === "Pending Approval" || e.status === "Pending") && (
+                            <div style={{ width: "100%", display: "flex", gap: "6px", marginBottom: "4px", flexWrap: "wrap" }}>
                               <button
                                 type="button"
                                 onClick={() => openTimingApprovalModal({ ...e, name: patientName, phone: cleanPhone })}
@@ -4441,10 +4476,34 @@ _(Saved in patient clinic records)_`;
                                   fontSize: "12px",
                                   fontWeight: "800",
                                   cursor: "pointer",
-                                  boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)"
+                                  boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)",
+                                  minWidth: "120px"
                                 }}
                               >
                                 ✅ Approve &amp; Set Time
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEnquiries(prev => prev.map(item => item.id === e.id ? { ...item, status: "Completed" } : item));
+                                  setLeadActionToast(`✓ Appointment for ${patientName} marked Completed.`);
+                                  setTimeout(() => setLeadActionToast(""), 3500);
+                                  api.updateEnquiryStatus(e.id, "Completed");
+                                }}
+                                style={{
+                                  flex: 1,
+                                  background: "#0878C9",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "7px",
+                                  padding: "7px 10px",
+                                  fontSize: "12px",
+                                  fontWeight: "800",
+                                  cursor: "pointer",
+                                  minWidth: "110px"
+                                }}
+                              >
+                                ✓ Mark Completed
                               </button>
                               <button
                                 type="button"
@@ -4471,10 +4530,11 @@ _(Saved in patient clinic records)_`;
                                   padding: "7px 10px",
                                   fontSize: "12px",
                                   fontWeight: "800",
-                                  cursor: "pointer"
+                                  cursor: "pointer",
+                                  minWidth: "100px"
                                 }}
                               >
-                                ❌ Reject (Unavailable)
+                                ❌ Reject
                               </button>
                             </div>
                           )}
@@ -6612,9 +6672,10 @@ _(Saved in patient clinic records)_`;
                 const cleanSelectedPhone = String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10);
                 const patientApts = (enquiries || []).filter(
                   (a) =>
-                    a.linkedPatientId === selectedPatient.patientId ||
+                    a.status !== "Completed" &&
+                    (a.linkedPatientId === selectedPatient.patientId ||
                     a.patientId === selectedPatient.patientId ||
-                    (cleanSelectedPhone && a.phone && String(a.phone).replace(/\D/g, "").slice(-10) === cleanSelectedPhone)
+                    (cleanSelectedPhone && a.phone && String(a.phone).replace(/\D/g, "").slice(-10) === cleanSelectedPhone))
                 );
                 if (patientApts.length === 0) return null;
                 return (
@@ -6633,7 +6694,7 @@ _(Saved in patient clinic records)_`;
                         🗓️ Online Visit Bookings &amp; Appointment Requests ({patientApts.length})
                       </strong>
                       <span style={{ fontSize: "12px", color: "#64748b" }}>
-                        Approve or Reject patient requests
+                        Approve, complete, or reject patient requests
                       </span>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -6707,6 +6768,34 @@ _(Saved in patient clinic records)_`;
                                   <button
                                     type="button"
                                     onClick={async () => {
+                                      setEnquiries((prev) =>
+                                        prev.map((e) =>
+                                          (String(e.id) === String(aptId) || String(e.enquiryId) === String(aptId) || (e.appointmentId && String(e.appointmentId) === String(aptId)))
+                                            ? { ...e, status: "Completed" }
+                                            : e
+                                        )
+                                      );
+                                      setLeadActionToast(`✓ Appointment on ${aptDate} marked as Completed.`);
+                                      setTimeout(() => setLeadActionToast(""), 3500);
+                                      await api.updateEnquiryStatus(aptId, "Completed", selectedPatient.patientId);
+                                      fetchEnquiries();
+                                    }}
+                                    style={{
+                                      background: "#0878C9",
+                                      color: "#ffffff",
+                                      border: "none",
+                                      padding: "6px 12px",
+                                      borderRadius: "7px",
+                                      fontSize: "12px",
+                                      fontWeight: "800",
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    ✓ Mark Completed
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
                                       // 1. Instant UI update & storage sync
                                       setEnquiries((prev) =>
                                         prev.map((e) =>
@@ -6749,27 +6838,57 @@ _(Saved in patient clinic records)_`;
                                 </>
                               )}
                               {isApproved && (
-                                <a
-                                  href={`https://wa.me/91${String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
-                                    `Namaste ${selectedPatient.name} ji, reminder for your booked physiotherapy visit on ${aptDate} at ${aptTime} with Dr. Satyam Vishwakarma at Vindhy Physiotherapy & Rehab Center.`
-                                  )}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    background: "#25d366",
-                                    color: "#ffffff",
-                                    fontSize: "12px",
-                                    fontWeight: "800",
-                                    padding: "6px 12px",
-                                    borderRadius: "7px",
-                                    textDecoration: "none"
-                                  }}
-                                >
-                                  💬 WhatsApp Reminder
-                                </a>
+                                <>
+                                  <a
+                                    href={`https://wa.me/91${String(selectedPatient.phone || "").replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
+                                      `Namaste ${selectedPatient.name} ji, reminder for your booked physiotherapy visit on ${aptDate} at ${aptTime} with Dr. Satyam Vishwakarma at Vindhy Physiotherapy & Rehab Center.`
+                                    )}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      background: "#25d366",
+                                      color: "#ffffff",
+                                      fontSize: "12px",
+                                      fontWeight: "800",
+                                      padding: "6px 12px",
+                                      borderRadius: "7px",
+                                      textDecoration: "none"
+                                    }}
+                                  >
+                                    💬 WhatsApp Reminder
+                                  </a>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      setEnquiries((prev) =>
+                                        prev.map((e) =>
+                                          (String(e.id) === String(aptId) || String(e.enquiryId) === String(aptId) || (e.appointmentId && String(e.appointmentId) === String(aptId)))
+                                            ? { ...e, status: "Completed" }
+                                            : e
+                                        )
+                                      );
+                                      setLeadActionToast(`✓ Appointment on ${aptDate} marked as Completed.`);
+                                      setTimeout(() => setLeadActionToast(""), 3500);
+                                      await api.updateEnquiryStatus(aptId, "Completed", selectedPatient.patientId);
+                                      fetchEnquiries();
+                                    }}
+                                    style={{
+                                      background: "#0878C9",
+                                      color: "#ffffff",
+                                      border: "none",
+                                      padding: "6px 12px",
+                                      borderRadius: "7px",
+                                      fontSize: "12px",
+                                      fontWeight: "800",
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    ✓ Mark Completed
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>

@@ -1528,37 +1528,59 @@ export default function PatientPortal({ onClose, themeProps }) {
               );
             })()}
 
-            {(recordsData?.appointments?.length || 0) > 0 && (
-              <div className="appointments-list-container">
-                <h3 className="appointments-history-title" style={{ color: "#0f172a" }}>Appointment History & Booking Enquiries ({recordsData?.appointments?.length || 0})</h3>
-                <div className="appointments-grid">
-                  {(recordsData?.appointments || []).map((appt) => (
-                    <div className="appointment-card" key={appt.id}>
-                      <div className="appt-head">
-                        <span className="appt-id">{appt.id}</span>
-                        <span
-                          className="status-pill"
-                          style={{
-                            background: (appt.status === "Approved" || appt.status === "Confirmed" || appt.status === "Booked") ? "#dcfce7" : appt.status === "Rejected" ? "#fee2e2" : "#fef3c7",
-                            color: (appt.status === "Approved" || appt.status === "Confirmed" || appt.status === "Booked") ? "#15803d" : appt.status === "Rejected" ? "#b91c1c" : "#b45309",
-                            fontWeight: "800",
-                            border: (appt.status === "Approved" || appt.status === "Confirmed" || appt.status === "Booked") ? "1px solid #86efac" : "1px solid #cbd5e1"
-                          }}
-                        >
-                          {(appt.status === "Approved" || appt.status === "Confirmed" || appt.status === "Booked") ? "✅ Booked & Confirmed" : appt.status === "Rejected" ? "❌ Doctor Unavailable" : "⏳ Pending Doctor Confirmation"}
-                        </span>
-                      </div>
-                      <div className="appt-body">
-                        <p><strong>Preferred Date:</strong> {cleanDateOnly(appt.appointmentDate || appt.date)}</p>
-                        <p><strong>Condition:</strong> {appt.painArea || "Physiotherapy Consultation"}</p>
-                        {appt.concern && <p><strong>Notes:</strong> {appt.concern}</p>}
-                        <small>Submitted on {cleanDateOnly(appt.date)} {cleanTimeOnly(appt.time) ? `at ${cleanTimeOnly(appt.time)}` : ""}</small>
-                      </div>
-                    </div>
-                  ))}
+            {(() => {
+              const isPatientCompleted = patientProfile?.status === "Completed" || (patientProfile?.status || "").toLowerCase().includes("complete");
+              // If patient treatment is completed, or appointment is completed/hidden, remove from pending/active list
+              const activeAppointments = isPatientCompleted
+                ? []
+                : (recordsData?.appointments || []).filter(
+                    (appt) =>
+                      appt.status !== "Completed" &&
+                      appt.status !== "Hidden" &&
+                      appt.status !== "Hidden / Spam"
+                  );
+
+              if (activeAppointments.length === 0) return null;
+
+              return (
+                <div className="appointments-list-container">
+                  <h3 className="appointments-history-title" style={{ color: "#0f172a" }}>
+                    Appointment History &amp; Booking Enquiries ({activeAppointments.length})
+                  </h3>
+                  <div className="appointments-grid">
+                    {activeAppointments.map((appt) => {
+                      const isApproved = appt.status === "Approved" || appt.status === "Confirmed" || appt.status === "Booked";
+                      const isRejected = appt.status === "Rejected";
+                      const isCompleted = appt.status === "Completed";
+                      return (
+                        <div className="appointment-card" key={appt.id}>
+                          <div className="appt-head">
+                            <span className="appt-id">{appt.id}</span>
+                            <span
+                              className="status-pill"
+                              style={{
+                                background: isCompleted ? "#f1f5f9" : isApproved ? "#dcfce7" : isRejected ? "#fee2e2" : "#fef3c7",
+                                color: isCompleted ? "#475569" : isApproved ? "#15803d" : isRejected ? "#b91c1c" : "#b45309",
+                                fontWeight: "800",
+                                border: isCompleted ? "1px solid #cbd5e1" : isApproved ? "1px solid #86efac" : "1px solid #cbd5e1"
+                              }}
+                            >
+                              {isCompleted ? "✅ Completed" : isApproved ? "✅ Booked & Confirmed" : isRejected ? "❌ Doctor Unavailable" : "⏳ Pending Doctor Confirmation"}
+                            </span>
+                          </div>
+                          <div className="appt-body">
+                            <p><strong>Preferred Date:</strong> {cleanDateOnly(appt.appointmentDate || appt.date)}</p>
+                            <p><strong>Condition:</strong> {appt.painArea || "Physiotherapy Consultation"}</p>
+                            {appt.concern && <p><strong>Notes:</strong> {appt.concern}</p>}
+                            <small>Submitted on {cleanDateOnly(appt.date)} {cleanTimeOnly(appt.time) ? `at ${cleanTimeOnly(appt.time)}` : ""}</small>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
 

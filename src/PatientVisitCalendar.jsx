@@ -611,6 +611,7 @@ export default function PatientVisitCalendar({
     });
 
     (appointments || []).forEach((a) => {
+      if (a.status === "Completed") return; // Completed appointments removed from pending calendar slots
       const key = parseToKey(a.appointmentDate || a.date);
       if (!key) return;
       if (!map[key]) map[key] = { visits: [], followUps: [], appointments: [], missed: null };
@@ -1222,7 +1223,9 @@ export default function PatientVisitCalendar({
                               : "1px solid #cbd5e1"
                         }}
                       >
-                        {apt.status === "Approved" || apt.status === "Confirmed" || apt.status === "Booked"
+                        {apt.status === "Completed"
+                          ? "✅ Completed"
+                          : apt.status === "Approved" || apt.status === "Confirmed" || apt.status === "Booked"
                           ? "✅ Booked & Confirmed by Doctor"
                           : apt.status === "Rejected"
                           ? "❌ Doctor Not Available"

@@ -123,7 +123,7 @@ export const buildReceiptPDF = (receipt) => {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(200, 220, 230);
-  doc.text("Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)", 14, 32);
+  doc.text("Vindhy Physiotherapy, Amravati Chauraha, Kantit, Vindhyachal, Mirzapur (U.P.) 231001", 14, 32);
   doc.text("Phone: +91 9793093316  |  WhatsApp: +91 9793093316", 14, 38);
 
   // Doctor Details on Top Right

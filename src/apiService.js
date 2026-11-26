@@ -733,12 +733,14 @@ export const api = {
     const patient = patients.find(p => p.patientId === patientId);
     if (!patient) throw new Error("Patient not found");
 
+    const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
     const cleanPh = String(patient.phone || "").replace(/\D/g, "").slice(-10);
     const cleanId = String(patientId || "").trim();
 
-    // Match visits by patientId, ID suffix, or clean phone number
+    // Match visits by patientId, ID suffix, or clean phone number (excluding deleted)
     const matchedVisits = visits.filter(v => {
-      if (!v) return false;
+      if (!v || !v.visitId) return false;
+      if (deletedVisitIds.has(v.visitId)) return false;
       if (v.patientId === cleanId) return true;
       if (cleanPh && String(v.phone || "").replace(/\D/g, "").slice(-10) === cleanPh) return true;
       if (v.patientId && cleanId) {
@@ -749,52 +751,28 @@ export const api = {
       return false;
     });
 
-    // Determine highest visit number and total expected visits
-    let highestVisitNumber = 0;
-    matchedVisits.forEach(v => {
-      const n = parseInt(String(v.visitNumber || 0).replace(/\D/g, "") || 0, 10);
-      if (n > highestVisitNumber) highestVisitNumber = n;
-    });
-
-    const expectedTotalVisits = Math.max(
-      highestVisitNumber,
-      parseInt(String(patient.totalVisits || 0).replace(/\D/g, "") || 0, 10),
-      matchedVisits.length
-    );
-
-    // If any visit number between 1 and expectedTotalVisits is missing, backfill it so all receipts are viewable
-    if (expectedTotalVisits > 0) {
-      const existingNums = new Set(matchedVisits.map(v => parseInt(String(v.visitNumber || 0).replace(/\D/g, "") || 0, 10)));
-      for (let k = 1; k <= expectedTotalVisits; k++) {
-        if (!existingNums.has(k)) {
-          const isFirst = k === 1;
-          const regDateStr = patient.registrationDate ? String(patient.registrationDate).slice(0, 10) : "";
-          const syntheticDate = isFirst && regDateStr ? regDateStr : (patient.lastVisitDate || new Date().toISOString().slice(0, 10));
-          matchedVisits.push({
-            visitId: `VST-${patient.patientId}-${k}`,
-            patientId: patient.patientId,
-            patientName: patient.name,
-            phone: patient.phone,
-            visitNumber: k,
-            date: syntheticDate,
-            time: "10:30 AM",
-            reason: isFirst 
-              ? (patient.firstVisitReason || "Initial Consultation & Clinical Intake") 
-              : `Rehabilitation Therapy Session #${k}`,
-            complaint: isFirst 
-              ? (patient.complaint || patient.firstVisitReason || "Initial Consultation") 
-              : `Follow-up therapy session #${k}`,
-            diagnosis: patient.lastDiagnosis || patient.firstVisitReason || "Under Active Physiotherapy Management",
-            treatmentNotes: isFirst 
-              ? "Comprehensive clinical intake, mobility evaluation, and physiotherapy roadmap." 
-              : `Day ${k}: Spinal mobilization, therapeutic exercises, and recovery monitoring.`,
-            fee: patient.lastFee || "₹500",
-            followUpDate: patient.followUpDate || "As advised by doctor",
-            followUpTime: "10:30 AM",
-            status: "Completed",
-            doctor: "Dr. Satyam Vishwakarma"
-          });
-        }
+    // Only backfill intake visit #1 if the patient has 0 visits recorded yet and synthetic ID is not deleted
+    if (matchedVisits.length === 0 && (patient.totalVisits || 0) > 0) {
+      const syntheticId = `VST-${patient.patientId}-1`;
+      if (!deletedVisitIds.has(syntheticId)) {
+        matchedVisits.push({
+          visitId: syntheticId,
+          patientId: patient.patientId,
+          patientName: patient.name,
+          phone: patient.phone,
+          visitNumber: 1,
+          date: patient.registrationDate ? String(patient.registrationDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          time: "10:30 AM",
+          reason: patient.firstVisitReason || "Initial Consultation & Clinical Intake",
+          complaint: patient.complaint || patient.firstVisitReason || "Initial Consultation",
+          diagnosis: patient.lastDiagnosis || patient.firstVisitReason || "Under Active Physiotherapy Management",
+          treatmentNotes: "Comprehensive clinical intake, mobility evaluation, and physiotherapy roadmap.",
+          fee: patient.lastFee || "₹500",
+          followUpDate: patient.followUpDate || "As advised by doctor",
+          followUpTime: "10:30 AM",
+          status: "Completed",
+          doctor: "Dr. Satyam Vishwakarma"
+        });
       }
     }
 
@@ -1152,7 +1130,95 @@ export const api = {
     } catch (_) {}
 
     syncToGoogleSheets("delete_visit", { visitId });
+
+    // Broadcast live event for PatientPortal and other tabs
+    try {
+      window.dispatchEvent(new CustomEvent("patient-records-updated", { detail: { deletedVisitId: visitId } }));
+    } catch (_) {}
+
     return { ok: true, message: `Visit ${visitId} deleted.` };
+  },
+
+  async updateVisit(visitId, updates) {
+    if (!visitId) throw new Error("visitId is required");
+
+    // 1. Update backend if available
+    try {
+      const token = localStorage.getItem("doctor_token") || localStorage.getItem(KEYS.DOCTOR_TOKEN);
+      if (token) {
+        await fetch(`${API_BASE}/doctor/visits/${encodeURIComponent(visitId)}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(updates)
+        });
+      }
+    } catch (e) {
+      console.warn("Backend visit update failed, proceeding with local update:", e);
+    }
+
+    // 2. Update local storage
+    const visits = getLocal(KEYS.VISITS, []);
+    let updatedVisit = null;
+    const updatedVisits = visits.map(v => {
+      if (v.visitId === visitId) {
+        updatedVisit = {
+          ...v,
+          ...updates,
+          visitNumber: updates.visitNumber !== undefined 
+            ? (parseInt(String(updates.visitNumber).replace(/\D/g, ""), 10) || v.visitNumber || 1)
+            : v.visitNumber
+        };
+        return updatedVisit;
+      }
+      return v;
+    });
+
+    if (!updatedVisit) {
+      updatedVisit = {
+        visitId,
+        ...updates,
+        visitNumber: updates.visitNumber !== undefined 
+          ? (parseInt(String(updates.visitNumber).replace(/\D/g, ""), 10) || 1)
+          : 1
+      };
+      updatedVisits.unshift(updatedVisit);
+    }
+
+    setLocal(KEYS.VISITS, updatedVisits);
+
+    // 3. Update patient details if fee or diagnosis changed
+    if (updatedVisit && updatedVisit.patientId) {
+      const patients = getLocal(KEYS.PATIENTS, []);
+      const patient = patients.find(p => p.patientId === updatedVisit.patientId);
+      if (patient) {
+        const patientVisits = updatedVisits.filter(v => v.patientId === updatedVisit.patientId);
+        patient.totalVisits = patientVisits.length;
+        if (updates.fee) patient.lastFee = updates.fee;
+        if (updates.diagnosis) patient.lastDiagnosis = updates.diagnosis;
+        setLocal(KEYS.PATIENTS, patients);
+        try {
+          supabaseUpsertPatient(patient).catch(() => {});
+        } catch (_) {}
+      }
+    }
+
+    // 4. Update Supabase if connected
+    try {
+      supabaseUpsertVisit(updatedVisit).catch(() => {});
+    } catch (_) {}
+
+    // 5. Sync to Google Sheets
+    syncToGoogleSheets("update_visit", updatedVisit);
+
+    // Broadcast live event for PatientPortal and other tabs
+    try {
+      window.dispatchEvent(new CustomEvent("patient-records-updated", { detail: { visitId, updatedVisit } }));
+    } catch (_) {}
+
+    return { ok: true, visit: updatedVisit };
   },
 
   // 4. VISITS
@@ -1866,14 +1932,15 @@ export const patientApi = {
 
     localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
 
-    let allVisits = getLocal(KEYS.VISITS, []);
+    const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+    let allVisits = getLocal(KEYS.VISITS, []).filter(v => v && v.visitId && !deletedVisitIds.has(v.visitId));
     if (isSupabaseConnected()) {
       try {
         const sbVisits = await supabaseGetVisits();
         if (sbVisits && sbVisits.length > 0) {
           const map = new Map();
           [...allVisits, ...sbVisits].forEach(v => {
-            if (v && v.visitId) map.set(v.visitId, v);
+            if (v && v.visitId && !deletedVisitIds.has(v.visitId)) map.set(v.visitId, v);
           });
           allVisits = Array.from(map.values());
           setLocal(KEYS.VISITS, allVisits);
@@ -1881,8 +1948,10 @@ export const patientApi = {
       } catch (_) {}
     }
     const visits = allVisits.filter(v => 
-      v.patientId === p.patientId || 
-      (v.phone && p.phone && String(v.phone).replace(/\D/g, "").slice(-10) === String(p.phone).replace(/\D/g, "").slice(-10))
+      !deletedVisitIds.has(v.visitId) && (
+        v.patientId === p.patientId || 
+        (v.phone && p.phone && String(v.phone).replace(/\D/g, "").slice(-10) === String(p.phone).replace(/\D/g, "").slice(-10))
+      )
     );
 
     visits.sort((a, b) => {

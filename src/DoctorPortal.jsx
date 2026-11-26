@@ -340,6 +340,19 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [shareFeedback, setShareFeedback] = useState("");
+  const [editingReceiptVisit, setEditingReceiptVisit] = useState(null);
+  const [editReceiptForm, setEditReceiptForm] = useState({
+    visitNumber: 1,
+    date: "",
+    time: "",
+    fee: "500",
+    reason: "",
+    diagnosis: "",
+    treatmentNotes: "",
+    followUpDate: ""
+  });
+  const [editReceiptSaving, setEditReceiptSaving] = useState(false);
+  const [editReceiptError, setEditReceiptError] = useState("");
   const [showDoctorMore, setShowDoctorMore] = useState(false);
   const [manualFollowUpDate, setManualFollowUpDate] = useState("");
   const [manualFollowUpTime, setManualFollowUpTime] = useState("10:30 AM");
@@ -1202,6 +1215,11 @@ export default function DoctorPortal({ onClose, themeProps }) {
         setShowDoctorMore(false);
         return;
       }
+      // 1b. If editing receipt modal is open, close it
+      if (editingReceiptVisit) {
+        setEditingReceiptVisit(null);
+        return;
+      }
       // 2. If Add visit modal or receipt modal is open, close it
       if (showAddVisitModal) {
         setShowAddVisitModal(false);
@@ -1229,12 +1247,12 @@ export default function DoctorPortal({ onClose, themeProps }) {
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [showDoctorMore, showAddVisitModal, activeReceipt, selectedPatient, activeTab, onClose]);
+  }, [showDoctorMore, editingReceiptVisit, showAddVisitModal, activeReceipt, selectedPatient, activeTab, onClose]);
 
   // Lock background body scroll when any modal or sheet is open
   useEffect(() => {
     const isModalActive = Boolean(
-      selectedPatient || showAddVisitModal || activeReceipt || activeConsultPatient || convertingLead || linkingEnquiry || showDoctorMore
+      selectedPatient || showAddVisitModal || activeReceipt || editingReceiptVisit || activeConsultPatient || convertingLead || linkingEnquiry || showDoctorMore
     );
     if (isModalActive) {
       document.body.style.overflow = "hidden";
@@ -2246,6 +2264,71 @@ export default function DoctorPortal({ onClose, themeProps }) {
       setTimeout(() => setShareFeedback(""), 3500);
     } catch (err) {
       alert("Could not update patient status: " + err.message);
+    }
+  };
+
+  const openEditReceiptModal = (visit) => {
+    if (!visit) return;
+    setEditingReceiptVisit(visit);
+    setEditReceiptError("");
+    setEditReceiptForm({
+      visitNumber: parseInt(String(visit.visitNumber || 1).replace(/\D/g, ""), 10) || 1,
+      date: visit.date || new Date().toISOString().slice(0, 10),
+      time: visit.time || "10:30 AM",
+      fee: cleanFeeAmount(visit.fee, "500"),
+      reason: visit.reason || "",
+      diagnosis: visit.diagnosis || "",
+      treatmentNotes: visit.treatmentNotes || "",
+      followUpDate: visit.followUpDate || ""
+    });
+  };
+
+  const handleSaveReceiptEdit = async (e) => {
+    if (e) e.preventDefault();
+    if (!editingReceiptVisit || !editingReceiptVisit.visitId) return;
+
+    const parsedVisitNum = parseInt(String(editReceiptForm.visitNumber).replace(/\D/g, ""), 10);
+    if (!parsedVisitNum || parsedVisitNum < 1) {
+      setEditReceiptError("Please enter a valid visit number (e.g. 1, 2, 3...)");
+      return;
+    }
+
+    setEditReceiptSaving(true);
+    setEditReceiptError("");
+    try {
+      const updates = {
+        visitNumber: parsedVisitNum,
+        date: editReceiptForm.date,
+        time: editReceiptForm.time,
+        fee: `₹${cleanFeeAmount(editReceiptForm.fee, "500")}`,
+        reason: editReceiptForm.reason,
+        diagnosis: editReceiptForm.diagnosis,
+        treatmentNotes: editReceiptForm.treatmentNotes,
+        followUpDate: editReceiptForm.followUpDate
+      };
+
+      const res = await api.updateVisit(editingReceiptVisit.visitId, updates);
+      if (res && res.ok) {
+        if (activeReceipt && activeReceipt.visit?.visitId === editingReceiptVisit.visitId) {
+          setActiveReceipt({
+            patient: activeReceipt.patient || selectedPatient,
+            visit: { ...editingReceiptVisit, ...updates }
+          });
+        }
+        setEditingReceiptVisit(null);
+        if (selectedPatient) {
+          await openPatientProfile(selectedPatient.patientId);
+        }
+        await fetchStats();
+        await fetchPatients();
+        await fetchTodayVisits();
+      } else {
+        setEditReceiptError(res?.error || "Failed to update receipt.");
+      }
+    } catch (err) {
+      setEditReceiptError("Error updating receipt: " + err.message);
+    } finally {
+      setEditReceiptSaving(false);
     }
   };
 
@@ -6264,7 +6347,55 @@ _(Saved in patient clinic records)_`;
                               </span>
                             </div>
 
-                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                              {/* Small Edit Button for Doctor */}
+                              <button
+                                type="button"
+                                style={{
+                                  background: "#f0fdf4",
+                                  color: "#15803d",
+                                  border: "1px solid #86efac",
+                                  borderRadius: "6px",
+                                  padding: "4px 8px",
+                                  fontSize: "11px",
+                                  fontWeight: "800",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "3px"
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditReceiptModal(v);
+                                }}
+                                title="Edit visit number or receipt details"
+                              >
+                                <span>✏️</span>
+                                <span>Edit</span>
+                              </button>
+                              {/* Small Delete Button */}
+                              <button
+                                type="button"
+                                style={{
+                                  background: "#fee2e2",
+                                  color: "#dc2626",
+                                  border: "1px solid #fca5a5",
+                                  borderRadius: "6px",
+                                  padding: "4px 7px",
+                                  fontSize: "11px",
+                                  fontWeight: "800",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center"
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteVisit(v);
+                                }}
+                                title="Delete this receipt"
+                              >
+                                ✕
+                              </button>
                               <button
                                 type="button"
                                 className="receipt-btn finalize-action-btn"
@@ -7014,37 +7145,64 @@ _(Saved in patient clinic records)_`;
                           )}
                         </div>
 
-                        {/* Dustbin Icon Only on Top-Right */}
-                        <button
-                          type="button"
-                          className="delete-visit-btn-icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteVisit(v);
-                          }}
-                          style={{
-                            background: "#fee2e2",
-                            color: "#dc2626",
-                            border: "1.5px solid #f87171",
-                            borderRadius: "7px",
-                            width: "30px",
-                            height: "30px",
-                            minWidth: "30px",
-                            padding: 0,
-                            fontSize: "13px",
-                            fontWeight: "800",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer",
-                            flexShrink: 0,
-                            boxShadow: "0 1px 4px rgba(220, 38, 38, 0.15)",
-                            transition: "all 0.15s ease"
-                          }}
-                          title="Delete this visit / receipt"
-                        >
-                          ✕
-                        </button>
+                        {/* Edit & Delete Buttons on Top-Right */}
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditReceiptModal(v);
+                            }}
+                            style={{
+                              background: "#f0fdf4",
+                              color: "#15803d",
+                              border: "1.5px solid #86efac",
+                              borderRadius: "7px",
+                              padding: "4px 8px",
+                              fontSize: "11.5px",
+                              fontWeight: "800",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              cursor: "pointer",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+                            }}
+                            title="Edit Visit Number & Receipt Details"
+                          >
+                            <span>✏️</span>
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="delete-visit-btn-icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteVisit(v);
+                            }}
+                            style={{
+                              background: "#fee2e2",
+                              color: "#dc2626",
+                              border: "1.5px solid #f87171",
+                              borderRadius: "7px",
+                              width: "30px",
+                              height: "30px",
+                              minWidth: "30px",
+                              padding: 0,
+                              fontSize: "13px",
+                              fontWeight: "800",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              flexShrink: 0,
+                              boxShadow: "0 1px 4px rgba(220, 38, 38, 0.15)",
+                              transition: "all 0.15s ease"
+                            }}
+                            title="Delete this visit / receipt"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
 
                       {/* Row 2: Slip & WhatsApp PDF + Download in the SAME ROW side by side */}
@@ -7561,6 +7719,14 @@ _(Saved in patient clinic records)_`;
                 <span style={{ fontSize: "18px" }}>💬</span>
                 <span>Send Receipt via WhatsApp (+91 {activeReceipt.patient.phone})</span>
               </button>
+              <button
+                className="secondary-btn"
+                style={{ background: "#f0fdf4", color: "#15803d", borderColor: "#86efac", fontWeight: "800" }}
+                onClick={() => openEditReceiptModal(activeReceipt.visit)}
+                title="Edit visit number or receipt details"
+              >
+                ✏️ Edit Receipt
+              </button>
               <button className="primary-btn" onClick={() => handleDownloadPDF(activeReceipt)}>
                 📥 Download PDF
               </button>
@@ -7782,6 +7948,221 @@ _(Saved in patient clinic records)_`;
                 <span>Send Receipt via WhatsApp (+91 {activeReceipt.patient.phone})</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= EDIT RECEIPT & VISIT MODAL (DOCTOR ONLY) ================= */}
+      {editingReceiptVisit && (
+        <div className="add-visit-modal-overlay" style={{ zIndex: 11000 }}>
+          <div
+            className="add-visit-card"
+            style={{
+              maxWidth: "520px",
+              width: "100%",
+              background: "#ffffff",
+              borderRadius: "16px",
+              border: "2px solid #0284c7",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+              padding: "22px 24px",
+              boxSizing: "border-box",
+              color: "#0f172a"
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1.5px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "22px" }}>✏️</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>
+                    Edit Receipt &amp; Visit Details
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "#64748b" }}>
+                    {selectedPatient?.name || editingReceiptVisit.patientName || "Patient"} • ID: {selectedPatient?.patientId || editingReceiptVisit.patientId}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingReceiptVisit(null)}
+                style={{
+                  background: "#f1f5f9",
+                  border: "none",
+                  borderRadius: "8px",
+                  width: "32px",
+                  height: "32px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "800",
+                  color: "#64748b"
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {editReceiptError && (
+              <div style={{ background: "#fee2e2", border: "1px solid #f87171", color: "#dc2626", borderRadius: "8px", padding: "8px 12px", marginBottom: "14px", fontSize: "13px", fontWeight: "700" }}>
+                ⚠️ {editReceiptError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveReceiptEdit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Visit Number - Highlighted Primary Field */}
+              <div style={{ background: "#f0f9ff", border: "1.5px solid #38bdf8", borderRadius: "10px", padding: "12px 14px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "800", color: "#0369a1", marginBottom: "6px" }}>
+                  🔢 Visit Number (Receipt #)
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "15px", fontWeight: "800", color: "#0284c7" }}>Visit #</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="999"
+                    required
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #0284c7",
+                      fontSize: "16px",
+                      fontWeight: "800",
+                      color: "#0f172a",
+                      background: "#ffffff"
+                    }}
+                    value={editReceiptForm.visitNumber}
+                    onChange={(e) => setEditReceiptForm({ ...editReceiptForm, visitNumber: e.target.value })}
+                  />
+                </div>
+                <p style={{ margin: "6px 0 0 0", fontSize: "11.5px", color: "#0284c7" }}>
+                  💡 Updates receipt slip number and reflects immediately in Doctor and Patient Portals.
+                </p>
+              </div>
+
+              {/* Date and Time */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                    📅 Visit Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "13px",
+                      boxSizing: "border-box"
+                    }}
+                    value={editReceiptForm.date}
+                    onChange={(e) => setEditReceiptForm({ ...editReceiptForm, date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                    ⏰ Visit Time
+                  </label>
+                  <input
+                    type="text"
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "13px",
+                      boxSizing: "border-box"
+                    }}
+                    value={editReceiptForm.time}
+                    placeholder="10:30 AM"
+                    onChange={(e) => setEditReceiptForm({ ...editReceiptForm, time: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Fee Amount */}
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                  💰 Consultation / Session Fee (₹)
+                </label>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontWeight: "800", color: "#64748b" }}>₹</span>
+                  <input
+                    type="text"
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px 8px 24px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                      boxSizing: "border-box"
+                    }}
+                    value={editReceiptForm.fee}
+                    onChange={(e) => setEditReceiptForm({ ...editReceiptForm, fee: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Treatment Reason / Focus */}
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                  🩺 Treatment Reason / Clinical Service
+                </label>
+                <input
+                  type="text"
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                  value={editReceiptForm.reason}
+                  placeholder="e.g. Cervical spine mobilization & traction"
+                  onChange={(e) => setEditReceiptForm({ ...editReceiptForm, reason: e.target.value })}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingReceiptVisit(null)}
+                  style={{
+                    padding: "9px 16px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#475569",
+                    fontWeight: "700",
+                    fontSize: "13px",
+                    cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editReceiptSaving}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                    color: "#ffffff",
+                    fontWeight: "800",
+                    fontSize: "13px",
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(2, 132, 199, 0.3)"
+                  }}
+                >
+                  {editReceiptSaving ? "Saving..." : "💾 Save Receipt Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

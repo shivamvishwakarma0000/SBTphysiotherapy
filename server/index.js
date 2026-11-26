@@ -1149,6 +1149,39 @@ app.delete("/api/doctor/visits/:id", requireDoctorAuth, async (req, res) => {
   }
 });
 
+// Doctor: Update Visit Record / Receipt Details
+app.put("/api/doctor/visits/:id", requireDoctorAuth, async (req, res) => {
+  try {
+    const visitId = req.params.id;
+    const updates = req.body || {};
+    const visits = await ensureDataFile(visitsFile, []);
+    let updatedVisit = null;
+    const updatedVisits = visits.map(v => {
+      if (v.visitId === visitId) {
+        updatedVisit = {
+          ...v,
+          ...updates,
+          visitNumber: updates.visitNumber !== undefined 
+            ? (parseInt(String(updates.visitNumber).replace(/\D/g, ""), 10) || v.visitNumber || 1) 
+            : v.visitNumber
+        };
+        return updatedVisit;
+      }
+      return v;
+    });
+
+    if (updatedVisit) {
+      await writeDataFile(visitsFile, updatedVisits);
+      syncToGoogleSheets("update_visit", updatedVisit).catch(() => {});
+      res.json({ ok: true, visit: updatedVisit });
+    } else {
+      res.status(404).json({ error: "Visit not found." });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update visit." });
+  }
+});
+
 // ==========================================
 // 2. CLINIC & DOCTOR APIS
 // ==========================================

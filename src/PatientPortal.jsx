@@ -242,6 +242,7 @@ export default function PatientPortal({ onClose, themeProps }) {
     window.addEventListener("focus", handleLiveSync);
     window.addEventListener("storage", handleLiveSync);
     window.addEventListener("online", handleLiveSync);
+    window.addEventListener("patient-records-updated", handleLiveSync);
     document.addEventListener("visibilitychange", handleLiveSync);
 
     const syncTimer = setInterval(handleLiveSync, 4000);
@@ -250,6 +251,7 @@ export default function PatientPortal({ onClose, themeProps }) {
       window.removeEventListener("focus", handleLiveSync);
       window.removeEventListener("storage", handleLiveSync);
       window.removeEventListener("online", handleLiveSync);
+      window.removeEventListener("patient-records-updated", handleLiveSync);
       document.removeEventListener("visibilitychange", handleLiveSync);
       clearInterval(syncTimer);
     };

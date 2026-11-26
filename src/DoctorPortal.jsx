@@ -6323,46 +6323,119 @@ _(Saved in patient clinic records)_`;
                               background: "#ffffff",
                               border: "1.5px solid #cbd5e1",
                               borderRadius: "10px",
-                              padding: "10px 14px",
+                              padding: "12px 14px",
                               display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              flexWrap: "wrap",
-                              gap: "8px",
+                              flexDirection: "column",
+                              gap: "10px",
                               boxShadow: "0 1px 4px rgba(0,0,0,0.03)"
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                              <span style={{ fontWeight: "800", fontSize: "12px", background: "#0284c7", color: "#ffffff", padding: "2px 8px", borderRadius: "6px" }}>
-                                Visit #{v.visitNumber || 1}
-                              </span>
-                              <span style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
-                                📅 {cleanDateOnly(v.date)}
-                              </span>
-                              <span style={{ fontWeight: "800", fontSize: "12px", color: isPrepaid ? "#0284c7" : "#16a34a", background: isPrepaid ? "#e0f2fe" : "#dcfce7", padding: "2px 8px", borderRadius: "6px" }}>
-                                {isPrepaid ? "₹0 (Package Plan)" : `₹${cleanFee}`}
-                              </span>
+                            {/* Visit Info Header */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "100%" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: "800", fontSize: "12px", background: "#0284c7", color: "#ffffff", padding: "2px 8px", borderRadius: "6px" }}>
+                                  Visit #{v.visitNumber || 1}
+                                </span>
+                                <span style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>
+                                  📅 {cleanDateOnly(v.date)}
+                                </span>
+                                <span style={{ fontWeight: "800", fontSize: "12px", color: isPrepaid ? "#0284c7" : "#16a34a", background: isPrepaid ? "#e0f2fe" : "#dcfce7", padding: "2px 8px", borderRadius: "6px" }}>
+                                  {isPrepaid ? "₹0 (Package Plan)" : `₹${cleanFee}`}
+                                </span>
+                              </div>
                               <span style={{ fontSize: "12px", color: "#64748b" }}>
                                 {v.reason || "Physiotherapy Treatment"}
                               </span>
                             </div>
 
-                            <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
-                              {/* Small Edit Button for Doctor */}
+                            {/* Top Row: WhatsApp (50%) & Download PDF (50%) */}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", width: "100%" }}>
+                              <button
+                                type="button"
+                                className="whatsapp-share-btn"
+                                style={{
+                                  width: "100%",
+                                  minHeight: "36px",
+                                  padding: "6px 10px",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  borderRadius: "8px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "5px",
+                                  margin: 0
+                                }}
+                                onClick={() => handleWhatsAppDirectShare({ patient: selectedPatient, visit: v })}
+                                title="Send WhatsApp"
+                              >
+                                💬 WhatsApp
+                              </button>
+                              <button
+                                type="button"
+                                className="secondary-btn"
+                                style={{
+                                  width: "100%",
+                                  minHeight: "36px",
+                                  padding: "6px 10px",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  borderRadius: "8px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "5px",
+                                  margin: 0
+                                }}
+                                onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
+                                title="Download PDF"
+                              >
+                                📥 PDF
+                              </button>
+                            </div>
+
+                            {/* Bottom Row: View Slip (40%), Edit (40%), Cross (20%) */}
+                            <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 1fr", gap: "8px", width: "100%" }}>
+                              <button
+                                type="button"
+                                className="receipt-btn finalize-action-btn"
+                                style={{
+                                  width: "100%",
+                                  minHeight: "36px",
+                                  padding: "6px 8px",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  borderRadius: "8px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "4px",
+                                  margin: 0
+                                }}
+                                onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
+                                title="Preview official slip & WhatsApp"
+                              >
+                                📄 View Slip
+                              </button>
                               <button
                                 type="button"
                                 style={{
+                                  width: "100%",
+                                  minHeight: "36px",
                                   background: "#f0fdf4",
                                   color: "#15803d",
-                                  border: "1px solid #86efac",
-                                  borderRadius: "6px",
-                                  padding: "4px 8px",
-                                  fontSize: "11px",
+                                  border: "1.5px solid #86efac",
+                                  borderRadius: "8px",
+                                  padding: "6px 8px",
+                                  fontSize: "12px",
                                   fontWeight: "800",
                                   cursor: "pointer",
-                                  display: "inline-flex",
+                                  display: "flex",
                                   alignItems: "center",
-                                  gap: "3px"
+                                  justifyContent: "center",
+                                  gap: "4px",
+                                  margin: 0,
+                                  transition: "all 0.15s ease"
                                 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -6373,20 +6446,24 @@ _(Saved in patient clinic records)_`;
                                 <span>✏️</span>
                                 <span>Edit</span>
                               </button>
-                              {/* Small Delete Button */}
                               <button
                                 type="button"
                                 style={{
+                                  width: "100%",
+                                  minHeight: "36px",
                                   background: "#fee2e2",
                                   color: "#dc2626",
-                                  border: "1px solid #fca5a5",
-                                  borderRadius: "6px",
-                                  padding: "4px 7px",
-                                  fontSize: "11px",
-                                  fontWeight: "800",
+                                  border: "1.5px solid #fca5a5",
+                                  borderRadius: "8px",
+                                  padding: "6px 0",
+                                  fontSize: "14px",
+                                  fontWeight: "900",
                                   cursor: "pointer",
-                                  display: "inline-flex",
-                                  alignItems: "center"
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  margin: 0,
+                                  transition: "all 0.15s ease"
                                 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -6395,33 +6472,6 @@ _(Saved in patient clinic records)_`;
                                 title="Delete this receipt"
                               >
                                 ✕
-                              </button>
-                              <button
-                                type="button"
-                                className="receipt-btn finalize-action-btn"
-                                style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700" }}
-                                onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
-                                title="Preview official slip & WhatsApp"
-                              >
-                                📄 View Slip
-                              </button>
-                              <button
-                                type="button"
-                                className="secondary-btn"
-                                style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700" }}
-                                onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
-                                title="Download PDF"
-                              >
-                                📥 PDF
-                              </button>
-                              <button
-                                type="button"
-                                className="whatsapp-share-btn"
-                                style={{ padding: "5px 10px", fontSize: "11.5px", fontWeight: "700" }}
-                                onClick={() => handleWhatsAppDirectShare({ patient: selectedPatient, visit: v })}
-                                title="Send WhatsApp"
-                              >
-                                💬 WhatsApp
                               </button>
                             </div>
                           </div>

@@ -38,7 +38,6 @@ export default function PatientVisitCalendar({
     const d = String(today.getDate()).padStart(2, "0");
     return `${d}/${m}/${y}`;
   });
-  const [filterType, setFilterType] = useState("all"); // "all", "completed", "missed", "followup"
 
   const [overrideFollowUpKey, setOverrideFollowUpKey] = useState(null);
 
@@ -859,56 +858,7 @@ export default function PatientVisitCalendar({
 
 
 
-      {/* 3. SEPARATE CARD B: RECOVERY & ACTIVITY STATUS COLOR GRID (LEGEND) */}
-      <div className="cal-section-panel legend-panel" style={{ background: "#ffffff", border: "1.5px solid #cbd5e1", borderRadius: "14px", padding: "14px 18px", margin: "14px 0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-          <span style={{ fontSize: "18px" }}>🎨</span>
-          <strong style={{ fontSize: "14.5px", color: "#0f172a" }}>Recovery &amp; Attendance Color Code Grid</strong>
-        </div>
-        <div className="clinical-calendar-legend" style={{ margin: 0 }}>
-          <div
-            className={`legend-item ${filterType === "all" ? "active-legend" : ""}`}
-            onClick={() => setFilterType("all")}
-          >
-            <span className="legend-dot all-indicator"></span>
-            <span className="legend-text">All Activity</span>
-          </div>
 
-          <div
-            className={`legend-item ${filterType === "completed" ? "active-legend" : ""}`}
-            onClick={() => setFilterType(filterType === "completed" ? "all" : "completed")}
-          >
-            <span className="legend-dot completed" style={{ background: "#16a34a" }}></span>
-            <span className="legend-text">Green (Present / Attended)</span>
-            <span className="legend-count">({visits.length})</span>
-          </div>
-
-          <div
-            className={`legend-item ${filterType === "missed" ? "active-legend" : ""}`}
-            onClick={() => setFilterType(filterType === "missed" ? "all" : "missed")}
-          >
-            <span className="legend-dot missed-indicator" style={{ background: "#ef4444" }}></span>
-            <span className="legend-text">Red (Absent / Missed)</span>
-            <span className="legend-count">({missingDaysCount})</span>
-          </div>
-
-          <div
-            className={`legend-item ${filterType === "followup" ? "active-legend" : ""}`}
-            onClick={() => setFilterType(filterType === "followup" ? "all" : "followup")}
-          >
-            <span className="legend-dot upcoming followup-pulse-dot"></span>
-            <span className="legend-text">Next Follow-Up</span>
-            <span className="legend-count">
-              {nextFollowUpKey ? `(🔔 ${nextFollowUpKey})` : "(0)"}
-            </span>
-          </div>
-
-          <div className="legend-item" onClick={handleToday}>
-            <span className="legend-dot today-indicator"></span>
-            <span className="legend-text">Today ({todayKey})</span>
-          </div>
-        </div>
-      </div>
 
       {/* 4. SEPARATE CARD C: MONTH CALENDAR GRID & DAILY DRILL-DOWN */}
       <div className="cal-section-panel calendar-panel" style={{ background: "#ffffff", border: "1.5px solid #cbd5e1", borderRadius: "14px", padding: "16px 18px", margin: "14px 0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>

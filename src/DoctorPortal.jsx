@@ -31,6 +31,7 @@ import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./useTheme";
 import { PatientAvatar } from "./PatientAvatar";
 import PatientVisitCalendar from "./PatientVisitCalendar";
+import ClinicLeafletMap, { CLINIC_SHARE_URL, CLINIC_EXACT_LOCATION } from "./ClinicLeafletMap";
 
 
 // =============================================================================
@@ -472,10 +473,11 @@ export default function DoctorPortal({ onClose, themeProps }) {
 
   // Clinic Map Location State
   const DEFAULT_CLINIC_LOCATION = {
-    address: "Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)",
-    lat: 25.1337,
-    lng: 82.5644,
-    name: "Vindhy Physio & Rehab Center"
+    address: CLINIC_EXACT_LOCATION.address,
+    lat: CLINIC_EXACT_LOCATION.lat,
+    lng: CLINIC_EXACT_LOCATION.lng,
+    name: CLINIC_EXACT_LOCATION.name,
+    mapUrl: CLINIC_SHARE_URL
   };
 
   const [clinicLocation, setClinicLocation] = useState(() => {
@@ -5793,7 +5795,7 @@ _(Saved in patient clinic records)_`;
                       Live Clinic Marker Preview: {clinicLocation.address} ({clinicLocation.lat}, {clinicLocation.lng})
                     </strong>
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${clinicLocation.lat},${clinicLocation.lng}`}
+                      href={clinicLocation.mapUrl || CLINIC_SHARE_URL}
                       target="_blank"
                       rel="noreferrer"
                       className="text-link-btn"
@@ -5802,18 +5804,13 @@ _(Saved in patient clinic records)_`;
                       ↗ View on Google Maps
                     </a>
                   </div>
-                  <iframe
-                    title="Clinic Location Map Preview"
-                    style={{
-                      width: "100%",
-                      height: "230px",
-                      borderRadius: "10px",
-                      border: "1.5px solid var(--line)",
-                      display: "block"
-                    }}
-                    loading="lazy"
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(clinicLocation.lng) - 0.02}%2C${parseFloat(clinicLocation.lat) - 0.02}%2C${parseFloat(clinicLocation.lng) + 0.02}%2C${parseFloat(clinicLocation.lat) + 0.02}&layer=mapnik&marker=${clinicLocation.lat}%2C${clinicLocation.lng}`}
-                  ></iframe>
+                  <ClinicLeafletMap
+                    lat={clinicLocation.lat}
+                    lng={clinicLocation.lng}
+                    address={clinicLocation.address}
+                    height="230px"
+                    autoOpenPopup={true}
+                  />
                 </div>
               </div>
             </div>

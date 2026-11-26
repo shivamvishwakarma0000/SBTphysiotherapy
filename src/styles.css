@@ -2312,6 +2312,42 @@ textarea:focus {
   border-radius: 10px;
 }
 
+.clinic-leaflet-container {
+  isolation: isolate;
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.clinic-leaflet-container .leaflet-pane {
+  z-index: 2 !important;
+}
+
+.clinic-leaflet-container .leaflet-control {
+  z-index: 5 !important;
+}
+
+.clinic-leaflet-container .leaflet-popup {
+  z-index: 10 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+  padding: 2px !important;
+}
+
+.leaflet-popup-content {
+  margin: 10px 12px !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-custom-clinic-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
 .footer-map-link {
   display: inline-block;
   margin-top: 8px;

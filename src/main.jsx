@@ -8,10 +8,11 @@ import { api } from "./apiService";
 import { useTheme } from "./useTheme";
 import ThemeToggle from "./ThemeToggle";
 import AppUpdateNotifier from "./AppUpdateNotifier";
+import ClinicLeafletMap, { CLINIC_SHARE_URL, CLINIC_EXACT_LOCATION } from "./ClinicLeafletMap";
 
 const phonePrimary = "9793093316";
 const phoneWhatsApp = "9793093316";
-const clinicAddress = "Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)";
+const clinicAddress = "Vindhy Physiotherapy, Amravati Chauraha, Kantit, Vindhyachal, Mirzapur, Uttar Pradesh 231001";
 
 const navItems = [
   ["Home", "#home"],
@@ -1148,11 +1149,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
       const saved = localStorage.getItem("vindhy_clinic_location");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return {
-      address: "Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)",
-      lat: 25.1337,
-      lng: 82.5644
-    };
+    return CLINIC_EXACT_LOCATION;
   });
 
   useEffect(() => {
@@ -1163,9 +1160,8 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
     return () => window.removeEventListener("clinic-location-updated", handleLocUpdate);
   }, []);
 
-  const lat = parseFloat(clinicLoc.lat) || 25.1337;
-  const lng = parseFloat(clinicLoc.lng) || 82.5644;
-  const mapSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.02}%2C${lat - 0.02}%2C${lng + 0.02}%2C${lat + 0.02}&layer=mapnik&marker=${lat}%2C${lng}`;
+  const lat = parseFloat(clinicLoc.lat) || CLINIC_EXACT_LOCATION.lat;
+  const lng = parseFloat(clinicLoc.lng) || CLINIC_EXACT_LOCATION.lng;
 
   return (
     <footer id="contact" className="site-footer">
@@ -1274,14 +1270,14 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
         </div>
         <div className="footer-col map-col">
           <h3>Clinic Location</h3>
-          <iframe
-            className="footer-map-frame"
-            title="Vindhyachal Mirzapur clinic location map"
-            loading="lazy"
-            src={mapSrc}
-          ></iframe>
+          <ClinicLeafletMap
+            lat={lat}
+            lng={lng}
+            address={clinicLoc.address || clinicAddress}
+            height="150px"
+          />
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+            href={clinicLoc.shareUrl || clinicLoc.mapUrl || CLINIC_SHARE_URL}
             target="_blank"
             rel="noreferrer"
             className="footer-map-link"

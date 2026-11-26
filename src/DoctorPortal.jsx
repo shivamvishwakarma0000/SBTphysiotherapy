@@ -260,7 +260,13 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const { themePreference, setTheme, isDark } = theme;
   const [token, setToken] = useState(() => localStorage.getItem("doctor_token") || "");
   const [doctorInfo, setDoctorInfo] = useState(null);
-  const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard", "new-patient", "patients", "today", "enquiries", "settings"
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      return sessionStorage.getItem("vindhy_doctor_active_tab") || "dashboard";
+    } catch (e) {
+      return "dashboard";
+    }
+  }); // "dashboard", "new-patient", "patients", "today", "enquiries", "settings"
   const [stats, setStats] = useState({
     totalPatients: 0,
     todayVisitsCount: 0,
@@ -298,7 +304,33 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const [todayViewMode, setTodayViewMode] = useState("calendar"); // "calendar" or "queue"
   const [doctorProfileVisitMode, setDoctorProfileVisitMode] = useState("timeline"); // "timeline" by default as requested, or "calendar"
   const [enquiries, setEnquiries] = useState([]);
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("vindhy_doctor_selected_patient");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Preserve Doctor Portal active tab and selected patient across refreshes
+  useEffect(() => {
+    try {
+      if (activeTab) {
+        sessionStorage.setItem("vindhy_doctor_active_tab", activeTab);
+      }
+    } catch (e) {}
+  }, [activeTab]);
+
+  useEffect(() => {
+    try {
+      if (selectedPatient) {
+        sessionStorage.setItem("vindhy_doctor_selected_patient", JSON.stringify(selectedPatient));
+      } else {
+        sessionStorage.removeItem("vindhy_doctor_selected_patient");
+      }
+    } catch (e) {}
+  }, [selectedPatient]);
   const [patientVisits, setPatientVisits] = useState([]);
   const [followupFilter, setFollowupFilter] = useState("all"); // "all", "pending", "doctor", "self-booked", "attended"
   const [followupSearchQuery, setFollowupSearchQuery] = useState("");
@@ -8075,6 +8107,12 @@ _(Saved in patient clinic records)_`;
                 className="more-sheet-item"
                 onClick={() => {
                   setShowDoctorMore(false);
+                  try {
+                    localStorage.setItem("active_portal", "doctor");
+                    window.location.hash = "doctor";
+                    if (activeTab) sessionStorage.setItem("vindhy_doctor_active_tab", activeTab);
+                    if (selectedPatient) sessionStorage.setItem("vindhy_doctor_selected_patient", JSON.stringify(selectedPatient));
+                  } catch (e) {}
                   if ('serviceWorker' in navigator) {
                     navigator.serviceWorker.getRegistrations().then(regs => {
                       for (let reg of regs) reg.update();
@@ -8098,7 +8136,9 @@ _(Saved in patient clinic records)_`;
                   e.stopPropagation();
                   setShowDoctorMore(false);
                   try {
-                    localStorage.removeItem("active_portal");
+                    localStorage.setItem("active_portal", "closed");
+                    sessionStorage.removeItem("vindhy_doctor_active_tab");
+                    sessionStorage.removeItem("vindhy_doctor_selected_patient");
                     if (window.location.hash === "#doctor") {
                       history.replaceState(null, "", window.location.pathname);
                     }

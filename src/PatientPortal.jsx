@@ -28,7 +28,22 @@ export default function PatientPortal({ onClose, themeProps }) {
   const [patientToken, setPatientToken] = useState(() => patientApi.getStoredToken() || "");
   const [patientProfile, setPatientProfile] = useState(() => patientApi.getStoredPatient() || null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard", "appointments", "visits", "receipts", "treatment", "exercises", "security"
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      return sessionStorage.getItem("vindhy_patient_active_tab") || "dashboard";
+    } catch (e) {
+      return "dashboard";
+    }
+  }); // "dashboard", "appointments", "visits", "receipts", "treatment", "exercises", "security"
+
+  // Preserve Patient Portal active tab across refreshes
+  useEffect(() => {
+    try {
+      if (activeTab) {
+        sessionStorage.setItem("vindhy_patient_active_tab", activeTab);
+      }
+    } catch (e) {}
+  }, [activeTab]);
   const [visitViewMode, setVisitViewMode] = useState("timeline"); // default view is "timeline" as required
   const [recordsData, setRecordsData] = useState({
     visits: [],
@@ -2924,6 +2939,11 @@ export default function PatientPortal({ onClose, themeProps }) {
                 className="more-sheet-item"
                 onClick={() => {
                   setShowMoreSheet(false);
+                  try {
+                    localStorage.setItem("active_portal", "patient");
+                    window.location.hash = "patient";
+                    if (activeTab) sessionStorage.setItem("vindhy_patient_active_tab", activeTab);
+                  } catch (e) {}
                   if ('serviceWorker' in navigator) {
                     navigator.serviceWorker.getRegistrations().then(regs => {
                       for (let reg of regs) reg.update();
@@ -2947,7 +2967,8 @@ export default function PatientPortal({ onClose, themeProps }) {
                   e.stopPropagation();
                   setShowMoreSheet(false);
                   try {
-                    localStorage.removeItem("active_portal");
+                    localStorage.setItem("active_portal", "closed");
+                    sessionStorage.removeItem("vindhy_patient_active_tab");
                     if (window.location.hash === "#patient") {
                       history.replaceState(null, "", window.location.pathname);
                     }

@@ -348,6 +348,9 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, th
                 }}
                 onClick={() => {
                   setMobileMenuOpen(false);
+                  try {
+                    localStorage.setItem("active_portal", "closed");
+                  } catch (e) {}
                   if (typeof window !== "undefined") {
                     if ("caches" in window) {
                       caches.keys().then((names) => {
@@ -1665,19 +1668,19 @@ function App() {
     const hash = window.location.hash;
     const path = window.location.pathname;
     const saved = localStorage.getItem("active_portal");
-    return hash === "#doctor" || path.startsWith("/doctor") || saved === "doctor";
+    if (hash === "#doctor" || path.startsWith("/doctor")) return true;
+    if (hash === "#patient" || path.startsWith("/patient")) return false;
+    return saved === "doctor";
   });
   const [showPatientPortal, setShowPatientPortal] = useState(() => {
     if (typeof window === "undefined") return false;
     const hash = window.location.hash;
     const path = window.location.pathname;
     const saved = localStorage.getItem("active_portal");
-    return (
-      hash === "#patient" ||
-      path.startsWith("/patient") ||
-      saved === "patient" ||
-      !!localStorage.getItem("vindhy_patient_token")
-    );
+    if (hash === "#doctor" || path.startsWith("/doctor")) return false;
+    if (hash === "#patient" || path.startsWith("/patient")) return true;
+    if (saved === "doctor" || saved === "closed") return false;
+    return saved === "patient";
   });
   const [showAutoEnquiry, setShowAutoEnquiry] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);

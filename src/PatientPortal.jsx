@@ -1101,9 +1101,52 @@ export default function PatientPortal({ onClose, themeProps }) {
                   fontSize: "13.5px",
                   fontWeight: "700",
                   color: "#ffffff",
-                  border: "1px solid rgba(255, 255, 255, 0.35)"
+                  border: "1px solid rgba(255, 255, 255, 0.35)",
+                  marginBottom: "16px"
                 }}>
                   🩺 Certified Recovered by Dr. Satyam Vishwakarma • Vindhy Physiotherapy &amp; Rehab Center
+                </div>
+
+                <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap", marginTop: "4px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("receipts")}
+                    style={{
+                      background: "#ffffff",
+                      color: "#065f46",
+                      border: "none",
+                      padding: "10px 18px",
+                      borderRadius: "10px",
+                      fontWeight: "800",
+                      fontSize: "13.5px",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    🧾 View All My Receipts &amp; Slips ({recordsData?.visits?.length || 0})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("timeline")}
+                    style={{
+                      background: "rgba(255, 255, 255, 0.2)",
+                      color: "#ffffff",
+                      border: "1.5px solid rgba(255, 255, 255, 0.6)",
+                      padding: "10px 18px",
+                      borderRadius: "10px",
+                      fontWeight: "800",
+                      fontSize: "13.5px",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    📅 View Full Recovery Timeline
+                  </button>
                 </div>
               </div>
             )}

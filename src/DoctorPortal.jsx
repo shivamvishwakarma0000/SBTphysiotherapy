@@ -760,7 +760,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     complaint: "",
     referredBy: "Self / Walk-in",
     visitTime: getNowTimeStr(),
-    fee: "500"
+    fee: "200"
   });
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState("");
@@ -1517,7 +1517,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
         referredBy: "Self / Walk-in",
         visitTime: getNowTimeStr(),
         visitTimeSelect: "Custom",
-        fee: "500"
+        fee: "200"
       });
 
       // Switch to Waiting Queue
@@ -1545,7 +1545,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     const tomorrowStr = tomorrow.toISOString().slice(0, 10);
 
     // Auto-calculate fee based on package if active:
-    let defaultFee = "500";
+    let defaultFee = "200";
     if (patient.packagePerSessionFee) {
       defaultFee = String(patient.packagePerSessionFee);
     } else if (patient.isDailyCourse && patient.packageTotalPrice && patient.dailyCourseTotalDays) {
@@ -1553,7 +1553,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     } else if (patient.isDailyCourse) {
       defaultFee = "200"; // default daily session rate under daily rehab course
     } else if (patient.lastFee) {
-      defaultFee = String(patient.lastFee).replace(/[^0-9]/g, "") || "500";
+      defaultFee = String(patient.lastFee).replace(/[^0-9]/g, "") || "200";
     }
 
     setNewVisitForm({
@@ -1581,7 +1581,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
       const initialConcern = patient.lastDiagnosis || patient.firstVisitReason || patient.reasonForVisit || "Physiotherapy Rehabilitation";
       const protocol = generateDailyPhysioProtocol(initialConcern, nextVisitNum);
 
-      let defaultFee = "500";
+      let defaultFee = "200";
       if (patient.packagePerSessionFee) {
         defaultFee = String(patient.packagePerSessionFee);
       } else if (patient.isDailyCourse && patient.packageTotalPrice && patient.dailyCourseTotalDays) {
@@ -1589,7 +1589,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
       } else if (patient.isDailyCourse) {
         defaultFee = "200";
       } else if (patient.lastFee) {
-        defaultFee = String(patient.lastFee).replace(/[^0-9]/g, "") || "500";
+        defaultFee = String(patient.lastFee).replace(/[^0-9]/g, "") || "200";
       }
 
       const todayStr = new Date().toISOString().slice(0, 10);
@@ -1665,7 +1665,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     setActiveConsultPatient(patient);
     const initialFee = patient.lastFee
       ? String(patient.lastFee).replace(/[^0-9]/g, "")
-      : (patient.packagePerSessionFee ? String(patient.packagePerSessionFee) : (patient.fee ? String(patient.fee).replace(/[^0-9]/g, "") : "500"));
+      : (patient.packagePerSessionFee ? String(patient.packagePerSessionFee) : (patient.fee ? String(patient.fee).replace(/[^0-9]/g, "") : "200"));
 
     setConsultForm({
       visitDate: new Date().toISOString().slice(0, 10),
@@ -1676,7 +1676,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
       duration: patient.duration || "1 to 2 Weeks",
       diagnosis: patient.firstVisitReason ? `${patient.firstVisitReason} (Active Rehabilitation)` : "Lumbar Spondylosis (L4-L5 Disc Bulge)",
       treatmentNotes: "Electrotherapy (IFT) + Targeted manual decompression + Isometric strengthening exercises.",
-      fee: initialFee || "500",
+      fee: initialFee || "200",
       followUpDate: "",
       followUpTime: ""
     });
@@ -1938,7 +1938,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     try {
       const chosenFee = patient.lastFee
         ? (String(patient.lastFee).startsWith("₹") ? patient.lastFee : `₹${String(patient.lastFee).replace(/[^0-9]/g, "")}`)
-        : (patient.packagePerSessionFee ? `₹${patient.packagePerSessionFee}` : (patient.fee ? `₹${String(patient.fee).replace(/[^0-9]/g, "")}` : "₹500"));
+        : (patient.packagePerSessionFee ? `₹${patient.packagePerSessionFee}` : (patient.fee ? `₹${String(patient.fee).replace(/[^0-9]/g, "")}` : "₹200"));
 
       await api.finalizeConsultation(patient.patientId, {
         reason: patient.firstVisitReason || "Physiotherapy Consultation",
@@ -2295,13 +2295,24 @@ export default function DoctorPortal({ onClose, themeProps }) {
     if (!visit) return;
     setEditingReceiptVisit(visit);
     setEditReceiptError("");
+
+    // Resolve existing fee with clean fallback to 200 (not 500)
+    let initialFee = "200";
+    if (visit.fee !== undefined && visit.fee !== null && String(visit.fee).trim() !== "") {
+      initialFee = cleanFeeAmount(visit.fee, "200");
+    } else if (selectedPatient && selectedPatient.lastFee) {
+      initialFee = cleanFeeAmount(selectedPatient.lastFee, "200");
+    } else if (selectedPatient && selectedPatient.packagePerSessionFee) {
+      initialFee = String(selectedPatient.packagePerSessionFee);
+    }
+
     setEditReceiptForm({
       visitNumber: parseInt(String(visit.visitNumber || 1).replace(/\D/g, ""), 10) || 1,
       date: visit.date || new Date().toISOString().slice(0, 10),
       time: visit.time || "10:30 AM",
-      fee: cleanFeeAmount(visit.fee, "500"),
-      reason: visit.reason || "",
-      diagnosis: visit.diagnosis || "",
+      fee: initialFee,
+      reason: visit.reason || visit.treatmentGiven || "",
+      diagnosis: visit.diagnosis || selectedPatient?.lastDiagnosis || selectedPatient?.firstVisitReason || "",
       treatmentNotes: visit.treatmentNotes || "",
       followUpDate: visit.followUpDate || "",
       followUpTime: visit.followUpTime || (visit.followUpDate ? "10:30 AM" : "")
@@ -2321,33 +2332,75 @@ export default function DoctorPortal({ onClose, themeProps }) {
     setEditReceiptSaving(true);
     setEditReceiptError("");
     try {
+      const cleanFeeNum = cleanFeeAmount(editReceiptForm.fee, "200");
+      const isPkgOrFree = cleanFeeNum === "0" || String(editReceiptForm.fee).toLowerCase().includes("pkg") || String(editReceiptForm.fee).toLowerCase().includes("package");
+      const feeFormatted = isPkgOrFree ? "₹0" : `₹${cleanFeeNum}`;
+
       const updates = {
         visitNumber: parsedVisitNum,
         date: editReceiptForm.date,
         time: editReceiptForm.time,
-        fee: `₹${cleanFeeAmount(editReceiptForm.fee, "500")}`,
-        reason: editReceiptForm.reason,
-        diagnosis: editReceiptForm.diagnosis,
-        treatmentNotes: editReceiptForm.treatmentNotes,
-        followUpDate: editReceiptForm.followUpDate,
-        followUpTime: editReceiptForm.followUpTime
+        fee: feeFormatted,
+        reason: editReceiptForm.reason || "Physiotherapy Treatment",
+        diagnosis: editReceiptForm.diagnosis || "Under Active Physiotherapy Management",
+        treatmentNotes: editReceiptForm.treatmentNotes || "",
+        followUpDate: editReceiptForm.followUpDate || "",
+        followUpTime: editReceiptForm.followUpTime || (editReceiptForm.followUpDate ? "10:30 AM" : "")
       };
 
       const res = await api.updateVisit(editingReceiptVisit.visitId, updates);
       if (res && res.ok) {
+        const updatedV = res.visit || { ...editingReceiptVisit, ...updates };
+
+        // 1. Update patientVisits state immediately
+        setPatientVisits(prev => prev.map(v => v.visitId === editingReceiptVisit.visitId ? updatedV : v));
+
+        // 2. Update activeReceipt if open
         if (activeReceipt && activeReceipt.visit?.visitId === editingReceiptVisit.visitId) {
           setActiveReceipt({
             patient: activeReceipt.patient || selectedPatient,
-            visit: { ...editingReceiptVisit, ...updates }
+            visit: updatedV
           });
         }
+
+        // 3. Update selectedPatient in local state
+        if (selectedPatient) {
+          setSelectedPatient(prev => prev ? {
+            ...prev,
+            lastFee: feeFormatted,
+            lastDiagnosis: updates.diagnosis,
+            lastVisitDate: updates.date,
+            followUpDate: updates.followUpDate || prev.followUpDate,
+            followUpTime: updates.followUpTime || prev.followUpTime
+          } : prev);
+        }
+
+        // 4. Update patients list
+        setPatients(prev => prev.map(p => {
+          if (selectedPatient && p.patientId === selectedPatient.patientId) {
+            return {
+              ...p,
+              lastFee: feeFormatted,
+              lastDiagnosis: updates.diagnosis,
+              lastVisitDate: updates.date,
+              followUpDate: updates.followUpDate || p.followUpDate,
+              followUpTime: updates.followUpTime || p.followUpTime
+            };
+          }
+          return p;
+        }));
+
         setEditingReceiptVisit(null);
+        setLeadActionToast(`✅ Receipt #${parsedVisitNum} successfully updated! Changes saved everywhere.`);
+        setTimeout(() => setLeadActionToast(""), 4000);
+
         if (selectedPatient) {
           await openPatientProfile(selectedPatient.patientId);
         }
         await fetchStats();
         await fetchPatients();
         await fetchTodayVisits();
+        await fetchAllVisits();
       } else {
         setEditReceiptError(res?.error || "Failed to update receipt.");
       }
@@ -3348,20 +3401,39 @@ _(Saved in patient clinic records)_`;
                       });
                     }}
                   >
-                    <option value="Spine & Back Pain">Spine & Back Pain</option>
-                    <option value="Knee & Joint Arthritis">Knee & Joint Arthritis</option>
-                    <option value="Neck & Cervical Spondylosis">Neck & Cervical Spondylosis</option>
-                    <option value="Cup Therapy">Cup Therapy / Cupping</option>
-                    <option value="Neuro Rehabilitation">Neuro Rehabilitation</option>
-                    <option value="Paralysis Rehabilitation">Paralysis Rehabilitation</option>
-                    <option value="Stroke Recovery">Stroke Recovery</option>
-                    <option value="CP (Child) Therapy">CP (Child) Therapy / Cerebral Palsy</option>
-                    <option value="Sports Injury Rehab">Sports Injury Rehab</option>
-                    <option value="Post-Surgical Rehab">Post-Surgical Rehab</option>
-                    <option value="Frozen Shoulder">Frozen Shoulder</option>
-                    <option value="Sciatica & Nerve Pain">Sciatica & Nerve Pain</option>
-                    <option value="Bell's Palsy / Facial Palsy">Bell's Palsy / Facial Palsy</option>
-                    <option value="General Physiotherapy">General Physiotherapy</option>
+                    <optgroup label="Spine & Lower Back">
+                      <option value="Spine & Back Pain">Spine & Lower Back Pain (L4-L5 / Disc Bulge)</option>
+                      <option value="Sciatica & Nerve Pain">Sciatica & Shooting Leg Nerve Pain</option>
+                      <option value="Ankylosing Spondylitis">Ankylosing Spondylitis (Stiff Spine)</option>
+                      <option value="Spinal Canal Stenosis">Spinal Canal Stenosis / Spondylolisthesis</option>
+                    </optgroup>
+                    <optgroup label="Neck, Shoulder & Upper Limb">
+                      <option value="Neck & Cervical Spondylosis">Neck & Cervical Spondylosis (Radiculopathy)</option>
+                      <option value="Frozen Shoulder">Frozen Shoulder (Adhesive Capsulitis)</option>
+                      <option value="Tennis Elbow">Tennis Elbow / Golfer's Elbow</option>
+                      <option value="Carpal Tunnel Syndrome">Carpal Tunnel Syndrome / Wrist Pain</option>
+                    </optgroup>
+                    <optgroup label="Knee, Hip & Lower Limb">
+                      <option value="Knee & Joint Arthritis">Knee Osteoarthritis & Joint Arthritis</option>
+                      <option value="Heel Pain / Plantar Fasciitis">Heel Pain / Plantar Fasciitis / Calcaneal Spur</option>
+                      <option value="Hip Joint Pain">Hip Joint Pain / Avascular Necrosis (AVN)</option>
+                      <option value="Ankle Sprain & Ligament Injury">Ankle Sprain & Ligament Injury</option>
+                    </optgroup>
+                    <optgroup label="Neurological & Paralysis">
+                      <option value="Neuro Rehabilitation">Neuro Rehabilitation (Spinal / Brain)</option>
+                      <option value="Paralysis Rehabilitation">Paralysis & Hemiplegia Rehabilitation</option>
+                      <option value="Stroke Recovery">Stroke Recovery & Motor Re-education</option>
+                      <option value="Bell's Palsy / Facial Palsy">Bell's Palsy / Facial Nerve Paralysis</option>
+                      <option value="CP (Child) Therapy">CP (Child) Therapy / Cerebral Palsy</option>
+                    </optgroup>
+                    <optgroup label="Specialized Care & Rehabilitation">
+                      <option value="Cup Therapy">Cup Therapy (Hijama / Dry & Wet Cupping)</option>
+                      <option value="Sports Injury Rehab">Sports Injury Rehab (ACL / Meniscus)</option>
+                      <option value="Post-Surgical Rehab">Post-Surgical Rehab & Fracture Stiffness</option>
+                      <option value="Muscle Spasm & Trigger Points">Muscle Spasm & Myofascial Trigger Points</option>
+                      <option value="Posture Correction">Posture Correction & Ergonomic Strain</option>
+                      <option value="General Physiotherapy">General Physiotherapy & Pain Relief</option>
+                    </optgroup>
                     <option value="Custom">✏️ Other / Custom Problem...</option>
                   </select>
                 </label>
@@ -4000,8 +4072,18 @@ _(Saved in patient clinic records)_`;
                 <tbody>
                   {filteredPatients.map(p => {
                     const isWaiting = p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0;
+                    const isCompleted = (p.status || "").toLowerCase().includes("complete");
+
                     return (
-                      <tr key={p.patientId}>
+                      <tr
+                        key={p.patientId}
+                        style={{ cursor: "pointer" }}
+                        onClick={(e) => {
+                          // If clicking inside a button, don't trigger row click
+                          if (e.target.closest("button") || e.target.closest("a")) return;
+                          openPatientProfile(p.patientId);
+                        }}
+                      >
                         <td><span className="patient-id-badge">{p.patientId}</span></td>
                         <td><strong>{p.name}</strong></td>
                         <td>{p.age}y / {p.gender}</td>
@@ -4009,8 +4091,8 @@ _(Saved in patient clinic records)_`;
                         <td>{p.address || "Vindhyachal"}</td>
                         <td>{p.firstVisitReason}</td>
                         <td>
-                          <span className={`status-badge ${isWaiting ? 'waiting-for-doctor' : (p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`}>
-                            {isWaiting ? "⏳ Waiting for Doctor" : (p.status || "Active")}
+                          <span className={`status-badge ${isWaiting ? 'waiting-for-doctor' : isCompleted ? 'completed-badge' : (p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`} style={isCompleted ? { background: "#dcfce7", color: "#15803d", border: "1px solid #86efac", fontWeight: "800" } : {}}>
+                            {isWaiting ? "⏳ Waiting for Doctor" : isCompleted ? "🎉 Completed & Recovered" : (p.status || "Active")}
                           </span>
                         </td>
                         <td>
@@ -4036,6 +4118,63 @@ _(Saved in patient clinic records)_`;
                                 title="Cancel / Delete intake record"
                               >
                                 ✕ Delete
+                              </button>
+                            </div>
+                          ) : isCompleted ? (
+                            <div className="patient-table-actions-grid" style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                              <button
+                                className="table-action-btn btn-profile"
+                                style={{ background: "#0284c7", color: "#ffffff", border: "none", fontWeight: "800", flex: "1 1 120px" }}
+                                onClick={() => openPatientProfile(p.patientId)}
+                                title="View all completed visits, receipts, and clinical history"
+                              >
+                                📜 Profile & Receipts
+                              </button>
+                              <button
+                                className="table-action-btn btn-whatsapp"
+                                onClick={() => {
+                                  handleWhatsAppDirectShare({
+                                    patient: p,
+                                    visit: {
+                                      visitId: `VST-${p.patientId.replace("VPR-2026-", "")}-1`,
+                                      patientId: p.patientId,
+                                      patientName: p.name,
+                                      phone: p.phone,
+                                      visitNumber: p.totalVisits || 1,
+                                      date: cleanDateOnly(p.lastVisitDate || p.registrationDate),
+                                      time: "10:00 AM",
+                                      reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
+                                      complaint: p.firstVisitReason || "Consultation",
+                                      diagnosis: p.lastDiagnosis || p.firstVisitReason || "Under Evaluation",
+                                      treatmentNotes: "Treatment course completed successfully.",
+                                      followUpDate: "None Required / SOS",
+                                      fee: p.lastFee || "₹200",
+                                      status: "Completed",
+                                      doctor: "Dr. Satyam Vishwakarma"
+                                    }
+                                  });
+                                }}
+                                title="Send Receipt PDF to WhatsApp"
+                              >
+                                💬 WhatsApp
+                              </button>
+                              <button
+                                className="table-action-btn"
+                                style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", fontWeight: "800" }}
+                                onClick={() => {
+                                  setSelectedPatient(p);
+                                  handleReactivatePatient();
+                                }}
+                                title="Reactivate treatment for this patient"
+                              >
+                                🔄 Reactivate
+                              </button>
+                              <button
+                                className="table-action-btn btn-delete"
+                                onClick={() => handleDeletePatient(p.patientId, p.name)}
+                                title="Permanently delete patient record"
+                              >
+                                ✕
                               </button>
                             </div>
                           ) : (
@@ -4079,7 +4218,7 @@ _(Saved in patient clinic records)_`;
                                       diagnosis: p.lastDiagnosis || p.firstVisitReason || "Under Evaluation",
                                       treatmentNotes: "Physical evaluation & physiotherapy management.",
                                       followUpDate: "As advised by doctor",
-                                      fee: p.lastFee || "₹500",
+                                      fee: p.lastFee || "₹200",
                                       status: "Completed",
                                       doctor: "Dr. Satyam Vishwakarma"
                                     }
@@ -4115,16 +4254,26 @@ _(Saved in patient clinic records)_`;
             <div className="mobile-patient-cards hide-on-desktop">
               {filteredPatients.map(p => {
                 const isWaiting = p.status === "Waiting for Doctor" || (p.totalVisits || 0) === 0;
+                const isCompleted = (p.status || "").toLowerCase().includes("complete");
+
                 return (
-                  <article className="mobile-patient-card" key={p.patientId}>
+                  <article
+                    className="mobile-patient-card"
+                    key={p.patientId}
+                    style={{ cursor: "pointer" }}
+                    onClick={(e) => {
+                      if (e.target.closest("button") || e.target.closest("a")) return;
+                      openPatientProfile(p.patientId);
+                    }}
+                  >
                     <div className="mobile-patient-top">
                       <div>
                         <span className="patient-id-badge">{p.patientId}</span>
                         <h3 className="mobile-patient-name" style={{ color: "#0f172a" }}>{p.name || p.patientName || "Patient"}</h3>
                         <p className="mobile-patient-sub" style={{ color: "#0f172a" }}>{p.age}y • {p.gender} • +91 {p.phone}</p>
                       </div>
-                      <span className={`status-badge ${isWaiting ? 'waiting-for-doctor' : (p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`}>
-                        {isWaiting ? "⏳ Waiting for Doctor" : (p.status || "Active")}
+                      <span className={`status-badge ${isWaiting ? 'waiting-for-doctor' : isCompleted ? 'completed-badge' : (p.status || "Active").toLowerCase().replace(/\s+/g, '-')}`} style={isCompleted ? { background: "#dcfce7", color: "#15803d", border: "1px solid #86efac", fontWeight: "800" } : {}}>
+                        {isWaiting ? "⏳ Waiting for Doctor" : isCompleted ? "🎉 Completed & Recovered" : (p.status || "Active")}
                       </span>
                     </div>
                     <div className="mobile-patient-info">
@@ -4147,6 +4296,63 @@ _(Saved in patient clinic records)_`;
                         >
                           ✕
                         </button>
+                      </div>
+                    ) : isCompleted ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
+                        <button
+                          className="table-action-btn btn-profile"
+                          style={{ width: "100%", padding: "9px 12px", background: "#0284c7", color: "#ffffff", fontWeight: "800", borderRadius: "8px", border: "none", fontSize: "13px" }}
+                          onClick={() => openPatientProfile(p.patientId)}
+                        >
+                          📜 View All Receipts & Clinical History
+                        </button>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            className="table-action-btn btn-whatsapp"
+                            style={{ flex: 1, padding: "8px 10px", fontSize: "12px", fontWeight: "700" }}
+                            onClick={() => {
+                              handleWhatsAppDirectShare({
+                                patient: p,
+                                visit: {
+                                  visitId: `VST-${p.patientId.replace("VPR-2026-", "")}-1`,
+                                  patientId: p.patientId,
+                                  patientName: p.name,
+                                  phone: p.phone,
+                                  visitNumber: p.totalVisits || 1,
+                                  date: cleanDateOnly(p.lastVisitDate || p.registrationDate),
+                                  time: "10:00 AM",
+                                  reason: p.firstVisitReason || "Physiotherapy Rehabilitation",
+                                  complaint: p.firstVisitReason || "Consultation",
+                                  diagnosis: p.lastDiagnosis || p.firstVisitReason || "Under Evaluation",
+                                  treatmentNotes: "Treatment course completed successfully.",
+                                  followUpDate: "None Required / SOS",
+                                  fee: p.lastFee || "₹200",
+                                  status: "Completed",
+                                  doctor: "Dr. Satyam Vishwakarma"
+                                }
+                              });
+                            }}
+                          >
+                            💬 WhatsApp
+                          </button>
+                          <button
+                            className="table-action-btn"
+                            style={{ flex: 1, padding: "8px 10px", fontSize: "12px", fontWeight: "800", background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", borderRadius: "8px" }}
+                            onClick={() => {
+                              setSelectedPatient(p);
+                              handleReactivatePatient();
+                            }}
+                          >
+                            🔄 Reactivate
+                          </button>
+                          <button
+                            className="table-action-btn btn-delete"
+                            style={{ padding: "8px 12px", borderRadius: "8px" }}
+                            onClick={() => handleDeletePatient(p.patientId, p.name)}
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="mobile-patient-actions-2x2">
@@ -8284,12 +8490,12 @@ _(Saved in patient clinic records)_`;
                   <label style={{ display: "block", fontSize: "12.5px", fontWeight: "800", color: "#065f46", margin: 0 }}>
                     💰 Consultation / Session Fee (₹)
                   </label>
-                  <span style={{ fontSize: "11.5px", color: "#047857", fontWeight: "700" }}>Tap to select</span>
+                  <span style={{ fontSize: "11.5px", color: "#047857", fontWeight: "700" }}>Default: ₹200 (Tap to change)</span>
                 </div>
 
                 <div style={{ display: "flex", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
                   {[
-                    { val: "200", label: "₹200" },
+                    { val: "200", label: "₹200 (Default)" },
                     { val: "300", label: "₹300" },
                     { val: "500", label: "₹500" },
                     { val: "700", label: "₹700" },
@@ -8342,11 +8548,106 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              {/* Treatment Reason / Focus */}
+              {/* Diagnosis / Clinical Condition */}
               <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
-                  🩺 Treatment Reason / Clinical Service
-                </label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", flexWrap: "wrap", gap: "6px" }}>
+                  <label style={{ margin: 0, fontSize: "12px", fontWeight: "700", color: "#475569" }}>
+                    🩺 Clinical Diagnosis / Condition
+                  </label>
+                  <span style={{ fontSize: "11px", color: "#0284c7" }}>1-Tap quick condition:</span>
+                </div>
+                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "6px" }}>
+                  {[
+                    "Spine & Back Pain",
+                    "Sciatica & Nerve Pain",
+                    "Cervical Spondylosis",
+                    "Frozen Shoulder",
+                    "Knee Osteoarthritis",
+                    "Cupping Therapy",
+                    "Stroke / Paralysis Rehab",
+                    "CP Child Therapy",
+                    "Sports Injury",
+                    "Bell's Palsy",
+                    "Post-Surgical Rehab"
+                  ].map((symptom) => (
+                    <button
+                      key={symptom}
+                      type="button"
+                      onClick={() => setEditReceiptForm({ ...editReceiptForm, diagnosis: symptom, reason: editReceiptForm.reason || symptom })}
+                      style={{
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        fontWeight: "600",
+                        background: editReceiptForm.diagnosis === symptom ? "#0284c7" : "#f1f5f9",
+                        color: editReceiptForm.diagnosis === symptom ? "#ffffff" : "#334155",
+                        border: "1px solid #cbd5e1",
+                        cursor: "pointer"
+                      }}
+                    >
+                      {symptom}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                  value={editReceiptForm.diagnosis}
+                  placeholder="e.g. Lumbar Spondylosis (L4-L5 Disc Bulge) with Sciatica"
+                  onChange={(e) => setEditReceiptForm({ ...editReceiptForm, diagnosis: e.target.value })}
+                />
+              </div>
+
+              {/* Treatment Reason / Focus & Administered Procedures */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", flexWrap: "wrap", gap: "6px" }}>
+                  <label style={{ margin: 0, fontSize: "12px", fontWeight: "700", color: "#475569" }}>
+                    ⚡ Treatment Reason & Procedures Administered
+                  </label>
+                  <span style={{ fontSize: "11px", color: "#059669" }}>Tap to add procedure:</span>
+                </div>
+                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "6px" }}>
+                  {[
+                    "Electrotherapy (IFT)",
+                    "Spinal Traction & Decompression",
+                    "Cupping Therapy (Hijama)",
+                    "Manual Mobilization & Stretches",
+                    "Therapeutic Ultrasound",
+                    "Targeted Isometric Exercises",
+                    "Hot Pack / Moist Heat"
+                  ].map((proc) => (
+                    <button
+                      key={proc}
+                      type="button"
+                      onClick={() => {
+                        const cur = (editReceiptForm.reason || "").trim();
+                        setEditReceiptForm({
+                          ...editReceiptForm,
+                          reason: cur ? `${cur} + ${proc}` : proc
+                        });
+                      }}
+                      style={{
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        fontWeight: "600",
+                        background: "#ecfdf5",
+                        color: "#065f46",
+                        border: "1px solid #a7f3d0",
+                        cursor: "pointer"
+                      }}
+                    >
+                      + {proc}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="text"
                   style={{
@@ -8358,49 +8659,117 @@ _(Saved in patient clinic records)_`;
                     boxSizing: "border-box"
                   }}
                   value={editReceiptForm.reason}
-                  placeholder="e.g. Cervical spine mobilization & traction"
+                  placeholder="e.g. Cervical spine mobilization & traction + IFT"
                   onChange={(e) => setEditReceiptForm({ ...editReceiptForm, reason: e.target.value })}
                 />
               </div>
 
-              {/* Follow-Up Date & Follow-Up Timing */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
-                    🗓️ Next Follow-Up Date
+              {/* Follow-Up Date & Follow-Up Timing with 1-Tap Presets */}
+              <div style={{
+                background: "#f8fafc",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: "10px",
+                padding: "12px 14px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                  <label style={{ margin: 0, fontSize: "12.5px", fontWeight: "800", color: "#1e293b" }}>
+                    🗓️ Next Follow-Up Date & Timing
                   </label>
-                  <input
-                    type="date"
-                    style={{
-                      width: "100%",
-                      padding: "8px 10px",
-                      borderRadius: "8px",
-                      border: "1.5px solid #cbd5e1",
-                      fontSize: "13px",
-                      boxSizing: "border-box"
-                    }}
-                    value={editReceiptForm.followUpDate || ""}
-                    onChange={(e) => setEditReceiptForm({ ...editReceiptForm, followUpDate: e.target.value })}
-                  />
+                  <span style={{ fontSize: "11.5px", color: "#0284c7", fontWeight: "700" }}>1-Tap Presets:</span>
                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
-                    ⏰ Follow-Up Timing
-                  </label>
-                  <input
-                    type="text"
-                    style={{
-                      width: "100%",
-                      padding: "8px 10px",
-                      borderRadius: "8px",
-                      border: "1.5px solid #cbd5e1",
-                      fontSize: "13px",
-                      boxSizing: "border-box"
-                    }}
-                    value={editReceiptForm.followUpTime || ""}
-                    placeholder="10:30 AM"
-                    onChange={(e) => setEditReceiptForm({ ...editReceiptForm, followUpTime: e.target.value })}
-                  />
+
+                {/* 1-Tap Follow-Up Presets */}
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px" }}>
+                  {(() => {
+                    const today = new Date();
+                    const getOffsetDate = (offsetDays) => {
+                      const d = new Date();
+                      d.setDate(today.getDate() + offsetDays);
+                      return d.toISOString().slice(0, 10);
+                    };
+
+                    const tomStr = getOffsetDate(1);
+                    const in2Str = getOffsetDate(2);
+                    const in3Str = getOffsetDate(3);
+                    const in7Str = getOffsetDate(7);
+                    const in15Str = getOffsetDate(15);
+
+                    return [
+                      { label: "Tomorrow", date: tomStr },
+                      { label: "+2 Days", date: in2Str },
+                      { label: "+3 Days", date: in3Str },
+                      { label: "+7 Days (1 Wk)", date: in7Str },
+                      { label: "+15 Days", date: in15Str },
+                      { label: "None / SOS (Clear)", date: "" }
+                    ].map((p) => {
+                      const isSel = (editReceiptForm.followUpDate || "") === p.date;
+                      return (
+                        <button
+                          key={p.label}
+                          type="button"
+                          onClick={() => setEditReceiptForm({
+                            ...editReceiptForm,
+                            followUpDate: p.date,
+                            followUpTime: p.date ? (editReceiptForm.followUpTime || "10:30 AM") : ""
+                          })}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "6px",
+                            fontSize: "11.5px",
+                            fontWeight: "700",
+                            cursor: "pointer",
+                            background: isSel ? "#0284c7" : "#ffffff",
+                            color: isSel ? "#ffffff" : "#334155",
+                            border: isSel ? "1.5px solid #0284c7" : "1.5px solid #cbd5e1"
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                      Follow-Up Date
+                    </label>
+                    <input
+                      type="date"
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        borderRadius: "8px",
+                        border: "1.5px solid #cbd5e1",
+                        fontSize: "13px",
+                        background: "#ffffff",
+                        boxSizing: "border-box"
+                      }}
+                      value={editReceiptForm.followUpDate || ""}
+                      onChange={(e) => setEditReceiptForm({ ...editReceiptForm, followUpDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                      Follow-Up Timing
+                    </label>
+                    <input
+                      type="text"
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        borderRadius: "8px",
+                        border: "1.5px solid #cbd5e1",
+                        fontSize: "13px",
+                        background: "#ffffff",
+                        boxSizing: "border-box"
+                      }}
+                      value={editReceiptForm.followUpTime || ""}
+                      placeholder="10:30 AM"
+                      onChange={(e) => setEditReceiptForm({ ...editReceiptForm, followUpTime: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
 

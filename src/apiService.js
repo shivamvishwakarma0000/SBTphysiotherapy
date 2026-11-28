@@ -1356,10 +1356,27 @@ export const api = {
     // 3. Update patient details if fee, diagnosis, reason, date, or follow-up changed
     if (updatedVisit && updatedVisit.patientId) {
       const patients = getLocal(KEYS.PATIENTS, []);
-      const patient = patients.find(p => p.patientId === updatedVisit.patientId);
+      const cleanPtId = String(updatedVisit.patientId || "").trim();
+      const idCoreV = cleanPtId.replace(/^VPR-(?:2026-)?0*/i, "");
+      const cleanPh = String(updatedVisit.phone || "").replace(/\D/g, "").slice(-10);
+
+      let patient = patients.find(p => {
+        if (p.patientId === cleanPtId) return true;
+        if (cleanPh && String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPh) return true;
+        const idCoreP = String(p.patientId || "").replace(/^VPR-(?:2026-)?0*/i, "");
+        return idCoreV && idCoreP && idCoreV === idCoreP;
+      });
+
       if (patient) {
-        const patientVisits = updatedVisits.filter(v => v.patientId === updatedVisit.patientId);
-        patient.totalVisits = patientVisits.length;
+        const patientVisits = updatedVisits.filter(v => {
+          if (!v || !v.visitId) return false;
+          if (v.patientId === cleanPtId) return true;
+          if (cleanPh && String(v.phone || "").replace(/\D/g, "").slice(-10) === cleanPh) return true;
+          const idCore = String(v.patientId || "").replace(/^VPR-(?:2026-)?0*/i, "");
+          return idCoreV && idCore && idCoreV === idCore;
+        });
+
+        patient.totalVisits = Math.max(patientVisits.length, patient.totalVisits || 1);
         if (updates.fee) patient.lastFee = updates.fee;
         if (updates.diagnosis) patient.lastDiagnosis = updates.diagnosis;
         if (updates.reason) patient.firstVisitReason = updates.reason;
@@ -1378,7 +1395,7 @@ export const api = {
         // Update PATIENT_PROFILE_KEY if patient is viewing portal
         try {
           const stored = JSON.parse(localStorage.getItem(PATIENT_PROFILE_KEY) || "null");
-          if (stored && (stored.patientId === patient.patientId || stored.phone === patient.phone)) {
+          if (stored && (stored.patientId === patient.patientId || String(stored.phone || "").replace(/\D/g, "").slice(-10) === cleanPh)) {
             localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...stored, ...patient }));
           }
         } catch (_) {}
@@ -2244,12 +2261,20 @@ export const patientApi = {
         }
       } catch (_) {}
     }
-    const visits = allVisits.filter(v => 
-      !deletedVisitIds.has(v.visitId) && (
-        v.patientId === p.patientId || 
-        (v.phone && p.phone && String(v.phone).replace(/\D/g, "").slice(-10) === String(p.phone).replace(/\D/g, "").slice(-10))
-      )
-    );
+    const cleanPtId = String(p.patientId || "").trim();
+    const idCoreP = cleanPtId.replace(/^VPR-(?:2026-)?0*/i, "");
+    const cleanPh = String(p.phone || "").replace(/\D/g, "").slice(-10);
+
+    const visits = allVisits.filter(v => {
+      if (!v || !v.visitId || deletedVisitIds.has(v.visitId)) return false;
+      if (v.patientId === cleanPtId) return true;
+      if (cleanPh && v.phone && String(v.phone).replace(/\D/g, "").slice(-10) === cleanPh) return true;
+      if (v.patientId && idCoreP) {
+        const idCoreV = String(v.patientId).replace(/^VPR-(?:2026-)?0*/i, "");
+        if (idCoreV && idCoreV === idCoreP) return true;
+      }
+      return false;
+    });
 
     visits.sort((a, b) => {
       const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);

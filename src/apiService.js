@@ -339,24 +339,26 @@ export function clearLocalPatientsCache() {
 // Run init
 initializeLocalDatabase();
 
-// Sync single item to Google Sheet Webhook in background
-export async function syncToGoogleSheets(action, data) {
+// Sync single item to Google Sheet Webhook in background (Non-blocking & blazing fast)
+export function syncToGoogleSheets(action, data) {
   const webhookUrl = getWebhookUrl();
-  if (!webhookUrl) return { ok: false, reason: "No webhook URL configured" };
+  if (!webhookUrl) return Promise.resolve({ ok: false, reason: "No webhook URL configured" });
 
   try {
     const payload = JSON.stringify({ action, data });
-    // Use no-cors mode to bypass CORS in browser if Google Apps Script doesn't return headers
-    await fetch(webhookUrl, {
+    // Fire-and-forget: dispatch fetch in background without delaying UI response
+    fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: payload,
       mode: "no-cors"
+    }).catch(err => {
+      console.warn("Google Sheets push notice:", err);
     });
-    return { ok: true };
+    return Promise.resolve({ ok: true });
   } catch (err) {
-    console.warn("Google Sheets push warning:", err);
-    return { ok: false, error: err.message };
+    console.warn("Google Sheets push error:", err);
+    return Promise.resolve({ ok: false, error: err.message });
   }
 }
 
@@ -874,21 +876,38 @@ export const api = {
       }
     }
 
-    if (matchedVisits.length > 0) {
-      patient.totalVisits = Math.max(Number(patient.totalVisits) || 0, matchedVisits.length);
+    // Deduplicate matched visits by visitNumber to guarantee zero duplicate receipts
+    const dedupedMatched = [];
+    const seenNumbers = new Set();
+    const seenIds = new Set();
+    matchedVisits.forEach(v => {
+      const vn = parseInt(String(v.visitNumber || 0).replace(/\D/g, ""), 10);
+      if (vn > 0) {
+        if (seenNumbers.has(vn)) return;
+        seenNumbers.add(vn);
+      }
+      if (v.visitId) {
+        if (seenIds.has(v.visitId)) return;
+        seenIds.add(v.visitId);
+      }
+      dedupedMatched.push(v);
+    });
+
+    if (dedupedMatched.length > 0) {
+      patient.totalVisits = Math.max(dedupedMatched.length, 1);
       if (patient.status === "Waiting for Doctor") {
         patient.status = "Active";
       }
     }
 
-    matchedVisits.sort((a, b) => {
+    dedupedMatched.sort((a, b) => {
       const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);
       const numB = parseInt(String(b.visitNumber || 0).replace(/\D/g, "") || 0, 10);
       if (numA !== numB) return numB - numA;
       return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
     });
 
-    return { ok: true, patient, visits: matchedVisits };
+    return { ok: true, patient, visits: dedupedMatched };
   },
 
   async createPatient(payload) {
@@ -1323,64 +1342,130 @@ export const api = {
       console.warn("Backend visit update failed, proceeding with local update:", e);
     }
 
-    // 2. Update local storage
+    // 2. Update local storage with resilient matching and zero duplicate creation
     const visits = getLocal(KEYS.VISITS, []);
-    let updatedVisit = null;
-    const updatedVisits = visits.map(v => {
-      if (v.visitId === visitId) {
-        updatedVisit = {
-          ...v,
-          ...updates,
-          visitNumber: updates.visitNumber !== undefined 
-            ? (parseInt(String(updates.visitNumber).replace(/\D/g, ""), 10) || v.visitNumber || 1)
-            : v.visitNumber
-        };
-        return updatedVisit;
-      }
-      return v;
-    });
+    const cleanId = (str) => String(str || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    const targetVidClean = cleanId(visitId);
+    const targetVisitNum = updates.visitNumber !== undefined 
+      ? parseInt(String(updates.visitNumber).replace(/\D/g, ""), 10) 
+      : (parseInt(String(visitId).replace(/^.*-(\d+)$/, "$1"), 10) || null);
+    const targetPatientId = updates.patientId ? String(updates.patientId).trim() : null;
+    const targetPatientCore = targetPatientId ? targetPatientId.replace(/^VPR-(?:2026-)?0*/i, "") : null;
+    const targetPhone = updates.phone ? String(updates.phone).replace(/\D/g, "").slice(-10) : null;
 
-    if (!updatedVisit) {
+    let updatedVisit = null;
+    let foundIndex = -1;
+
+    for (let i = 0; i < visits.length; i++) {
+      const v = visits[i];
+      if (!v) continue;
+      if (v.visitId === visitId) { foundIndex = i; break; }
+      if (targetVidClean && cleanId(v.visitId) === targetVidClean) { foundIndex = i; break; }
+      
+      const vNum = parseInt(String(v.visitNumber || 0).replace(/\D/g, ""), 10);
+      if (targetVisitNum !== null && vNum === targetVisitNum) {
+        if (targetPatientId && v.patientId === targetPatientId) { foundIndex = i; break; }
+        if (targetPhone && v.phone && String(v.phone).replace(/\D/g, "").slice(-10) === targetPhone) { foundIndex = i; break; }
+        if (targetPatientCore) {
+          const vCore = String(v.patientId || "").replace(/^VPR-(?:2026-)?0*/i, "");
+          if (vCore && vCore === targetPatientCore) { foundIndex = i; break; }
+        }
+      }
+    }
+
+    if (foundIndex !== -1) {
+      const existing = visits[foundIndex];
+      updatedVisit = {
+        ...existing,
+        ...updates,
+        visitId: existing.visitId || visitId,
+        visitNumber: targetVisitNum || existing.visitNumber || 1
+      };
+      visits[foundIndex] = updatedVisit;
+    } else {
       updatedVisit = {
         visitId,
         ...updates,
-        visitNumber: updates.visitNumber !== undefined 
-          ? (parseInt(String(updates.visitNumber).replace(/\D/g, ""), 10) || 1)
-          : 1
+        visitNumber: targetVisitNum || 1
       };
-      updatedVisits.unshift(updatedVisit);
+      // Check if duplicate with same patient and visit number exists
+      const duplicateIdx = visits.findIndex(v => {
+        if (!v) return false;
+        const vNum = parseInt(String(v.visitNumber || 0).replace(/\D/g, ""), 10);
+        if (targetVisitNum && vNum === targetVisitNum) {
+          if (targetPatientId && v.patientId === targetPatientId) return true;
+          if (targetPhone && v.phone && String(v.phone).replace(/\D/g, "").slice(-10) === targetPhone) return true;
+        }
+        return false;
+      });
+      if (duplicateIdx !== -1) {
+        visits[duplicateIdx] = { ...visits[duplicateIdx], ...updatedVisit };
+        updatedVisit = visits[duplicateIdx];
+      } else {
+        visits.unshift(updatedVisit);
+      }
     }
 
-    setLocal(KEYS.VISITS, updatedVisits);
+    // Deduplicate any visits for this patient having identical visit numbers
+    const cleanPtId = String(updatedVisit.patientId || targetPatientId || "").trim();
+    const idCoreV = cleanPtId.replace(/^VPR-(?:2026-)?0*/i, "");
+    const cleanPh = String(updatedVisit.phone || targetPhone || "").replace(/\D/g, "").slice(-10);
+
+    const dedupedVisits = [];
+    const seenPatientVisitNums = new Set();
+    const seenOtherVisitIds = new Set();
+
+    visits.forEach(v => {
+      if (!v || !v.visitId) return;
+      const isThisPatient = (cleanPtId && v.patientId === cleanPtId) ||
+        (cleanPh && String(v.phone || "").replace(/\D/g, "").slice(-10) === cleanPh) ||
+        (idCoreV && String(v.patientId || "").replace(/^VPR-(?:2026-)?0*/i, "") === idCoreV);
+
+      if (isThisPatient) {
+        const vn = parseInt(String(v.visitNumber || 0).replace(/\D/g, ""), 10) || 1;
+        if (seenPatientVisitNums.has(vn)) return; // discard duplicate visit
+        seenPatientVisitNums.add(vn);
+      } else {
+        if (seenOtherVisitIds.has(v.visitId)) return;
+        seenOtherVisitIds.add(v.visitId);
+      }
+      dedupedVisits.push(v);
+    });
+
+    setLocal(KEYS.VISITS, dedupedVisits);
 
     // 3. Update patient details if fee, diagnosis, reason, date, or follow-up changed
-    if (updatedVisit && updatedVisit.patientId) {
+    if (updatedVisit && (cleanPtId || cleanPh)) {
       const patients = getLocal(KEYS.PATIENTS, []);
-      const cleanPtId = String(updatedVisit.patientId || "").trim();
-      const idCoreV = cleanPtId.replace(/^VPR-(?:2026-)?0*/i, "");
-      const cleanPh = String(updatedVisit.phone || "").replace(/\D/g, "").slice(-10);
-
       let patient = patients.find(p => {
-        if (p.patientId === cleanPtId) return true;
+        if (cleanPtId && p.patientId === cleanPtId) return true;
         if (cleanPh && String(p.phone || "").replace(/\D/g, "").slice(-10) === cleanPh) return true;
         const idCoreP = String(p.patientId || "").replace(/^VPR-(?:2026-)?0*/i, "");
         return idCoreV && idCoreP && idCoreV === idCoreP;
       });
 
       if (patient) {
-        const patientVisits = updatedVisits.filter(v => {
+        const patientVisits = dedupedVisits.filter(v => {
           if (!v || !v.visitId) return false;
-          if (v.patientId === cleanPtId) return true;
+          if (cleanPtId && v.patientId === cleanPtId) return true;
           if (cleanPh && String(v.phone || "").replace(/\D/g, "").slice(-10) === cleanPh) return true;
           const idCore = String(v.patientId || "").replace(/^VPR-(?:2026-)?0*/i, "");
           return idCoreV && idCore && idCoreV === idCore;
         });
 
-        patient.totalVisits = Math.max(patientVisits.length, patient.totalVisits || 1);
+        const uniqueNums = new Set(
+          patientVisits.map(v => parseInt(String(v.visitNumber || 0).replace(/\D/g, ""), 10)).filter(n => n > 0)
+        );
+        patient.totalVisits = Math.max(uniqueNums.size, 1);
+
         if (updates.fee) patient.lastFee = updates.fee;
         if (updates.diagnosis) patient.lastDiagnosis = updates.diagnosis;
         if (updates.reason) patient.firstVisitReason = updates.reason;
-        if (updates.date) patient.lastVisitDate = updates.date;
+
+        // Pick latest chronological visit date
+        const sortedDates = patientVisits.map(v => v.date).filter(Boolean).sort().reverse();
+        patient.lastVisitDate = sortedDates[0] || updates.date || patient.lastVisitDate;
+
         if (updates.followUpDate !== undefined) {
           patient.followUpDate = updates.followUpDate;
           patient.follow_up_date = updates.followUpDate;
@@ -1409,7 +1494,7 @@ export const api = {
       }
     }
 
-    // 4. Update Supabase if connected (AWAITED for immediate consistency)
+    // 4. Update Supabase if connected
     if (isSupabaseConnected()) {
       try {
         await supabaseUpsertVisit(updatedVisit);
@@ -1418,7 +1503,7 @@ export const api = {
       }
     }
 
-    // 5. Sync to Google Sheets
+    // 5. Sync to Google Sheets (Non-blocking)
     syncToGoogleSheets("update_visit", updatedVisit);
 
     // Broadcast live event for PatientPortal and other tabs
@@ -2285,7 +2370,23 @@ export const patientApi = {
       return false;
     });
 
-    visits.sort((a, b) => {
+    const dedupedVisits = [];
+    const seenVisitNumbers = new Set();
+    const seenVisitIds = new Set();
+    visits.forEach(v => {
+      const vNum = parseInt(String(v.visitNumber || 0).replace(/\D/g, ""), 10);
+      if (vNum > 0) {
+        if (seenVisitNumbers.has(vNum)) return;
+        seenVisitNumbers.add(vNum);
+      }
+      if (v.visitId) {
+        if (seenVisitIds.has(v.visitId)) return;
+        seenVisitIds.add(v.visitId);
+      }
+      dedupedVisits.push(v);
+    });
+
+    dedupedVisits.sort((a, b) => {
       const numA = parseInt(String(a.visitNumber || 0).replace(/\D/g, "") || 0, 10);
       const numB = parseInt(String(b.visitNumber || 0).replace(/\D/g, "") || 0, 10);
       if (numA !== numB) return numB - numA;
@@ -2298,7 +2399,7 @@ export const patientApi = {
       return (pPhone.length === 10 && ePhone === pPhone) || e.linkedPatientId === p.patientId;
     });
 
-    const latestFollowUp = visits.find(v => {
+    const latestFollowUp = dedupedVisits.find(v => {
       const s = v?.followUpDate ? String(v.followUpDate).trim() : "";
       return s && s.toLowerCase() !== "none" && s.toLowerCase() !== "sos" && !s.toLowerCase().includes("as advised");
     });
@@ -2313,15 +2414,15 @@ export const patientApi = {
       ok: true,
       patient: p,
       stats: {
-        totalVisits: Math.max(p.totalVisits || 1, visits.length),
+        totalVisits: Math.max(p.totalVisits || 1, dedupedVisits.length),
         firstVisitDate: p.registrationDate,
-        lastVisitDate: visits[0]?.date || p.lastVisitDate || p.registrationDate,
+        lastVisitDate: dedupedVisits[0]?.date || p.lastVisitDate || p.registrationDate,
         daysInRecovery: 1,
-        activeCondition: visits[0]?.diagnosis || p.firstVisitReason || "Under Evaluation",
-        nextFollowUp: latestFollowUp ? latestFollowUp.followUpDate : (visits[0]?.followUpDate || p.followUpDate || null),
-        nextFollowUpTime: latestFollowUp ? latestFollowUp.followUpTime : (visits[0]?.followUpTime || p.followUpTime || null)
+        activeCondition: dedupedVisits[0]?.diagnosis || p.firstVisitReason || "Under Evaluation",
+        nextFollowUp: latestFollowUp ? latestFollowUp.followUpDate : (dedupedVisits[0]?.followUpDate || p.followUpDate || null),
+        nextFollowUpTime: latestFollowUp ? latestFollowUp.followUpTime : (dedupedVisits[0]?.followUpTime || p.followUpTime || null)
       },
-      visits,
+      visits: dedupedVisits,
       appointments: enquiries
     };
   },
@@ -2480,4 +2581,18 @@ export const patientApi = {
     return getReviewWhatsAppUrl(phone, patientName, reviewUrl);
   }
 };
+
+// Global and top-level helper exports to guarantee zero undefined errors
+export const addVisit = (...args) => api.addVisit(...args);
+export const createVisit = (...args) => api.createVisit(...args);
+export const updateVisit = (...args) => api.updateVisit(...args);
+export const getPatientVisits = (...args) => api.getPatientVisits(...args);
+export const getPatientDetails = (...args) => api.getPatientDetails(...args);
+
+if (typeof window !== "undefined") {
+  window.api = api;
+  window.addVisit = addVisit;
+  window.createVisit = createVisit;
+  window.updateVisit = updateVisit;
+}
 

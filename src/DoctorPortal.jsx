@@ -434,6 +434,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
   };
   const [manualPlanStart, setManualPlanStart] = useState(getTodayInputStr());
   const [manualPlanEnd, setManualPlanEnd] = useState(getFutureInputStr(30));
+  const [isEditingActivePlan, setIsEditingActivePlan] = useState(false);
 
   const calculatedPlanDays = useMemo(() => {
     if (!manualPlanStart || !manualPlanEnd) return 30;
@@ -1577,7 +1578,14 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const handleOneClickDailyVisit = async (patient) => {
     if (!patient) return;
     try {
-      const existingCount = (patient.totalVisits || (patientVisits ? patientVisits.length : 0)) || 0;
+      let maxVisitNum = 0;
+      if (Array.isArray(patientVisits) && patientVisits.length > 0) {
+        patientVisits.forEach(v => {
+          const vn = parseInt(String(v.visitNumber || 0).replace(/\D/g, ""), 10);
+          if (vn > maxVisitNum) maxVisitNum = vn;
+        });
+      }
+      const existingCount = Math.max(maxVisitNum, parseInt(String(patient.totalVisits || 0).replace(/\D/g, ""), 10) || 0);
       const nextVisitNum = existingCount + 1;
       const initialConcern = patient.lastDiagnosis || patient.firstVisitReason || patient.reasonForVisit || "Physiotherapy Rehabilitation";
       const protocol = generateDailyPhysioProtocol(initialConcern, nextVisitNum);
@@ -1613,7 +1621,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
         followUpTime: "10:30 AM"
       };
 
-      const res = await api.createVisit(patient.patientId, visitPayload);
+      const res = await (api.createVisit ? api.createVisit(patient.patientId, visitPayload) : api.addVisit(patient.patientId, visitPayload));
       if (res && res.ok !== false) {
         setLeadActionToast(`⚡ Visit #${nextVisitNum} logged for ${patient.name}! Attendance marked Green.`);
         setTimeout(() => setLeadActionToast(""), 4000);
@@ -1640,6 +1648,15 @@ export default function DoctorPortal({ onClose, themeProps }) {
     setSelectedPlanLabel(label);
     setSelectedPlanPrice(getDefaultPackagePrice(days));
     setPlanJustConfirmed(false);
+
+    // Sync end date
+    const sDate = manualPlanStart ? new Date(manualPlanStart) : new Date();
+    const eDate = new Date(sDate.getTime());
+    eDate.setDate(eDate.getDate() + (days - 1));
+    const ey = eDate.getFullYear();
+    const em = String(eDate.getMonth() + 1).padStart(2, "0");
+    const ed = String(eDate.getDate()).padStart(2, "0");
+    setManualPlanEnd(`${ey}-${em}-${ed}`);
   };
 
   const handleSelectCustomDays = () => {
@@ -7034,43 +7051,215 @@ _(Saved in patient clinic records)_`;
                             </div>
                           </div>
                         ) : (
-                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-                            <button
-                              type="button"
-                              onClick={handleSendDailyScheduleWhatsApp}
-                              style={{
-                                background: "#25d366",
-                                color: "#ffffff",
-                                border: "none",
-                                padding: "9px 15px",
-                                borderRadius: "8px",
-                                fontSize: "12.5px",
-                                fontWeight: "800",
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                boxShadow: "0 2px 8px rgba(37, 211, 102, 0.3)"
-                              }}
-                            >
-                              💬 Send Schedule on WhatsApp
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleDailyCourse(false)}
-                              style={{
-                                background: "#fee2e2",
-                                color: "#b91c1c",
-                                border: "1px solid #fca5a5",
-                                padding: "9px 14px",
-                                borderRadius: "8px",
-                                fontSize: "12px",
-                                fontWeight: "700",
-                                cursor: "pointer"
-                              }}
-                            >
-                              ⏹️ End Course
-                            </button>
+                          <div>
+                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginBottom: isEditingActivePlan ? "12px" : "0" }}>
+                              <button
+                                type="button"
+                                onClick={handleSendDailyScheduleWhatsApp}
+                                style={{
+                                  background: "#25d366",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  padding: "9px 15px",
+                                  borderRadius: "8px",
+                                  fontSize: "12.5px",
+                                  fontWeight: "800",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  boxShadow: "0 2px 8px rgba(37, 211, 102, 0.3)"
+                                }}
+                              >
+                                💬 Send Schedule on WhatsApp
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingActivePlan(prev => !prev)}
+                                style={{
+                                  background: isEditingActivePlan ? "#0284c7" : "#e0f2fe",
+                                  color: isEditingActivePlan ? "#ffffff" : "#0369a1",
+                                  border: "1.5px solid #0284c7",
+                                  padding: "9px 15px",
+                                  borderRadius: "8px",
+                                  fontSize: "12.5px",
+                                  fontWeight: "800",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "6px"
+                                }}
+                              >
+                                <span>{isEditingActivePlan ? "▲ Close Editor" : "✏️ Modify Rehab Plan & Dates"}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDailyCourse(false)}
+                                style={{
+                                  background: "#fee2e2",
+                                  color: "#b91c1c",
+                                  border: "1px solid #fca5a5",
+                                  padding: "9px 14px",
+                                  borderRadius: "8px",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                ⏹️ End Course
+                              </button>
+                            </div>
+
+                            {/* IN-PLACE PLAN MODIFICATION EDITOR (30 Days, Custom Days, Dates, Price) */}
+                            {isEditingActivePlan && (
+                              <div style={{
+                                marginTop: "12px",
+                                background: "linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%)",
+                                border: "2px solid #0d9488",
+                                borderRadius: "14px",
+                                padding: "16px 18px",
+                                boxShadow: "0 4px 14px rgba(13, 148, 136, 0.15)"
+                              }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "6px" }}>
+                                  <strong style={{ fontSize: "13.5px", color: "#0f766e" }}>
+                                    ✏️ Edit Rehabilitation Duration, Calendar Dates &amp; Fees
+                                  </strong>
+                                  <span style={{ fontSize: "11px", color: "#0d9488", fontWeight: "700" }}>
+                                    Changes update active calendar &amp; slips immediately
+                                  </span>
+                                </div>
+
+                                {/* Quick Duration Preset Pills */}
+                                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "12px" }}>
+                                  {[
+                                    { days: 7, label: "7 Days (1 Wk)" },
+                                    { days: 14, label: "14 Days (2 Wks)" },
+                                    { days: 21, label: "21 Days (3 Wks)" },
+                                    { days: 30, label: "30 Days (1 Month)" },
+                                    { days: 60, label: "60 Days (2 Months)" }
+                                  ].map((pill) => (
+                                    <button
+                                      key={pill.days}
+                                      type="button"
+                                      onClick={() => handleSelectPlanPill(pill.days, pill.label)}
+                                      style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "8px",
+                                        border: calculatedPlanDays === pill.days ? "2px solid #0d9488" : "1px solid #cbd5e1",
+                                        background: calculatedPlanDays === pill.days ? "#ccfbf1" : "#ffffff",
+                                        color: calculatedPlanDays === pill.days ? "#0f766e" : "#334155",
+                                        fontSize: "12px",
+                                        fontWeight: calculatedPlanDays === pill.days ? "800" : "600",
+                                        cursor: "pointer"
+                                      }}
+                                    >
+                                      {pill.label}
+                                    </button>
+                                  ))}
+                                </div>
+
+                                {/* Start and End Date Inputs */}
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", marginBottom: "12px" }}>
+                                  <div style={{ background: "#ffffff", border: "1.5px solid #0284c7", borderRadius: "10px", padding: "8px 12px" }}>
+                                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: "800", color: "#0369a1", marginBottom: "4px" }}>
+                                      📅 Start Date
+                                    </label>
+                                    <input
+                                      type="date"
+                                      value={manualPlanStart}
+                                      onChange={(e) => setManualPlanStart(e.target.value)}
+                                      style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid #94a3b8", fontSize: "13px", fontWeight: "800", color: "#0f172a" }}
+                                    />
+                                  </div>
+                                  <div style={{ background: "#ffffff", border: "1.5px solid #0284c7", borderRadius: "10px", padding: "8px 12px" }}>
+                                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: "800", color: "#0369a1", marginBottom: "4px" }}>
+                                      🏁 End Date
+                                    </label>
+                                    <input
+                                      type="date"
+                                      value={manualPlanEnd}
+                                      onChange={(e) => setManualPlanEnd(e.target.value)}
+                                      style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid #94a3b8", fontSize: "13px", fontWeight: "800", color: "#0f172a" }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Fee summary & Rate per session */}
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", background: "#ecfdf5", border: "1.5px solid #10b981", padding: "10px 14px", borderRadius: "10px", marginBottom: "12px" }}>
+                                  <div>
+                                    <strong style={{ fontSize: "13px", color: "#065f46", display: "block" }}>
+                                      Duration: {calculatedPlanDays} Days
+                                    </strong>
+                                    <span style={{ fontSize: "11.5px", color: "#047857" }}>
+                                      {formatInputDateToDisplay(manualPlanStart)} ➔ {formatInputDateToDisplay(manualPlanEnd)}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span style={{ fontSize: "12px", color: "#065f46", fontWeight: "800" }}>Total: ₹</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="50"
+                                      value={selectedPlanPrice}
+                                      onChange={(e) => setSelectedPlanPrice(parseInt(e.target.value, 10) || 0)}
+                                      style={{ width: "88px", padding: "5px 8px", borderRadius: "6px", border: "1.5px solid #059669", fontWeight: "900", fontSize: "13px", color: "#065f46", background: "#ffffff" }}
+                                    />
+                                    <span style={{ fontSize: "11px", background: "#059669", color: "#ffffff", padding: "3px 6px", borderRadius: "4px", fontWeight: "800" }}>
+                                      ₹{calculatedPlanDays > 0 ? Math.round(selectedPlanPrice / calculatedPlanDays) : 200}/session
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Save & Cancel Buttons */}
+                                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      await handleToggleDailyCourse(
+                                        true,
+                                        `${calculatedPlanDays} Days Treatment Plan`,
+                                        calculatedPlanDays,
+                                        selectedPlanPrice,
+                                        formatInputDateToDisplay(manualPlanStart),
+                                        formatInputDateToDisplay(manualPlanEnd)
+                                      );
+                                      setIsEditingActivePlan(false);
+                                    }}
+                                    style={{
+                                      flex: "1 1 180px",
+                                      minHeight: "42px",
+                                      background: "linear-gradient(135deg, #0d9488, #0f766e)",
+                                      color: "#ffffff",
+                                      border: "none",
+                                      borderRadius: "10px",
+                                      padding: "10px 16px",
+                                      fontSize: "13.5px",
+                                      fontWeight: "800",
+                                      cursor: "pointer",
+                                      boxShadow: "0 2px 8px rgba(13, 148, 136, 0.3)"
+                                    }}
+                                  >
+                                    💾 Save &amp; Update {calculatedPlanDays} Days Plan
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsEditingActivePlan(false)}
+                                    style={{
+                                      background: "#f1f5f9",
+                                      color: "#475569",
+                                      border: "1px solid #cbd5e1",
+                                      borderRadius: "10px",
+                                      padding: "10px 14px",
+                                      fontSize: "12.5px",
+                                      fontWeight: "700",
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )
                       ) : (
@@ -7091,6 +7280,35 @@ _(Saved in patient clinic records)_`;
                             <p style={{ fontSize: "12.5px", color: "#334155", margin: "0 0 14px 0", lineHeight: "1.5" }}>
                               Set the treatment date span manually. The calendar tracks attendance automatically: if an assessment or receipt is created on that date, it is marked <strong style={{ color: "#16a34a" }}>Green (Present)</strong>; otherwise <strong style={{ color: "#dc2626" }}>Red (Absent)</strong>.
                             </p>
+
+                            {/* Quick Presets for New Plan Setup */}
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "12px" }}>
+                              {[
+                                { days: 7, label: "7 Days (1 Wk)" },
+                                { days: 14, label: "14 Days (2 Wks)" },
+                                { days: 21, label: "21 Days (3 Wks)" },
+                                { days: 30, label: "30 Days (1 Month)" },
+                                { days: 60, label: "60 Days (2 Months)" }
+                              ].map((pill) => (
+                                <button
+                                  key={pill.days}
+                                  type="button"
+                                  onClick={() => handleSelectPlanPill(pill.days, pill.label)}
+                                  style={{
+                                    padding: "6px 12px",
+                                    borderRadius: "8px",
+                                    border: calculatedPlanDays === pill.days ? "2px solid #0d9488" : "1px solid #cbd5e1",
+                                    background: calculatedPlanDays === pill.days ? "#ccfbf1" : "#ffffff",
+                                    color: calculatedPlanDays === pill.days ? "#0f766e" : "#334155",
+                                    fontSize: "12px",
+                                    fontWeight: calculatedPlanDays === pill.days ? "800" : "600",
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  {pill.label}
+                                </button>
+                              ))}
+                            </div>
 
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "14px" }}>
                               <div style={{ background: "#ffffff", border: "1.5px solid #0284c7", borderRadius: "12px", padding: "10px 14px", boxShadow: "0 2px 6px rgba(2, 132, 199, 0.08)" }}>

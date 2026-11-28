@@ -40,6 +40,7 @@ export default function PatientVisitCalendar({
   });
 
   const [overrideFollowUpKey, setOverrideFollowUpKey] = useState(null);
+  const [showPriorHistory, setShowPriorHistory] = useState(false);
 
   const getCalPresetKey = (daysToAdd) => {
     const d = new Date();
@@ -593,7 +594,17 @@ export default function PatientVisitCalendar({
       const key = parseToKey(v.date);
       if (!key) return;
       if (!map[key]) map[key] = { visits: [], followUps: [], appointments: [], missed: null };
-      map[key].visits.push({ ...v, itemType: "visit" });
+      
+      const vNum = parseInt(String(v.visitNumber || 0).replace(/\D/g, ""), 10);
+      const isDuplicate = map[key].visits.some(existing => {
+        if (v.visitId && existing.visitId && existing.visitId === v.visitId) return true;
+        const exNum = parseInt(String(existing.visitNumber || 0).replace(/\D/g, ""), 10);
+        return vNum > 0 && exNum > 0 && exNum === vNum;
+      });
+
+      if (!isDuplicate) {
+        map[key].visits.push({ ...v, itemType: "visit" });
+      }
 
       if (v.followUpDate) {
         const fuKey = parseToKey(v.followUpDate);
@@ -1359,68 +1370,105 @@ export default function PatientVisitCalendar({
               </div>
             )}
 
-            {/* Section C: COMPLETE PAST / OLD VISITS TIMELINE FOR THIS PATIENT */}
-            <div className="patient-old-visits-history-section">
-              <div className="old-visits-history-header">
-                <h5>📜 Prior Visit History ({sortedVisitsNewestFirst.length})</h5>
-                <span className="old-visits-sub">Full patient recovery timeline</span>
+            {/* Section C: COMPLETE PAST / OLD VISITS TIMELINE FOR THIS PATIENT (Collapsible so selected date records stay clear and uncluttered) */}
+            <div className="patient-old-visits-history-section" style={{ marginTop: "14px", borderTop: "1.5px dashed #cbd5e1", paddingTop: "12px" }}>
+              <div 
+                className="old-visits-history-header"
+                onClick={() => setShowPriorHistory(prev => !prev)}
+                style={{ 
+                  cursor: "pointer", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "space-between",
+                  background: showPriorHistory ? "#f8fafc" : "#f0f9ff",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: showPriorHistory ? "1px solid #cbd5e1" : "1px solid #bae6fd"
+                }}
+                title="Click to toggle past receipts history"
+              >
+                <div>
+                  <h5 style={{ margin: 0, fontSize: "13px", fontWeight: "800", color: "#0369a1" }}>
+                    📜 All Prior Visits &amp; Receipts ({sortedVisitsNewestFirst.length})
+                  </h5>
+                  <span className="old-visits-sub" style={{ fontSize: "11px", color: "#64748b" }}>
+                    {showPriorHistory ? "Tap to collapse previous receipts" : "Tap to expand full past history"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  style={{
+                    background: showPriorHistory ? "#e2e8f0" : "#0284c7",
+                    color: showPriorHistory ? "#334155" : "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "4px 8px",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    cursor: "pointer"
+                  }}
+                >
+                  {showPriorHistory ? "▲ Hide" : "▼ Show"}
+                </button>
               </div>
 
-              {sortedVisitsNewestFirst.length === 0 ? (
-                <p className="no-prior-visits-text">No previous visits recorded yet.</p>
-              ) : (
-                <div className="old-visits-scrollable-list">
-                  {sortedVisitsNewestFirst.map((ov, oIdx) => {
-                    const isSelectedDateVisit = parseToKey(ov.date) === selectedDateStr;
-                    return (
-                      <div
-                        key={`old-v-${ov.visitId || oIdx}`}
-                        className={`old-visit-item-compact ${isSelectedDateVisit ? "is-selected-date-item" : ""}`}
-                        onClick={() => {
-                          setSelectedDateStr(parseToKey(ov.date));
-                          if (onSelectVisit) {
-                            onSelectVisit(ov);
-                          }
-                        }}
-                        style={{ cursor: "pointer" }}
-                        title="Click to view full visit details and official receipt"
-                      >
-                        <div className="old-visit-top">
-                          <span className="old-visit-num-badge">
-                            Visit #{ov.visitNumber || sortedVisitsNewestFirst.length - oIdx}
-                          </span>
-                          <span className="old-visit-date-badge">
-                            {cleanDateOnly(ov.date)} {ov.time ? `• ${cleanTimeOnly(ov.time)}` : ""}
-                          </span>
-                        </div>
+              {showPriorHistory && (
+                sortedVisitsNewestFirst.length === 0 ? (
+                  <p className="no-prior-visits-text" style={{ padding: "8px 12px", fontSize: "12px", color: "#64748b" }}>No previous visits recorded yet.</p>
+                ) : (
+                  <div className="old-visits-scrollable-list" style={{ marginTop: "10px" }}>
+                    {sortedVisitsNewestFirst.map((ov, oIdx) => {
+                      const isSelectedDateVisit = parseToKey(ov.date) === selectedDateStr;
+                      return (
+                        <div
+                          key={`old-v-${ov.visitId || oIdx}`}
+                          className={`old-visit-item-compact ${isSelectedDateVisit ? "is-selected-date-item" : ""}`}
+                          onClick={() => {
+                            setSelectedDateStr(parseToKey(ov.date));
+                            if (onSelectVisit) {
+                              onSelectVisit(ov);
+                            }
+                          }}
+                          style={{ cursor: "pointer" }}
+                          title="Click to view full visit details and official receipt"
+                        >
+                          <div className="old-visit-top">
+                            <span className="old-visit-num-badge">
+                              Visit #{ov.visitNumber || sortedVisitsNewestFirst.length - oIdx}
+                            </span>
+                            <span className="old-visit-date-badge">
+                              {cleanDateOnly(ov.date)} {ov.time ? `• ${cleanTimeOnly(ov.time)}` : ""}
+                            </span>
+                          </div>
 
-                        <div className="old-visit-details">
-                          <strong className="old-visit-diag">
-                            {ov.diagnosis || ov.reason || "Rehabilitation Session"}
-                          </strong>
-                          {ov.treatmentNotes && (
-                            <p className="old-visit-notes-snippet">{ov.treatmentNotes}</p>
+                          <div className="old-visit-details">
+                            <strong className="old-visit-diag">
+                              {ov.diagnosis || ov.reason || "Rehabilitation Session"}
+                            </strong>
+                            {ov.treatmentNotes && (
+                              <p className="old-visit-notes-snippet">{ov.treatmentNotes}</p>
+                            )}
+                          </div>
+
+                          {onSelectVisit && (
+                            <div className="old-visit-actions">
+                              <button
+                                type="button"
+                                className="old-visit-receipt-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectVisit(ov);
+                                }}
+                              >
+                                🧾 View Receipt
+                              </button>
+                            </div>
                           )}
                         </div>
-
-                        {onSelectVisit && (
-                          <div className="old-visit-actions">
-                            <button
-                              type="button"
-                              className="old-visit-receipt-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onSelectVisit(ov);
-                              }}
-                            >
-                              🧾 View Receipt
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )
               )}
             </div>
           </div>

@@ -1,6 +1,6 @@
 # Vindhya Physio & Rehab Center — Master Google Sheets & Google Apps Script Setup Guide (Part 3)
 
-**Clinic:** Vindhya Physio & Rehab Center  
+**Clinic:** Vindhya Physiotherapy & Rehab Center  
 **Lead Doctor:** Dr. Satyam Vishwakarma  
 **Location:** Amravati Chauraha, Vindhyachal, Mirzapur, Uttar Pradesh  
 **Lead Doctor Account:** `shivamupsc8@gmail.com`  

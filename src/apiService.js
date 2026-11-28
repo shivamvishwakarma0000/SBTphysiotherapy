@@ -1417,11 +1417,33 @@ export const api = {
     const patients = getLocal(KEYS.PATIENTS, []);
     const visits = getLocal(KEYS.VISITS, []);
 
-    const patient = patients.find(p => p.patientId === patientId);
+    let patient = patients.find(p => p.patientId === patientId);
+    if (!patient) {
+      const cleanId = String(patientId || "").trim();
+      const idCore = cleanId.replace(/^VPR-(?:2026-)?0*/i, "");
+      patient = patients.find(p => {
+        if (p.patientId === cleanId) return true;
+        const pCore = String(p.patientId || "").replace(/^VPR-(?:2026-)?0*/i, "");
+        return idCore && pCore && idCore === pCore;
+      });
+    }
+    if (!patient && payload && (payload.patient || payload.name || payload.patientName)) {
+      patient = payload.patient || {
+        patientId,
+        name: payload.patientName || payload.name || "Patient",
+        phone: payload.phone || ""
+      };
+      patients.push(patient);
+    }
     if (!patient) throw new Error("Patient not found");
 
-    const existingVisits = visits.filter(v => v.patientId === patientId);
-    const visitNumber = existingVisits.length + 1;
+    const existingVisits = visits.filter(v => {
+      if (!v || !v.visitId) return false;
+      if (v.patientId === patientId) return true;
+      if (patient.phone && String(v.phone || "").replace(/\D/g, "").slice(-10) === String(patient.phone || "").replace(/\D/g, "").slice(-10)) return true;
+      return false;
+    });
+    const visitNumber = payload.visitNumber || (existingVisits.length + 1);
     const todayStr = payload.visitDate || payload.date || new Date().toISOString().split("T")[0];
     const visitTimeStr = payload.visitTime || payload.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
     const cleanFeeRaw = payload.fee !== undefined && payload.fee !== null ? String(payload.fee).trim() : "";
@@ -1507,6 +1529,27 @@ export const api = {
     syncToGoogleSheets("sync_visit", newVisit);
 
     return { ok: true, visit: newVisit, patient };
+  },
+
+  // Helper alias for addVisit / createVisit
+  async addVisit(patientIdOrPayload, maybePayload) {
+    if (typeof patientIdOrPayload === "object" && patientIdOrPayload !== null) {
+      const pid = patientIdOrPayload.patientId;
+      return this.createVisit(pid, patientIdOrPayload);
+    }
+    return this.createVisit(patientIdOrPayload, maybePayload);
+  },
+
+  // Helper alias for getPatientVisits
+  async getPatientVisits(patientId) {
+    try {
+      const details = await this.getPatientDetails(patientId);
+      return { ok: true, visits: details.visits || [] };
+    } catch (_) {
+      const visits = getLocal(KEYS.VISITS, []);
+      const matched = visits.filter(v => v.patientId === patientId);
+      return { ok: true, visits: matched };
+    }
   },
 
   async getTodayVisits() {

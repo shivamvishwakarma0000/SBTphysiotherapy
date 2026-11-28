@@ -1612,17 +1612,15 @@ export default function DoctorPortal({ onClose, themeProps }) {
         followUpTime: "10:30 AM"
       };
 
-      const res = await api.addVisit(visitPayload);
+      const res = await api.createVisit(patient.patientId, visitPayload);
       if (res && res.ok !== false) {
         setLeadActionToast(`⚡ Visit #${nextVisitNum} logged for ${patient.name}! Attendance marked Green.`);
         setTimeout(() => setLeadActionToast(""), 4000);
+        await openPatientProfile(patient.patientId);
         await fetchPatients();
         await fetchAllVisits();
         await fetchTodayVisits();
-        if (selectedPatient && selectedPatient.patientId === patient.patientId) {
-          const vList = await api.getPatientVisits(patient.patientId);
-          if (vList && vList.visits) setPatientVisits(vList.visits);
-        }
+        await fetchStats();
       }
     } catch (err) {
       console.error("1-click daily visit error:", err);

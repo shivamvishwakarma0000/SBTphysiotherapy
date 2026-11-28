@@ -1486,8 +1486,13 @@ export const api = {
       finalFollowUpTime = "10:30 AM";
     }
 
+    let uniqueVisitId = `VST-${patientId.replace("VPR-2026-", "")}-${visitNumber}`;
+    if (visits.some(v => v.visitId === uniqueVisitId)) {
+      uniqueVisitId = `VST-${patientId.replace("VPR-2026-", "")}-${visitNumber}-${Date.now().toString().slice(-4)}`;
+    }
+
     const newVisit = {
-      visitId: `VST-${patientId.replace("VPR-2026-", "")}-${visitNumber}`,
+      visitId: uniqueVisitId,
       patientId,
       patientName: patient.name,
       phone: patient.phone,
@@ -1516,8 +1521,12 @@ export const api = {
     const updatedVisits = visits.filter(v => v.visitId !== newVisit.visitId);
     updatedVisits.unshift(newVisit);
 
-    patient.totalVisits = Math.max(visitNumber, updatedVisits.filter(v => v.patientId === patientId).length);
-    patient.lastVisitDate = todayStr;
+    const patientVisits = updatedVisits.filter(v => v.patientId === patientId);
+    patient.totalVisits = Math.max(visitNumber, patientVisits.length);
+
+    // Keep most recent visit date
+    const sortedDates = patientVisits.map(v => v.date).filter(Boolean).sort().reverse();
+    patient.lastVisitDate = sortedDates[0] || todayStr;
     patient.lastDiagnosis = newVisit.diagnosis;
     patient.lastFee = feeStr;
     if (newVisit.followUpDate) {

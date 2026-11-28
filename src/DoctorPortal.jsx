@@ -1559,6 +1559,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     setNewVisitForm({
       visitDate: new Date().toISOString().slice(0, 10),
       visitTime: getNowTimeStr(),
+      visitNumber: nextVisitNum,
       reasonForVisit: protocol.focus || "Daily Physiotherapy Session",
       complaint: "", // Optional: Today's Solved Symptoms / Relief Status
       diagnosis: patient.lastDiagnosis || protocol.diagnosis || initialConcern,
@@ -2171,14 +2172,23 @@ export default function DoctorPortal({ onClose, themeProps }) {
     if (!selectedPatient) return;
     try {
       const nextNum = (selectedPatient.totalVisits || (patientVisits ? patientVisits.length : 0) || 0) + 1;
+      const parsedVisitNum = parseInt(String(newVisitForm.visitNumber || nextNum).replace(/\D/g, ""), 10) || nextNum;
+      const visitDateVal = newVisitForm.visitDate || new Date().toISOString().slice(0, 10);
+      const visitTimeVal = newVisitForm.visitTime || getNowTimeStr();
+
       const payload = {
         ...newVisitForm,
-        complaint: newVisitForm.complaint?.trim() || `Day ${nextNum} rehabilitation session & recovery follow-up`,
+        visitNumber: parsedVisitNum,
+        visitDate: visitDateVal,
+        date: visitDateVal,
+        visitTime: visitTimeVal,
+        time: visitTimeVal,
+        complaint: newVisitForm.complaint?.trim() || `Day ${parsedVisitNum} rehabilitation session & recovery follow-up`,
         treatmentNotes: newVisitForm.treatmentNotes?.trim() || "Targeted physical therapy mobilization, therapeutic exercise, and functional retraining.",
         reasonForVisit: newVisitForm.reasonForVisit || "Daily Physiotherapy Session",
         fee: (newVisitForm.fee !== undefined && newVisitForm.fee !== null && String(newVisitForm.fee).trim() !== "")
           ? (String(newVisitForm.fee).trim() === "0" ? "₹0" : (String(newVisitForm.fee).startsWith("₹") ? newVisitForm.fee : `₹${String(newVisitForm.fee).replace(/[^0-9]/g, "")}`))
-          : (selectedPatient.lastFee || (selectedPatient.packagePerSessionFee ? `₹${selectedPatient.packagePerSessionFee}` : "₹500"))
+          : (selectedPatient.lastFee || (selectedPatient.packagePerSessionFee ? `₹${selectedPatient.packagePerSessionFee}` : "₹200"))
       };
 
       const data = await api.createVisit(selectedPatient.patientId, payload);
@@ -3597,17 +3607,50 @@ _(Saved in patient clinic records)_`;
                     );
                   })}
                 </div>
-                <div className="phone-prefix-input" style={{ maxWidth: "200px" }}>
-                  <span style={{ fontWeight: "800", color: "#065f46" }}>₹</span>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  maxWidth: "240px",
+                  background: "#ffffff",
+                  border: "2px solid #86efac",
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                  boxShadow: "0 2px 5px rgba(0,0,0,0.04)"
+                }}>
+                  <span style={{
+                    padding: "9px 14px",
+                    background: "#ecfdf5",
+                    color: "#065f46",
+                    fontWeight: "900",
+                    fontSize: "17px",
+                    borderRight: "1.5px solid #86efac",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    userSelect: "none"
+                  }}>
+                    ₹
+                  </span>
                   <input
                     type="number"
                     required
                     min="0"
                     step="50"
-                    value={newPatientForm.fee !== undefined ? newPatientForm.fee : "500"}
+                    value={String(newPatientForm.fee !== undefined ? newPatientForm.fee : "200").replace(/[^0-9]/g, "")}
                     onChange={(e) => setNewPatientForm({ ...newPatientForm, fee: e.target.value })}
-                    placeholder="500"
-                    style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", background: "#ffffff", border: "1.5px solid #86efac", borderRadius: "8px", padding: "8px 12px" }}
+                    placeholder="200"
+                    style={{
+                      flex: 1,
+                      border: "none",
+                      outline: "none",
+                      padding: "9px 12px",
+                      fontSize: "16px",
+                      fontWeight: "800",
+                      color: "#0f172a",
+                      background: "transparent",
+                      width: "100%",
+                      minWidth: 0
+                    }}
                   />
                 </div>
               </div>
@@ -7799,6 +7842,113 @@ _(Saved in patient clinic records)_`;
               </div>
 
               <form onSubmit={handleAddVisit}>
+                {/* 0. Visit Date & Attendance Day (Allows backdating missed visits!) */}
+                <div
+                  style={{
+                    marginBottom: "14px",
+                    background: "#f0f9ff",
+                    border: "1.5px solid #38bdf8",
+                    borderRadius: "12px",
+                    padding: "12px 14px"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                    <label style={{ margin: 0, color: "#0369a1", fontWeight: "800", fontSize: "13px" }}>
+                      📅 Visit Date & Attendance Day
+                    </label>
+                    <span style={{ fontSize: "11.5px", color: "#0284c7", fontWeight: "700" }}>
+                      Missed past days? 1-Tap to backdate:
+                    </span>
+                  </div>
+
+                  {/* Quick Past Date Presets */}
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
+                    {(() => {
+                      const today = new Date();
+                      const getOffsetDate = (offset) => {
+                        const d = new Date();
+                        d.setDate(today.getDate() + offset);
+                        return d.toISOString().slice(0, 10);
+                      };
+                      const todayStr = getOffsetDate(0);
+                      const yestStr = getOffsetDate(-1);
+                      const minus2Str = getOffsetDate(-2);
+                      const minus3Str = getOffsetDate(-3);
+
+                      return [
+                        { label: "Today", date: todayStr },
+                        { label: "Yesterday", date: yestStr },
+                        { label: "-2 Days Ago", date: minus2Str },
+                        { label: "-3 Days Ago", date: minus3Str }
+                      ].map((p) => {
+                        const isSel = (newVisitForm.visitDate || todayStr) === p.date;
+                        return (
+                          <button
+                            key={p.label}
+                            type="button"
+                            onClick={() => setNewVisitForm({ ...newVisitForm, visitDate: p.date })}
+                            style={{
+                              padding: "5px 10px",
+                              borderRadius: "6px",
+                              fontSize: "11.5px",
+                              fontWeight: "700",
+                              cursor: "pointer",
+                              background: isSel ? "#0284c7" : "#ffffff",
+                              color: isSel ? "#ffffff" : "#0369a1",
+                              border: isSel ? "1.5px solid #0284c7" : "1.5px solid #cbd5e1"
+                            }}
+                          >
+                            {p.label}
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                        Selected Date
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={newVisitForm.visitDate || new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => setNewVisitForm({ ...newVisitForm, visitDate: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          border: "1.5px solid #cbd5e1",
+                          fontSize: "13px",
+                          background: "#ffffff",
+                          boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                        Visit Time
+                      </label>
+                      <input
+                        type="text"
+                        value={newVisitForm.visitTime || "10:30 AM"}
+                        onChange={(e) => setNewVisitForm({ ...newVisitForm, visitTime: e.target.value })}
+                        placeholder="10:30 AM"
+                        style={{
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          border: "1.5px solid #cbd5e1",
+                          fontSize: "13px",
+                          background: "#ffffff",
+                          boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* 1. Fee Amount (Auto-filled & 1-tap selectable) */}
                 <div
                   style={{
@@ -7814,16 +7964,16 @@ _(Saved in patient clinic records)_`;
                       💰 Today's Visit Fee (₹)
                     </label>
                     <span style={{ fontSize: "11.5px", color: "#15803d", fontWeight: "600" }}>
-                      Auto-prefilled from patient profile / package
+                      Default: ₹200 (Tap to change)
                     </span>
                   </div>
 
                   {/* 1-Tap Quick Fee Chips */}
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
                     {[
-                      { amt: "200", label: "₹200" },
+                      { amt: "200", label: "₹200 (Default)" },
                       { amt: "300", label: "₹300" },
-                      { amt: "500", label: "₹500 (Standard)" },
+                      { amt: "500", label: "₹500" },
                       { amt: "700", label: "₹700" },
                       { amt: "1000", label: "₹1000" },
                       { amt: "0", label: "₹0 (Pkg / Free)" }
@@ -7853,16 +8003,49 @@ _(Saved in patient clinic records)_`;
                     })}
                   </div>
 
-                  <div style={{ display: "inline-flex", alignItems: "center", background: "#ffffff", border: "1.5px solid #cbd5e1", borderRadius: "8px", padding: "4px 10px", width: "160px" }}>
-                    <span style={{ color: "#0f172a", fontWeight: "800", fontSize: "15px", marginRight: "6px" }}>₹</span>
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    maxWidth: "220px",
+                    background: "#ffffff",
+                    border: "2px solid #86efac",
+                    borderRadius: "10px",
+                    overflow: "hidden",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.04)"
+                  }}>
+                    <span style={{
+                      padding: "9px 14px",
+                      background: "#ecfdf5",
+                      color: "#065f46",
+                      fontWeight: "900",
+                      fontSize: "17px",
+                      borderRight: "1.5px solid #86efac",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      userSelect: "none"
+                    }}>
+                      ₹
+                    </span>
                     <input
                       type="number"
                       min="0"
                       step="50"
-                      value={newVisitForm.fee || "200"}
+                      value={String(newVisitForm.fee !== undefined ? newVisitForm.fee : "200").replace(/[^0-9]/g, "")}
                       onChange={(e) => setNewVisitForm({ ...newVisitForm, fee: e.target.value })}
                       placeholder="200"
-                      style={{ border: "none", outline: "none", width: "100%", fontSize: "15px", fontWeight: "800", color: "#0f172a" }}
+                      style={{
+                        flex: 1,
+                        border: "none",
+                        outline: "none",
+                        padding: "9px 12px",
+                        fontSize: "16px",
+                        fontWeight: "800",
+                        color: "#0f172a",
+                        background: "transparent",
+                        width: "100%",
+                        minWidth: 0
+                      }}
                     />
                   </div>
                 </div>
@@ -8527,23 +8710,49 @@ _(Saved in patient clinic records)_`;
                   })}
                 </div>
 
-                <div style={{ position: "relative", maxWidth: "200px" }}>
-                  <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontWeight: "800", color: "#065f46" }}>₹</span>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  maxWidth: "220px",
+                  background: "#ffffff",
+                  border: "2px solid #86efac",
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                  boxShadow: "0 2px 5px rgba(0,0,0,0.04)"
+                }}>
+                  <span style={{
+                    padding: "9px 14px",
+                    background: "#ecfdf5",
+                    color: "#065f46",
+                    fontWeight: "900",
+                    fontSize: "17px",
+                    borderRight: "1.5px solid #86efac",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    userSelect: "none"
+                  }}>
+                    ₹
+                  </span>
                   <input
-                    type="text"
+                    type="number"
+                    min="0"
+                    step="50"
                     style={{
-                      width: "100%",
-                      padding: "8px 10px 8px 24px",
-                      borderRadius: "8px",
-                      border: "1.5px solid #86efac",
-                      fontSize: "14px",
+                      flex: 1,
+                      border: "none",
+                      outline: "none",
+                      padding: "9px 12px",
+                      fontSize: "16px",
                       fontWeight: "800",
                       color: "#0f172a",
-                      background: "#ffffff",
-                      boxSizing: "border-box"
+                      background: "transparent",
+                      width: "100%",
+                      minWidth: 0
                     }}
-                    value={editReceiptForm.fee}
+                    value={String(editReceiptForm.fee !== undefined ? editReceiptForm.fee : "200").replace(/[^0-9]/g, "")}
                     onChange={(e) => setEditReceiptForm({ ...editReceiptForm, fee: e.target.value })}
+                    placeholder="200"
                   />
                 </div>
               </div>
@@ -9034,17 +9243,50 @@ _(Saved in patient clinic records)_`;
                     );
                   })}
                 </div>
-                <div className="phone-prefix-input" style={{ maxWidth: "200px" }}>
-                  <span style={{ fontWeight: "800", color: "#065f46" }}>₹</span>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  maxWidth: "240px",
+                  background: "#ffffff",
+                  border: "2px solid #86efac",
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                  boxShadow: "0 2px 5px rgba(0,0,0,0.04)"
+                }}>
+                  <span style={{
+                    padding: "9px 14px",
+                    background: "#ecfdf5",
+                    color: "#065f46",
+                    fontWeight: "900",
+                    fontSize: "17px",
+                    borderRight: "1.5px solid #86efac",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    userSelect: "none"
+                  }}>
+                    ₹
+                  </span>
                   <input
                     type="number"
                     required
                     min="0"
                     step="50"
-                    value={consultForm.fee}
+                    value={String(consultForm.fee !== undefined ? consultForm.fee : "200").replace(/[^0-9]/g, "")}
                     onChange={(e) => setConsultForm({ ...consultForm, fee: e.target.value })}
-                    placeholder="500"
-                    style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", background: "#ffffff", border: "1.5px solid #86efac", borderRadius: "8px", padding: "8px 12px" }}
+                    placeholder="200"
+                    style={{
+                      flex: 1,
+                      border: "none",
+                      outline: "none",
+                      padding: "9px 12px",
+                      fontSize: "16px",
+                      fontWeight: "800",
+                      color: "#0f172a",
+                      background: "transparent",
+                      width: "100%",
+                      minWidth: 0
+                    }}
                   />
                 </div>
               </div>

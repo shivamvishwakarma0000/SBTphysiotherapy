@@ -298,6 +298,7 @@ export function patientToRow(p) {
     status: p.status || "Active",
     total_visits: Number(p.totalVisits || p.total_visits || 0),
     last_visit_date: p.lastVisitDate || p.last_visit_date || "",
+    last_fee: p.lastFee || p.last_fee || "",
     follow_up_date: p.followUpDate || p.follow_up_date || "",
     follow_up_time: p.followUpTime || p.follow_up_time || "",
     updated_at: new Date().toISOString()
@@ -324,6 +325,7 @@ export function rowToPatient(r) {
     status: r.status || "Active",
     totalVisits: Number(r.total_visits !== undefined ? r.total_visits : (r.totalVisits || 0)),
     lastVisitDate: r.last_visit_date || r.lastVisitDate || "",
+    lastFee: r.last_fee || r.lastFee || "",
     followUpDate: r.follow_up_date || r.followUpDate || "",
     followUpTime: r.follow_up_time || r.followUpTime || "",
     createdAt: r.created_at || r.createdAt

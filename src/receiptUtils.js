@@ -14,7 +14,7 @@ export const getTodayISTString = () => {
 export const cleanDateOnly = (d) => {
   if (!d) return getTodayISTString();
   const s = String(d).trim();
-  
+
   // If string contains 1899 (Google Sheets time-only epoch artifact), return today's clean date
   if (s.includes("1899")) {
     return getTodayISTString();
@@ -53,14 +53,14 @@ export const cleanDateOnly = (d) => {
 export const cleanTimeOnly = (t) => {
   if (!t) return "";
   const s = String(t).trim();
-  
+
   // 1. Check if already clean 12-hr with AM/PM like "08:58 PM" or "8:58 PM"
   const ampmMatch = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)/i);
   if (ampmMatch) {
     let hr = parseInt(ampmMatch[1], 10);
     return `${String(hr).padStart(2, "0")}:${ampmMatch[2]} ${ampmMatch[3].toUpperCase()}`;
   }
-  
+
   // 2. Check 24-hr time like "20:58:00" or within Date string (e.g. Sat Dec 30 1899 19:33:00 GMT+0521)
   const time24Match = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
   if (time24Match) {
@@ -141,7 +141,7 @@ export const buildReceiptPDF = (receipt) => {
   // Document Title
   const isPackage = String(visit.reason || "").toLowerCase().includes("package") || String(visit.treatmentNotes || "").toLowerCase().includes("package");
   const isPerDay = (visit.visitNumber || 1) > 1;
-  const receiptDocTitle = isPackage 
+  const receiptDocTitle = isPackage
     ? "OFFICIAL CLINICAL REHABILITATION PACKAGE RECEIPT"
     : (isPerDay ? `OFFICIAL CLINICAL SESSION RECEIPT (VISIT #${visit.visitNumber || 1})` : "OFFICIAL PATIENT REGISTRATION & CONSULTATION RECEIPT");
 
@@ -234,9 +234,9 @@ export const buildReceiptPDF = (receipt) => {
   doc.text(splitNotes, 60, 165);
 
   const feeY = 165 + (splitNotes.length * 5.2);
-  
+
   // Fee Box inside Section 2
-  const rawFee = String(visit.fee || "500").trim();
+  const rawFee = String(visit.fee || (patient && patient.lastFee) || "500").trim();
   const cleanFeeNum = cleanFeeAmount(rawFee);
   const isPrepaid = cleanFeeNum === "0" || rawFee.toLowerCase().includes("pkg") || rawFee.toLowerCase().includes("package");
   const feeDisplayStr = isPrepaid ? "Rs. 0 (Prepaid in Package)" : `Rs. ${cleanFeeNum}`;

@@ -759,7 +759,8 @@ export default function DoctorPortal({ onClose, themeProps }) {
     duration: "1 to 2 Weeks",
     complaint: "",
     referredBy: "Self / Walk-in",
-    visitTime: getNowTimeStr()
+    visitTime: getNowTimeStr(),
+    fee: "500"
   });
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState("");
@@ -1515,7 +1516,8 @@ export default function DoctorPortal({ onClose, themeProps }) {
         complaint: "",
         referredBy: "Self / Walk-in",
         visitTime: getNowTimeStr(),
-        visitTimeSelect: "Custom"
+        visitTimeSelect: "Custom",
+        fee: "500"
       });
 
       // Switch to Waiting Queue
@@ -1663,6 +1665,10 @@ export default function DoctorPortal({ onClose, themeProps }) {
 
   const handleOpenConsultationModal = (patient) => {
     setActiveConsultPatient(patient);
+    const initialFee = patient.lastFee
+      ? String(patient.lastFee).replace(/[^0-9]/g, "")
+      : (patient.packagePerSessionFee ? String(patient.packagePerSessionFee) : (patient.fee ? String(patient.fee).replace(/[^0-9]/g, "") : "500"));
+
     setConsultForm({
       visitDate: new Date().toISOString().slice(0, 10),
       visitTime: getNowTimeStr(),
@@ -1672,7 +1678,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
       duration: patient.duration || "1 to 2 Weeks",
       diagnosis: patient.firstVisitReason ? `${patient.firstVisitReason} (Active Rehabilitation)` : "Lumbar Spondylosis (L4-L5 Disc Bulge)",
       treatmentNotes: "Electrotherapy (IFT) + Targeted manual decompression + Isometric strengthening exercises.",
-      fee: "500",
+      fee: initialFee || "500",
       followUpDate: "",
       followUpTime: ""
     });
@@ -1809,7 +1815,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
       // Immediately update local React state so UI updates instantly without any waiting room flicker!
       setPatients(prev => prev.map(p =>
         p.patientId === data.patient.patientId
-          ? { ...p, status: "Active", totalVisits: data.patient.totalVisits || 1, lastVisitDate: data.visit.date }
+          ? { ...p, status: "Active", totalVisits: data.patient.totalVisits || 1, lastVisitDate: data.visit.date, lastFee: data.visit.fee }
           : p
       ));
 
@@ -1932,14 +1938,18 @@ export default function DoctorPortal({ onClose, themeProps }) {
   const handleDirectEnrollFromQueue = async (patient) => {
     if (!patient) return;
     try {
+      const chosenFee = patient.lastFee
+        ? (String(patient.lastFee).startsWith("₹") ? patient.lastFee : `₹${String(patient.lastFee).replace(/[^0-9]/g, "")}`)
+        : (patient.packagePerSessionFee ? `₹${patient.packagePerSessionFee}` : (patient.fee ? `₹${String(patient.fee).replace(/[^0-9]/g, "")}` : "₹500"));
+
       await api.finalizeConsultation(patient.patientId, {
         reason: patient.firstVisitReason || "Physiotherapy Consultation",
         complaint: patient.complaint || "Initial consultation completed.",
         diagnosis: "Clinical Evaluation - Active Rehabilitation",
         treatmentNotes: "Patient enrolled directly from waiting room.",
-        fee: "₹500"
+        fee: chosenFee
       });
-      setPatients(prev => prev.map(p => p.patientId === patient.patientId ? { ...p, status: "Active", totalVisits: Math.max(1, (p.totalVisits || 0) + 1) } : p));
+      setPatients(prev => prev.map(p => p.patientId === patient.patientId ? { ...p, status: "Active", totalVisits: Math.max(1, (p.totalVisits || 0) + 1), lastFee: chosenFee } : p));
       setLeadActionToast(`✅ ${patient.name} (${patient.patientId}) enrolled and moved to Enrolled Patients!`);
       setTimeout(() => setLeadActionToast(""), 4000);
       await Promise.all([fetchPatients(), fetchStats()]);
@@ -2168,7 +2178,9 @@ export default function DoctorPortal({ onClose, themeProps }) {
         complaint: newVisitForm.complaint?.trim() || `Day ${nextNum} rehabilitation session & recovery follow-up`,
         treatmentNotes: newVisitForm.treatmentNotes?.trim() || "Targeted physical therapy mobilization, therapeutic exercise, and functional retraining.",
         reasonForVisit: newVisitForm.reasonForVisit || "Daily Physiotherapy Session",
-        fee: newVisitForm.fee || (selectedPatient.packagePerSessionFee ? String(selectedPatient.packagePerSessionFee) : "200")
+        fee: (newVisitForm.fee !== undefined && newVisitForm.fee !== null && String(newVisitForm.fee).trim() !== "")
+          ? (String(newVisitForm.fee).trim() === "0" ? "₹0" : (String(newVisitForm.fee).startsWith("₹") ? newVisitForm.fee : `₹${String(newVisitForm.fee).replace(/[^0-9]/g, "")}`))
+          : (selectedPatient.lastFee || (selectedPatient.packagePerSessionFee ? `₹${selectedPatient.packagePerSessionFee}` : "₹500"))
       };
 
       const data = await api.createVisit(selectedPatient.patientId, payload);
@@ -3464,6 +3476,70 @@ _(Saved in patient clinic records)_`;
                   onChange={(e) => setNewPatientForm({ ...newPatientForm, complaint: e.target.value })}
                   placeholder="Type in Hindi (जैसे: कमर में दर्द है और पैर में झनझनाहट होती है), Hinglish (e.g. kamar dard chalne me dikkat), or English. Click 'Convert' to auto-translate into medical English."
                 />
+              </div>
+
+              {/* Consultation & Therapy Fee Selection with 1-Tap Chips */}
+              <div style={{
+                background: "#f0fdf4",
+                border: "1.5px solid #86efac",
+                borderRadius: "12px",
+                padding: "14px 16px",
+                marginBottom: "16px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
+                  <label style={{ margin: 0, color: "#065f46", fontWeight: "800", fontSize: "13.5px" }}>
+                    💰 Intake Consultation / Session Fee (₹) <span style={{ color: "#e11d48" }}>*</span>
+                  </label>
+                  <span style={{ fontSize: "12px", color: "#047857", fontWeight: "700" }}>
+                    Tap amount to select in 1 tap
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "8px", marginBottom: "10px", flexWrap: "wrap" }}>
+                  {[
+                    { val: "200", label: "₹200" },
+                    { val: "300", label: "₹300" },
+                    { val: "500", label: "₹500" },
+                    { val: "700", label: "₹700" },
+                    { val: "1000", label: "₹1000" },
+                    { val: "0", label: "₹0 (Pkg / Free)" }
+                  ].map((chip) => {
+                    const isSelected = String(newPatientForm.fee || "500") === chip.val;
+                    return (
+                      <button
+                        key={chip.val}
+                        type="button"
+                        onClick={() => setNewPatientForm({ ...newPatientForm, fee: chip.val })}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: "8px",
+                          fontSize: "13px",
+                          fontWeight: "800",
+                          cursor: "pointer",
+                          border: isSelected ? "2px solid #047857" : "1.5px solid #94a3b8",
+                          background: isSelected ? "#059669" : "#ffffff",
+                          color: isSelected ? "#ffffff" : "#0f172a",
+                          boxShadow: isSelected ? "0 3px 8px rgba(5, 150, 105, 0.4)" : "0 1px 2px rgba(0,0,0,0.05)",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        {chip.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="phone-prefix-input" style={{ maxWidth: "200px" }}>
+                  <span style={{ fontWeight: "800", color: "#065f46" }}>₹</span>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="50"
+                    value={newPatientForm.fee !== undefined ? newPatientForm.fee : "500"}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, fee: e.target.value })}
+                    placeholder="500"
+                    style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", background: "#ffffff", border: "1.5px solid #86efac", borderRadius: "8px", padding: "8px 12px" }}
+                  />
+                </div>
               </div>
 
               <div className="form-actions-bar">
@@ -6031,7 +6107,7 @@ _(Saved in patient clinic records)_`;
                       type="button"
                       className="secondary-btn"
                       style={{ flex: "1 1 110px", minHeight: "44px", background: "rgba(2, 132, 199, 0.25)", color: "#38bdf8", borderColor: "#0284c7", fontWeight: "700" }}
-                      onClick={() => setShowAddVisitModal(true)}
+                      onClick={() => openQuickDailyVisitModal(selectedPatient)}
                     >
                       ➕ Custom Visit
                     </button>
@@ -7541,26 +7617,29 @@ _(Saved in patient clinic records)_`;
                   {/* 1-Tap Quick Fee Chips */}
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
                     {[
-                      { amt: String(selectedPatient.packagePerSessionFee || "200"), label: `₹${selectedPatient.packagePerSessionFee || "200"} (Pkg)` },
+                      { amt: "200", label: "₹200" },
                       { amt: "300", label: "₹300" },
                       { amt: "500", label: "₹500 (Standard)" },
-                      { amt: "0", label: "₹0 (Prepaid)" }
+                      { amt: "700", label: "₹700" },
+                      { amt: "1000", label: "₹1000" },
+                      { amt: "0", label: "₹0 (Pkg / Free)" }
                     ].map((chip) => {
-                      const isSelected = String(newVisitForm.fee) === chip.amt;
+                      const isSelected = String(newVisitForm.fee).replace(/[^0-9]/g, "") === chip.amt;
                       return (
                         <button
                           key={chip.label}
                           type="button"
                           onClick={() => setNewVisitForm({ ...newVisitForm, fee: chip.amt })}
                           style={{
-                            padding: "5px 11px",
-                            borderRadius: "6px",
+                            padding: "6px 12px",
+                            borderRadius: "7px",
                             fontSize: "12px",
                             fontWeight: isSelected ? "800" : "700",
                             cursor: "pointer",
                             border: isSelected ? "2px solid #16a34a" : "1px solid #cbd5e1",
                             background: isSelected ? "#16a34a" : "#ffffff",
                             color: isSelected ? "#ffffff" : "#1e293b",
+                            boxShadow: isSelected ? "0 2px 6px rgba(22, 163, 74, 0.3)" : "none",
                             transition: "all 0.15s ease"
                           }}
                         >
@@ -8013,8 +8092,8 @@ _(Saved in patient clinic records)_`;
                   <div className="receipt-cell highlight-fee">
                     <span className="cell-label">Session Fee &amp; Settlement:</span>
                     {(() => {
-                      const cleanFee = cleanFeeAmount(activeReceipt.visit.fee, "500");
-                      const isPrepaid = cleanFee === "0" || String(activeReceipt.visit.fee || "").toLowerCase().includes("pkg") || String(activeReceipt.visit.fee || "").toLowerCase().includes("package");
+                      const cleanFee = cleanFeeAmount(activeReceipt.visit.fee || activeReceipt.patient?.lastFee, "500");
+                      const isPrepaid = cleanFee === "0" || String(activeReceipt.visit.fee || activeReceipt.patient?.lastFee || "").toLowerCase().includes("pkg") || String(activeReceipt.visit.fee || activeReceipt.patient?.lastFee || "").toLowerCase().includes("package");
                       return (
                         <>
                           <strong className="cell-value fee-amount" style={{ color: isPrepaid ? "#0284c7" : "#059669" }}>
@@ -8196,22 +8275,67 @@ _(Saved in patient clinic records)_`;
                 </div>
               </div>
 
-              {/* Fee Amount */}
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
-                  💰 Consultation / Session Fee (₹)
-                </label>
-                <div style={{ position: "relative" }}>
-                  <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontWeight: "800", color: "#64748b" }}>₹</span>
+              {/* Fee Amount with Quick 1-Tap Chips */}
+              <div style={{
+                background: "#f0fdf4",
+                border: "1.5px solid #86efac",
+                borderRadius: "10px",
+                padding: "12px 14px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: "800", color: "#065f46", margin: 0 }}>
+                    💰 Consultation / Session Fee (₹)
+                  </label>
+                  <span style={{ fontSize: "11.5px", color: "#047857", fontWeight: "700" }}>Tap to select</span>
+                </div>
+
+                <div style={{ display: "flex", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
+                  {[
+                    { val: "200", label: "₹200" },
+                    { val: "300", label: "₹300" },
+                    { val: "500", label: "₹500" },
+                    { val: "700", label: "₹700" },
+                    { val: "1000", label: "₹1000" },
+                    { val: "0", label: "₹0 (Pkg / Free)" }
+                  ].map((chip) => {
+                    const isSelected = String(editReceiptForm.fee).replace(/[^0-9]/g, "") === chip.val;
+                    return (
+                      <button
+                        key={chip.val}
+                        type="button"
+                        onClick={() => setEditReceiptForm({ ...editReceiptForm, fee: chip.val })}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "7px",
+                          fontSize: "12px",
+                          fontWeight: "800",
+                          cursor: "pointer",
+                          border: isSelected ? "2px solid #047857" : "1.5px solid #cbd5e1",
+                          background: isSelected ? "#059669" : "#ffffff",
+                          color: isSelected ? "#ffffff" : "#0f172a",
+                          boxShadow: isSelected ? "0 2px 6px rgba(5, 150, 105, 0.3)" : "none",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        {chip.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div style={{ position: "relative", maxWidth: "200px" }}>
+                  <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontWeight: "800", color: "#065f46" }}>₹</span>
                   <input
                     type="text"
                     style={{
                       width: "100%",
                       padding: "8px 10px 8px 24px",
                       borderRadius: "8px",
-                      border: "1.5px solid #cbd5e1",
+                      border: "1.5px solid #86efac",
                       fontSize: "14px",
-                      fontWeight: "700",
+                      fontWeight: "800",
+                      color: "#0f172a",
+                      background: "#ffffff",
                       boxSizing: "border-box"
                     }}
                     value={editReceiptForm.fee}

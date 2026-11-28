@@ -411,10 +411,13 @@ export default function PatientPortal({ onClose, themeProps }) {
     if (v.receipt && v.receipt.patient && v.receipt.visit) {
       return v.receipt;
     }
+    const resolvedFee = (v.fee !== undefined && v.fee !== null && String(v.fee).trim() !== "")
+      ? v.fee
+      : (patientProfile?.lastFee || "500");
     return {
       receiptNumber: `REC-${v.visitId || "01"}`,
       receiptDate: v.date || new Date().toISOString().slice(0, 10),
-      fee: v.fee || 300,
+      fee: resolvedFee,
       paymentMode: v.paymentMode || "Cash",
       patient: {
         patientId: patientProfile?.patientId || v.patientId,
@@ -435,7 +438,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         treatmentNotes: v.treatmentNotes || "Physiotherapy & Rehabilitation",
         followUpDate: v.followUpDate || "As advised",
         doctor: v.doctor || "Dr. Satyam Vishwakarma",
-        fee: v.fee || 300
+        fee: resolvedFee
       }
     };
   };
@@ -1769,7 +1772,12 @@ export default function PatientPortal({ onClose, themeProps }) {
                       }}>
                         <div>
                           <span style={{ color: "#64748b" }}>Fee & Payment: </span>
-                          <strong style={{ color: "#16a34a" }}>{String(latestVisit.fee || 300).startsWith("₹") ? latestVisit.fee : `₹${latestVisit.fee || 300}`} (Paid)</strong>
+                          <strong style={{ color: "#16a34a" }}>
+                            {(() => {
+                              const f = latestVisit.fee || patientProfile?.lastFee || "500";
+                              return String(f).startsWith("₹") ? f : `₹${f}`;
+                            })()} (Paid)
+                          </strong>
                         </div>
                         <div>
                           <span style={{ color: "#64748b" }}>Next Follow-Up: </span>
@@ -1969,7 +1977,12 @@ export default function PatientPortal({ onClose, themeProps }) {
                           }}>
                             <div>
                               <span style={{ color: "#64748b" }}>Fee & Payment: </span>
-                              <strong style={{ color: "#16a34a" }}>{String(v.fee || 300).startsWith("₹") ? v.fee : `₹${v.fee || 300}`} (Paid)</strong>
+                              <strong style={{ color: "#16a34a" }}>
+                                {(() => {
+                                  const f = v.fee || patientProfile?.lastFee || "500";
+                                  return String(f).startsWith("₹") ? f : `₹${f}`;
+                                })()} (Paid)
+                              </strong>
                             </div>
                             <div>
                               <span style={{ color: "#64748b" }}>Next Follow-Up: </span>
@@ -2200,8 +2213,9 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="receipts-grid">
                 {sortedVisits.map((v) => {
                   const receiptObj = makeReceiptObj(v);
-                  const cleanFeeNum = cleanFeeAmount(v.fee, "500");
-                  const isPrepaid = cleanFeeNum === "0" || String(v.fee || "").toLowerCase().includes("pkg") || String(v.fee || "").toLowerCase().includes("package");
+                  const rawFee = (v.fee !== undefined && v.fee !== null && String(v.fee).trim() !== "") ? v.fee : (patientProfile?.lastFee || "500");
+                  const cleanFeeNum = cleanFeeAmount(rawFee, "500");
+                  const isPrepaid = cleanFeeNum === "0" || String(rawFee).toLowerCase().includes("pkg") || String(rawFee).toLowerCase().includes("package");
 
                   return (
                     <div

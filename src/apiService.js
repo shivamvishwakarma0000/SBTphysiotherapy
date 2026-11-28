@@ -959,7 +959,8 @@ export const api = {
       intakeTime: intakeTimeStr,
       status: "Waiting for Doctor",
       totalVisits: 0,
-      lastVisitDate: todayStr
+      lastVisitDate: todayStr,
+      lastFee: payload.fee ? (String(payload.fee).startsWith("₹") ? payload.fee : `₹${String(payload.fee).replace(/[^0-9]/g, "")}`) : "₹500"
     };
 
     patients.unshift(newPatient);
@@ -1024,6 +1025,14 @@ export const api = {
     let newVisit;
     let visitNum;
 
+    // Cleanly normalize chosen fee (preserve ₹0, ₹200, ₹300, ₹500, etc. without auto-forcing ₹500)
+    const cleanFeeRaw = consultData.fee !== undefined && consultData.fee !== null ? String(consultData.fee).trim() : "";
+    const cleanConsultFee = cleanFeeRaw !== ""
+      ? (cleanFeeRaw === "0" || cleanFeeRaw.toLowerCase().includes("pkg") || cleanFeeRaw.toLowerCase().includes("package")
+          ? "₹0"
+          : (cleanFeeRaw.startsWith("₹") ? cleanFeeRaw : `₹${cleanFeeRaw.replace(/[^0-9]/g, "")}`))
+      : (patient.lastFee || (existingVisits.length > 0 && existingVisits[0].fee) || "₹500");
+
     // If patient already has a Visit #1 recorded for this intake consultation, update Visit #1 instead of duplicating to Visit #2!
     if (patient.status === "Waiting for Doctor" && existingVisits.length > 0) {
       const existingV = existingVisits[0];
@@ -1038,7 +1047,7 @@ export const api = {
         duration: consultData.duration || existingV.duration || patient.duration || "",
         diagnosis: consultData.diagnosis || existingV.diagnosis || "Under Active Physiotherapy Management",
         treatmentNotes: consultData.treatmentNotes || existingV.treatmentNotes || "Spinal mobilization, targeted stretches, and rehabilitation therapy.",
-        fee: consultData.fee ? (String(consultData.fee).startsWith("₹") ? String(consultData.fee) : `₹${String(consultData.fee).replace(/[^0-9]/g, "")}`) : (existingV.fee || "₹500"),
+        fee: cleanConsultFee,
         followUpDate: consultData.followUpDate || existingV.followUpDate || "",
         followUpTime: consultData.followUpTime || existingV.followUpTime || "",
         status: "Completed",
@@ -1059,7 +1068,7 @@ export const api = {
         duration: consultData.duration || patient.duration || "",
         diagnosis: consultData.diagnosis || "Under Active Physiotherapy Management",
         treatmentNotes: consultData.treatmentNotes || "Spinal mobilization, targeted stretches, and rehabilitation therapy.",
-        fee: consultData.fee ? (String(consultData.fee).startsWith("₹") ? String(consultData.fee) : `₹${String(consultData.fee).replace(/[^0-9]/g, "")}`) : "₹500",
+        fee: cleanConsultFee,
         followUpDate: consultData.followUpDate || "",
         followUpTime: consultData.followUpTime || "",
         status: "Completed",
@@ -1415,7 +1424,12 @@ export const api = {
     const visitNumber = existingVisits.length + 1;
     const todayStr = payload.visitDate || payload.date || new Date().toISOString().split("T")[0];
     const visitTimeStr = payload.visitTime || payload.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-    const feeStr = payload.fee ? (String(payload.fee).startsWith("₹") ? String(payload.fee) : `₹${String(payload.fee).replace(/[^0-9]/g, "")}`) : (patient.lastFee || "₹500");
+    const cleanFeeRaw = payload.fee !== undefined && payload.fee !== null ? String(payload.fee).trim() : "";
+    const feeStr = cleanFeeRaw !== ""
+      ? (cleanFeeRaw === "0" || cleanFeeRaw.toLowerCase().includes("pkg") || cleanFeeRaw.toLowerCase().includes("package")
+          ? "₹0"
+          : (cleanFeeRaw.startsWith("₹") ? cleanFeeRaw : `₹${cleanFeeRaw.replace(/[^0-9]/g, "")}`))
+      : (patient.lastFee || (patient.packagePerSessionFee ? `₹${patient.packagePerSessionFee}` : "₹500"));
 
     let finalFollowUpDate = payload.followUpDate || "";
     let finalFollowUpTime = payload.followUpTime || (payload.followUpDate ? "10:30 AM" : "");

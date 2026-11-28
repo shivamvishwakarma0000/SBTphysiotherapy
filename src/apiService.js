@@ -1,5 +1,5 @@
 // =============================================================================
-// VINDHYA PHYSIO & REHAB CENTER — CLOUD & LOCAL UNIFIED API ENGINE
+// VINDHY PHYSIOTHERAPY & REHAB CENTER — CLOUD & LOCAL UNIFIED API ENGINE
 // Supports: Netlify Static Hosting, Local Express Server, Supabase PostgreSQL & Direct Google Sheets Cloud Sync
 // =============================================================================
 
@@ -19,7 +19,9 @@ import {
   supabaseUpsertEnquiry,
   supabaseDeleteEnquiry,
   supabasePushAllData,
-  supabasePullAllData
+  supabasePullAllData,
+  supabaseGetSetting,
+  supabaseSetSetting
 } from "./supabaseClient";
 import defaultSeedPatients from "../data/patients.json";
 import defaultSeedVisits from "../data/visits.json";
@@ -97,7 +99,7 @@ export function generateReviewWhatsAppMessage(patientName, customReviewUrl = "")
 
   return `Namaste ${pName} ji \u{1F64F},
 
-Thank you for visiting Vindhy Physio & Rehab Center today for your consultation with Dr. Satyam Vishwakarma (PT).
+Thank you for visiting Vindhy Physiotherapy & Rehab Center today for your consultation with Dr. Satyam Vishwakarma (PT).
 
 \u{2B50} Please take 30 seconds to share your valuable review & feedback:
 \u{1F449} ${linkText}
@@ -218,6 +220,50 @@ function setLocal(key, data) {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
     console.error("Local storage error:", e);
+  }
+}
+
+// Multi-Device Permanent Deletion Synchronizer (Laptop <-> Phone <-> Supabase)
+export async function syncDeletedTombstones() {
+  if (!isSupabaseConnected()) return;
+  try {
+    const cloudDeleted = await supabaseGetSetting("deleted_tombstones");
+    const localDeletedPatients = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
+    const localDeletedVisits = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+
+    if (cloudDeleted && typeof cloudDeleted === "object") {
+      if (Array.isArray(cloudDeleted.patientIds)) {
+        cloudDeleted.patientIds.forEach(id => {
+          if (id && !localDeletedPatients.has(String(id))) {
+            localDeletedPatients.add(String(id));
+          }
+        });
+      }
+      if (Array.isArray(cloudDeleted.visitIds)) {
+        cloudDeleted.visitIds.forEach(id => {
+          if (id && !localDeletedVisits.has(String(id))) {
+            localDeletedVisits.add(String(id));
+          }
+        });
+      }
+    }
+
+    setLocal(KEYS.DELETED_PATIENT_IDS, Array.from(localDeletedPatients));
+    setLocal(KEYS.DELETED_VISIT_IDS, Array.from(localDeletedVisits));
+
+    // Push merged union to Supabase
+    await supabaseSetSetting("deleted_tombstones", {
+      patientIds: Array.from(localDeletedPatients),
+      visitIds: Array.from(localDeletedVisits)
+    });
+
+    // Clean local storage of any deletions discovered from other devices
+    const patients = getLocal(KEYS.PATIENTS, []).filter(p => !localDeletedPatients.has(p.patientId) && !localDeletedPatients.has(p.phone));
+    setLocal(KEYS.PATIENTS, patients);
+    const visits = getLocal(KEYS.VISITS, []).filter(v => !localDeletedVisits.has(v.visitId) && !localDeletedPatients.has(v.patientId));
+    setLocal(KEYS.VISITS, visits);
+  } catch (e) {
+    console.warn("syncDeletedTombstones notice:", e);
   }
 }
 
@@ -398,10 +444,16 @@ export async function restoreFromGoogleSheets() {
             pMap.set(lp.patientId, lp);
           } else {
             const sheetP = pMap.get(lp.patientId);
-            const resolvedStatus = (lp.status === "Waiting for Doctor" || sheetP.status === "Waiting for Doctor")
-              ? "Waiting for Doctor"
-              : (sheetP.status || lp.status || "Active");
-            pMap.set(lp.patientId, { ...sheetP, ...lp, status: resolvedStatus });
+            const maxVisits = Math.max(Number(lp.totalVisits) || 0, Number(sheetP.totalVisits) || 0);
+            let resolvedStatus = lp.status || sheetP.status || "Active";
+            if (maxVisits > 0) {
+              resolvedStatus = (lp.status === "Completed" || sheetP.status === "Completed") ? "Completed" : "Active";
+            } else if (lp.status === "Active" || sheetP.status === "Active") {
+              resolvedStatus = "Active";
+            } else {
+              resolvedStatus = lp.status || sheetP.status || "Waiting for Doctor";
+            }
+            pMap.set(lp.patientId, { ...sheetP, ...lp, status: resolvedStatus, totalVisits: maxVisits });
           }
         }
       });
@@ -502,6 +554,9 @@ export async function restoreFromGoogleSheets() {
           patient.lastVisitDate = pVisits[pVisits.length - 1].date;
           patient.lastDiagnosis = pVisits[pVisits.length - 1].diagnosis || patient.firstVisitReason;
           patient.firstVisitDate = pVisits[0].date;
+          if (patient.status === "Waiting for Doctor") {
+            patient.status = "Active";
+          }
         } else {
           patient.totalVisits = 0;
           patient.lastVisitDate = patient.registrationDate;
@@ -556,7 +611,7 @@ export const api = {
         email: auth.email,
         name: "Dr. Satyam Vishwakarma",
         role: "Chief Physiotherapist & Director",
-        clinic: "Vindhy Physio & Rehab Center"
+        clinic: "Vindhy Physiotherapy & Rehab Center"
       };
       return { ok: true, token, doctor };
     }
@@ -568,7 +623,7 @@ export const api = {
         email: DEFAULT_DOCTOR_EMAIL,
         name: "Dr. Satyam Vishwakarma",
         role: "Chief Physiotherapist & Director",
-        clinic: "Vindhy Physio & Rehab Center"
+        clinic: "Vindhy Physiotherapy & Rehab Center"
       };
       return { ok: true, token, doctor };
     }
@@ -587,7 +642,7 @@ export const api = {
         email: auth.email,
         name: "Dr. Satyam Vishwakarma",
         role: "Chief Physiotherapist & Director",
-        clinic: "Vindhy Physio & Rehab Center"
+        clinic: "Vindhy Physiotherapy & Rehab Center"
       }
     };
   },
@@ -683,16 +738,40 @@ export const api = {
 
   // 3. PATIENTS
   async getPatients(query = "") {
+    // 0. Sync tombstones across devices first
+    await syncDeletedTombstones();
+
     // If Supabase is connected, optionally fetch fresh records
     if (isSupabaseConnected()) {
       try {
         const sbPatients = await supabaseGetPatients();
         if (sbPatients && sbPatients.length > 0) {
           const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
-          const activeSbPatients = sbPatients.filter(p => !deletedPatientIds.has(p.patientId) && !deletedPatientIds.has(p.phone));
-          if (activeSbPatients.length > 0) {
-            setLocal(KEYS.PATIENTS, activeSbPatients);
-          }
+          const localPatients = getLocal(KEYS.PATIENTS, []);
+          const localMap = new Map(localPatients.map(p => [p.patientId, p]));
+
+          const mergedPatients = sbPatients
+            .filter(p => !deletedPatientIds.has(p.patientId) && !deletedPatientIds.has(p.phone))
+            .map(sbP => {
+              const localP = localMap.get(sbP.patientId);
+              if (!localP) return sbP;
+              const totalVisits = Math.max(Number(localP.totalVisits) || 0, Number(sbP.totalVisits) || 0);
+              let status = localP.status || sbP.status || "Active";
+              if (totalVisits > 0 && status === "Waiting for Doctor") {
+                status = "Active";
+              } else if (localP.status === "Active" && sbP.status === "Waiting for Doctor") {
+                status = "Active";
+              }
+              return { ...sbP, ...localP, totalVisits, status };
+            });
+
+          localPatients.forEach(lp => {
+            if (lp && lp.patientId && !deletedPatientIds.has(lp.patientId) && !mergedPatients.some(m => m.patientId === lp.patientId)) {
+              mergedPatients.push(lp);
+            }
+          });
+
+          setLocal(KEYS.PATIENTS, mergedPatients);
         }
       } catch (err) {
         console.warn("Supabase live getPatients notice:", err);
@@ -715,6 +794,25 @@ export const api = {
     };
 
     const patients = getLocal(KEYS.PATIENTS, []).filter(p => !isDummyRecord(p));
+
+    // Ensure status & totalVisits match actual visits
+    const visits = getLocal(KEYS.VISITS, []);
+    const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
+    const validVisits = visits.filter(v => v && v.visitId && !deletedVisitIds.has(v.visitId));
+
+    patients.forEach(p => {
+      const pVisits = validVisits.filter(v => 
+        v.patientId === p.patientId || 
+        (p.phone && String(v.phone || "").replace(/\D/g, "").slice(-10) === String(p.phone).replace(/\D/g, "").slice(-10))
+      );
+      if (pVisits.length > 0) {
+        p.totalVisits = Math.max(Number(p.totalVisits) || 0, pVisits.length);
+        if (p.status === "Waiting for Doctor") {
+          p.status = "Active";
+        }
+      }
+    });
+
     if (!query) return { ok: true, patients };
 
     const q = query.toLowerCase();
@@ -773,6 +871,13 @@ export const api = {
           status: "Completed",
           doctor: "Dr. Satyam Vishwakarma"
         });
+      }
+    }
+
+    if (matchedVisits.length > 0) {
+      patient.totalVisits = Math.max(Number(patient.totalVisits) || 0, matchedVisits.length);
+      if (patient.status === "Waiting for Doctor") {
+        patient.status = "Active";
       }
     }
 
@@ -916,27 +1021,51 @@ export const api = {
 
     const patient = patients[pIndex];
     const existingVisits = visits.filter(v => v.patientId === patientId);
-    const visitNum = existingVisits.length + 1;
+    let newVisit;
+    let visitNum;
 
-    const newVisit = {
-      visitId: `VST-${patientId.replace("VPR-2026-", "")}-${visitNum}`,
-      patientId: patientId,
-      patientName: patient.name,
-      phone: patient.phone,
-      visitNumber: visitNum,
-      date: consultData.visitDate || todayStr,
-      time: consultData.visitTime || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
-      reason: consultData.reason || patient.firstVisitReason || "Physiotherapy Consultation",
-      complaint: consultData.complaint || patient.complaint || "Pain / Mobility limitation",
-      duration: consultData.duration || patient.duration || "",
-      diagnosis: consultData.diagnosis || "Under Active Physiotherapy Management",
-      treatmentNotes: consultData.treatmentNotes || "Spinal mobilization, targeted stretches, and rehabilitation therapy.",
-      fee: consultData.fee ? (String(consultData.fee).startsWith("₹") ? String(consultData.fee) : `₹${String(consultData.fee).replace(/[^0-9]/g, "")}`) : "₹500",
-      followUpDate: consultData.followUpDate || "",
-      followUpTime: consultData.followUpTime || "",
-      status: "Completed",
-      doctor: "Dr. Satyam Vishwakarma"
-    };
+    // If patient already has a Visit #1 recorded for this intake consultation, update Visit #1 instead of duplicating to Visit #2!
+    if (patient.status === "Waiting for Doctor" && existingVisits.length > 0) {
+      const existingV = existingVisits[0];
+      visitNum = 1;
+      newVisit = {
+        ...existingV,
+        visitNumber: 1,
+        date: consultData.visitDate || existingV.date || todayStr,
+        time: consultData.visitTime || existingV.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+        reason: consultData.reason || existingV.reason || patient.firstVisitReason || "Physiotherapy Consultation",
+        complaint: consultData.complaint || existingV.complaint || patient.complaint || "Pain / Mobility limitation",
+        duration: consultData.duration || existingV.duration || patient.duration || "",
+        diagnosis: consultData.diagnosis || existingV.diagnosis || "Under Active Physiotherapy Management",
+        treatmentNotes: consultData.treatmentNotes || existingV.treatmentNotes || "Spinal mobilization, targeted stretches, and rehabilitation therapy.",
+        fee: consultData.fee ? (String(consultData.fee).startsWith("₹") ? String(consultData.fee) : `₹${String(consultData.fee).replace(/[^0-9]/g, "")}`) : (existingV.fee || "₹500"),
+        followUpDate: consultData.followUpDate || existingV.followUpDate || "",
+        followUpTime: consultData.followUpTime || existingV.followUpTime || "",
+        status: "Completed",
+        doctor: "Dr. Satyam Vishwakarma"
+      };
+    } else {
+      visitNum = existingVisits.length + 1;
+      newVisit = {
+        visitId: `VST-${patientId.replace("VPR-2026-", "")}-${visitNum}`,
+        patientId: patientId,
+        patientName: patient.name,
+        phone: patient.phone,
+        visitNumber: visitNum,
+        date: consultData.visitDate || todayStr,
+        time: consultData.visitTime || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+        reason: consultData.reason || patient.firstVisitReason || "Physiotherapy Consultation",
+        complaint: consultData.complaint || patient.complaint || "Pain / Mobility limitation",
+        duration: consultData.duration || patient.duration || "",
+        diagnosis: consultData.diagnosis || "Under Active Physiotherapy Management",
+        treatmentNotes: consultData.treatmentNotes || "Spinal mobilization, targeted stretches, and rehabilitation therapy.",
+        fee: consultData.fee ? (String(consultData.fee).startsWith("₹") ? String(consultData.fee) : `₹${String(consultData.fee).replace(/[^0-9]/g, "")}`) : "₹500",
+        followUpDate: consultData.followUpDate || "",
+        followUpTime: consultData.followUpTime || "",
+        status: "Completed",
+        doctor: "Dr. Satyam Vishwakarma"
+      };
+    }
 
     // Remove any stale deletion tombstone
     const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
@@ -947,8 +1076,8 @@ export const api = {
 
     // Update patient status to Active (Consultation complete)
     patient.status = "Active";
-    patient.totalVisits = Math.max(visitNum, existingVisits.length + 1);
-    patient.lastVisitDate = todayStr;
+    patient.totalVisits = Math.max(1, visitNum, existingVisits.length);
+    patient.lastVisitDate = newVisit.date || todayStr;
     patient.lastDiagnosis = newVisit.diagnosis;
     patient.lastFee = newVisit.fee;
     if (newVisit.followUpDate) {
@@ -972,7 +1101,7 @@ export const api = {
     } catch (e) {}
 
     // If this is the patient's first consultation (newly enrolled), schedule the 2-hour automated WhatsApp review
-    if (visitNum === 1 || existingVisits.length === 0 || !patient.totalVisits || patient.totalVisits <= 1) {
+    if (visitNum === 1 || existingVisits.length <= 1) {
       try {
         scheduleReviewRequest(patient, newVisit);
       } catch (e) {
@@ -980,11 +1109,17 @@ export const api = {
       }
     }
 
-    // Sync to Supabase PostgreSQL (Non-blocking)
-    try {
-      supabaseUpsertPatient(patient).catch(err => console.warn("Supabase patient update notice:", err));
-      supabaseUpsertVisit(newVisit).catch(err => console.warn("Supabase visit sync notice:", err));
-    } catch (_) {}
+    // Sync to Supabase PostgreSQL
+    if (isSupabaseConnected()) {
+      try {
+        await Promise.all([
+          supabaseUpsertPatient(patient),
+          supabaseUpsertVisit(newVisit)
+        ]);
+      } catch (err) {
+        console.warn("Supabase patient/visit sync notice:", err);
+      }
+    }
 
     // Sync to Google Sheets
     syncToGoogleSheets("sync_patient", patient);
@@ -1060,10 +1195,19 @@ export const api = {
     setLocal(KEYS.VISITS, updatedVisits);
     setLocal(KEYS.PATIENT_AUTH, updatedAuth);
 
-    // 4. Delete from Supabase PostgreSQL (Non-blocking)
-    try {
-      supabaseDeletePatient(patientId).catch(err => console.warn("Supabase patient delete notice:", err));
-    } catch (_) {}
+    // 4. Delete from Supabase PostgreSQL & update cloud tombstone
+    if (isSupabaseConnected()) {
+      try {
+        await supabaseDeletePatient(patientId);
+        const deletedVisits = getLocal(KEYS.DELETED_VISIT_IDS, []);
+        await supabaseSetSetting("deleted_tombstones", {
+          patientIds: Array.from(deletedPatientIds),
+          visitIds: deletedVisits
+        });
+      } catch (err) {
+        console.warn("Supabase patient delete notice:", err);
+      }
+    }
 
     // 5. Sync deletion to Google Sheets Webhook
     syncToGoogleSheets("delete_patient", {
@@ -1118,16 +1262,27 @@ export const api = {
           patient.lastVisitDate = patient.registrationDate;
         }
         setLocal(KEYS.PATIENTS, patients);
-        try {
-          supabaseUpsertPatient(patient).catch(() => {});
-        } catch (_) {}
+        if (isSupabaseConnected()) {
+          try {
+            await supabaseUpsertPatient(patient);
+          } catch (_) {}
+        }
       }
     }
 
-    // Delete from Supabase PostgreSQL
-    try {
-      supabaseDeleteVisit(visitId).catch(err => console.warn("Supabase visit delete notice:", err));
-    } catch (_) {}
+    // Delete from Supabase PostgreSQL & update cloud tombstone
+    if (isSupabaseConnected()) {
+      try {
+        await supabaseDeleteVisit(visitId);
+        const deletedPatients = getLocal(KEYS.DELETED_PATIENT_IDS, []);
+        await supabaseSetSetting("deleted_tombstones", {
+          patientIds: deletedPatients,
+          visitIds: Array.from(deletedVisitIds)
+        });
+      } catch (err) {
+        console.warn("Supabase visit delete notice:", err);
+      }
+    }
 
     syncToGoogleSheets("delete_visit", { visitId });
 
@@ -1189,7 +1344,7 @@ export const api = {
 
     setLocal(KEYS.VISITS, updatedVisits);
 
-    // 3. Update patient details if fee or diagnosis changed
+    // 3. Update patient details if fee, diagnosis, reason, date, or follow-up changed
     if (updatedVisit && updatedVisit.patientId) {
       const patients = getLocal(KEYS.PATIENTS, []);
       const patient = patients.find(p => p.patientId === updatedVisit.patientId);
@@ -1198,17 +1353,44 @@ export const api = {
         patient.totalVisits = patientVisits.length;
         if (updates.fee) patient.lastFee = updates.fee;
         if (updates.diagnosis) patient.lastDiagnosis = updates.diagnosis;
+        if (updates.reason) patient.firstVisitReason = updates.reason;
+        if (updates.date) patient.lastVisitDate = updates.date;
+        if (updates.followUpDate !== undefined) {
+          patient.followUpDate = updates.followUpDate;
+          patient.follow_up_date = updates.followUpDate;
+        }
+        if (updates.followUpTime !== undefined) {
+          patient.followUpTime = updates.followUpTime;
+          patient.follow_up_time = updates.followUpTime;
+        }
+
         setLocal(KEYS.PATIENTS, patients);
+
+        // Update PATIENT_PROFILE_KEY if patient is viewing portal
         try {
-          supabaseUpsertPatient(patient).catch(() => {});
+          const stored = JSON.parse(localStorage.getItem(PATIENT_PROFILE_KEY) || "null");
+          if (stored && (stored.patientId === patient.patientId || stored.phone === patient.phone)) {
+            localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify({ ...stored, ...patient }));
+          }
         } catch (_) {}
+
+        if (isSupabaseConnected()) {
+          try {
+            await supabaseUpsertPatient(patient);
+          } catch (_) {}
+        }
+        syncToGoogleSheets("sync_patient", patient);
       }
     }
 
-    // 4. Update Supabase if connected
-    try {
-      supabaseUpsertVisit(updatedVisit).catch(() => {});
-    } catch (_) {}
+    // 4. Update Supabase if connected (AWAITED for immediate consistency)
+    if (isSupabaseConnected()) {
+      try {
+        await supabaseUpsertVisit(updatedVisit);
+      } catch (err) {
+        console.warn("Supabase visit update notice:", err);
+      }
+    }
 
     // 5. Sync to Google Sheets
     syncToGoogleSheets("update_visit", updatedVisit);
@@ -1314,16 +1496,26 @@ export const api = {
   },
 
   async getTodayVisits() {
+    await syncDeletedTombstones();
     if (isSupabaseConnected()) {
       try {
         const sbVisits = await supabaseGetVisits();
         if (sbVisits && sbVisits.length > 0) {
           const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
           const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
-          const activeVisits = sbVisits.filter(v => !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId));
-          if (activeVisits.length > 0) {
-            setLocal(KEYS.VISITS, activeVisits);
-          }
+          const localVisits = getLocal(KEYS.VISITS, []);
+          const vMap = new Map();
+          localVisits.forEach(v => {
+            if (v && v.visitId && !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId)) {
+              vMap.set(v.visitId, v);
+            }
+          });
+          sbVisits.forEach(v => {
+            if (v && v.visitId && !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId)) {
+              vMap.set(v.visitId, { ...(vMap.get(v.visitId) || {}), ...v });
+            }
+          });
+          setLocal(KEYS.VISITS, Array.from(vMap.values()));
         }
       } catch (e) {
         console.warn("Supabase live getTodayVisits notice:", e);
@@ -1331,21 +1523,32 @@ export const api = {
     }
     const visits = getLocal(KEYS.VISITS, []);
     const todayStr = new Date().toISOString().split("T")[0];
-    const todayList = visits.filter(v => v.date === todayStr);
+    const todayClean = cleanDateOnly(new Date());
+    const todayList = visits.filter(v => v.date === todayStr || cleanDateOnly(v.date) === todayClean);
     return { ok: true, visits: todayList };
   },
 
   async getAllVisits() {
+    await syncDeletedTombstones();
     if (isSupabaseConnected()) {
       try {
         const sbVisits = await supabaseGetVisits();
         if (sbVisits && sbVisits.length > 0) {
           const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
           const deletedPatientIds = new Set(getLocal(KEYS.DELETED_PATIENT_IDS, []));
-          const activeVisits = sbVisits.filter(v => !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId));
-          if (activeVisits.length > 0) {
-            setLocal(KEYS.VISITS, activeVisits);
-          }
+          const localVisits = getLocal(KEYS.VISITS, []);
+          const vMap = new Map();
+          localVisits.forEach(v => {
+            if (v && v.visitId && !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId)) {
+              vMap.set(v.visitId, v);
+            }
+          });
+          sbVisits.forEach(v => {
+            if (v && v.visitId && !deletedVisitIds.has(v.visitId) && !deletedPatientIds.has(v.patientId)) {
+              vMap.set(v.visitId, { ...(vMap.get(v.visitId) || {}), ...v });
+            }
+          });
+          setLocal(KEYS.VISITS, Array.from(vMap.values()));
         }
       } catch (e) {
         console.warn("Supabase live getAllVisits notice:", e);
@@ -1898,11 +2101,29 @@ export const patientApi = {
     const storedPatient = this.getStoredPatient();
     if (!storedPatient) return { ok: false, error: "No patient session found." };
 
-    const patients = getLocal(KEYS.PATIENTS, []);
-    const p = patients.find(patient => 
-      patient.patientId === storedPatient.patientId || 
-      (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
-    ) || storedPatient;
+    await syncDeletedTombstones();
+
+    let p = null;
+    if (isSupabaseConnected()) {
+      try {
+        const cloudPatients = await supabaseGetPatients();
+        if (Array.isArray(cloudPatients) && cloudPatients.length > 0) {
+          const fresh = cloudPatients.find(patient => 
+            patient.patientId === storedPatient.patientId || 
+            (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
+          );
+          if (fresh) p = fresh;
+        }
+      } catch (_) {}
+    }
+
+    if (!p) {
+      const patients = getLocal(KEYS.PATIENTS, []);
+      p = patients.find(patient => 
+        patient.patientId === storedPatient.patientId || 
+        (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
+      ) || storedPatient;
+    }
 
     localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
     return { ok: true, patient: p };
@@ -1924,13 +2145,29 @@ export const patientApi = {
     const storedPatient = this.getStoredPatient();
     if (!storedPatient) return { ok: false, error: "No patient session found." };
 
-    const patients = getLocal(KEYS.PATIENTS, []);
-    const p = patients.find(patient => 
-      patient.patientId === storedPatient.patientId || 
-      (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
-    ) || storedPatient;
+    await syncDeletedTombstones();
 
-    localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
+    let p = null;
+    if (isSupabaseConnected()) {
+      try {
+        const cloudPatients = await supabaseGetPatients();
+        if (Array.isArray(cloudPatients) && cloudPatients.length > 0) {
+          const fresh = cloudPatients.find(patient => 
+            patient.patientId === storedPatient.patientId || 
+            (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
+          );
+          if (fresh) p = fresh;
+        }
+      } catch (_) {}
+    }
+
+    if (!p) {
+      const patients = getLocal(KEYS.PATIENTS, []);
+      p = patients.find(patient => 
+        patient.patientId === storedPatient.patientId || 
+        (patient.phone && storedPatient.phone && String(patient.phone).replace(/\D/g, "").slice(-10) === String(storedPatient.phone).replace(/\D/g, "").slice(-10))
+      ) || storedPatient;
+    }
 
     const deletedVisitIds = new Set(getLocal(KEYS.DELETED_VISIT_IDS, []));
     let allVisits = getLocal(KEYS.VISITS, []).filter(v => v && v.visitId && !deletedVisitIds.has(v.visitId));
@@ -1939,8 +2176,11 @@ export const patientApi = {
         const sbVisits = await supabaseGetVisits();
         if (sbVisits && sbVisits.length > 0) {
           const map = new Map();
-          [...allVisits, ...sbVisits].forEach(v => {
+          allVisits.forEach(v => {
             if (v && v.visitId && !deletedVisitIds.has(v.visitId)) map.set(v.visitId, v);
+          });
+          sbVisits.forEach(v => {
+            if (v && v.visitId && !deletedVisitIds.has(v.visitId)) map.set(v.visitId, { ...(map.get(v.visitId) || {}), ...v });
           });
           allVisits = Array.from(map.values());
           setLocal(KEYS.VISITS, allVisits);
@@ -1971,6 +2211,12 @@ export const patientApi = {
       const s = v?.followUpDate ? String(v.followUpDate).trim() : "";
       return s && s.toLowerCase() !== "none" && s.toLowerCase() !== "sos" && !s.toLowerCase().includes("as advised");
     });
+
+    if (latestFollowUp) {
+      p.followUpDate = latestFollowUp.followUpDate;
+      if (latestFollowUp.followUpTime) p.followUpTime = latestFollowUp.followUpTime;
+    }
+    localStorage.setItem(PATIENT_PROFILE_KEY, JSON.stringify(p));
 
     return {
       ok: true,

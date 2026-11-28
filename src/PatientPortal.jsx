@@ -451,11 +451,11 @@ export default function PatientPortal({ onClose, themeProps }) {
             <div className="patient-portal-badge">PATIENT RECOVERY PORTAL</div>
             <img
               src={CLINIC_LOGO_B64 || "/vindhy-receipt-logo.png"}
-              alt="Vindhy Physio & Rehab Center Logo"
+              alt="Vindhy Physiotherapy & Rehab Center Logo"
               className="patient-portal-logo prominent-landing-logo"
             />
-            <h2>Vindhy Physio & Rehab Center</h2>
-            <p className="subtext">Dr. Satyam Vishwakarma • Amravati Chauraha, Vindhyachal</p>
+            <h2>Vindhy Physiotherapy & Rehab Center</h2>
+            <p className="subtext">Dr. Satyam Vishwakarma • Atal Chauraha (Amravati), Vindhyachal</p>
           </div>
 
           <div className="patient-login-card">
@@ -616,12 +616,12 @@ export default function PatientPortal({ onClose, themeProps }) {
           {CLINIC_LOGO_B64 && (
             <img
               src={CLINIC_LOGO_B64}
-              alt="Vindhy Physio & Rehab Center Logo"
+              alt="Vindhy Physiotherapy & Rehab Center Logo"
               className="portal-nav-logo"
             />
           )}
           <div className="portal-clinic-meta">
-            <h1>Vindhy Physio & Rehab Center</h1>
+            <h1>Vindhy Physiotherapy & Rehab Center</h1>
             <span className="portal-badge-pill">
               {isAwaitingConsultation ? "PATIENT INTAKE • WAITING QUEUE" : "PATIENT RECOVERY PORTAL"}
             </span>
@@ -1050,7 +1050,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                 {CLINIC_LOGO_B64 && (
                   <img
                     src={CLINIC_LOGO_B64}
-                    alt="Vindhy Physio & Rehab Center"
+                    alt="Vindhy Physiotherapy & Rehab Center"
                     className="mobile-hero-logo"
                   />
                 )}
@@ -2264,7 +2264,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                         </div>
                         <div className="receipt-meta-row">
                           <span className="meta-label">Clinic:</span>
-                          <span className="meta-val">Vindhy Physio & Rehab Center</span>
+                          <span className="meta-val">Vindhy Physiotherapy & Rehab Center</span>
                         </div>
                       </div>
 
@@ -2623,7 +2623,7 @@ export default function PatientPortal({ onClose, themeProps }) {
                   <div>
                     <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: "800", color: "var(--heading)" }}>Clinic Login Credentials</h3>
                     <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
-                      Your account was enrolled at Vindhy Physio & Rehab Center by Dr. Satyam Vishwakarma.
+                      Your account was enrolled at Vindhy Physiotherapy & Rehab Center by Dr. Satyam Vishwakarma.
                     </p>
                   </div>
                 </div>
@@ -2723,7 +2723,7 @@ export default function PatientPortal({ onClose, themeProps }) {
               <div className="slip-top-bar">
                 <div>
                   <h4>VINDHY PHYSIOTHERAPY &amp; REHAB CENTER</h4>
-                  <p>Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)</p>
+                  <p>Atal Chauraha (Amravati), Vindhyachal, Mirzapur (U.P.)</p>
                   <p>Phone: +91 9793093316 | WhatsApp: +91 9793093316</p>
                 </div>
                 <div className="slip-doctor-right">
@@ -3034,7 +3034,7 @@ export default function PatientPortal({ onClose, themeProps }) {
         <div className="patient-submodal-overlay" onClick={() => setShowContactModal(false)}>
           <div className="patient-submodal-card" onClick={(e) => e.stopPropagation()}>
             <div className="submodal-head">
-              <h3>📞 Contact Vindhy Physio Clinic</h3>
+              <h3>📞 Contact Vindhy Physiotherapy Clinic</h3>
               <button className="submodal-close" onClick={() => setShowContactModal(false)}>✕</button>
             </div>
             <p style={{ margin: "8px 0 16px", color: "var(--text-secondary, #475569)", fontSize: "13px", lineHeight: "1.5" }}>

@@ -123,7 +123,7 @@ export const buildReceiptPDF = (receipt) => {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(200, 220, 230);
-  doc.text("Vindhy Physiotherapy, Amravati Chauraha, Kantit, Vindhyachal, Mirzapur (U.P.) 231001", 14, 32);
+  doc.text("Vindhy Physiotherapy & Rehab Center, Atal Chauraha (Amravati), Vindhyachal, Mirzapur (U.P.) 231001", 14, 32);
   doc.text("Phone: +91 9793093316  |  WhatsApp: +91 9793093316", 14, 38);
 
   // Doctor Details on Top Right
@@ -299,7 +299,7 @@ export const buildReceiptPDF = (receipt) => {
   doc.text("Thank you for choosing Vindhy Physiotherapy & Rehab Center", 105, 283, { align: "center" });
   doc.setFontSize(7);
   doc.setTextColor(180, 200, 210);
-  doc.text("For appointments & medical inquiries: Call 9793093316 | WhatsApp: 9793093316 | Amravati Chauraha, Vindhyachal", 105, 289, { align: "center" });
+  doc.text("For appointments & medical inquiries: Call 9793093316 | WhatsApp: 9793093316 | Atal Chauraha (Amravati), Vindhyachal, Mirzapur", 105, 289, { align: "center" });
 
   return doc;
 };

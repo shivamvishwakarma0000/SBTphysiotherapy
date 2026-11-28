@@ -12,7 +12,7 @@ import ClinicLeafletMap, { CLINIC_SHARE_URL, CLINIC_EXACT_LOCATION } from "./Cli
 
 const phonePrimary = "9793093316";
 const phoneWhatsApp = "9793093316";
-const clinicAddress = "Vindhy Physiotherapy, Amravati Chauraha, Kantit, Vindhyachal, Mirzapur, Uttar Pradesh 231001";
+const clinicAddress = "Vindhy Physiotherapy & Rehab Center, Atal Chauraha (Amravati), Vindhyachal, Mirzapur, Uttar Pradesh 231001";
 
 const navItems = [
   ["Home", "#home"],
@@ -130,7 +130,7 @@ function ClinicLogo() {
     <div className="clinic-logo-wrap">
       <img
         src="/vindhy-logo.png"
-        alt="Vindhy Physio & Rehab Center"
+        alt="Vindhy Physiotherapy & Rehab Center"
         className="clinic-logo-img"
         loading="eager"
       />
@@ -225,7 +225,7 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, th
     <>
       <header className="site-header">
         <div className="header-inner">
-          <a className="brand" href="#home" aria-label="Vindhy Physio & Rehab Center home" onClick={handleNavClick}>
+          <a className="brand" href="#home" aria-label="Vindhy Physiotherapy & Rehab Center home" onClick={handleNavClick}>
             <ClinicLogo isDark={true} />
           </a>
 
@@ -312,7 +312,7 @@ function Header({ onOpenDoctorPortal, onOpenPatientPortal, onOpenDownloadApp, th
               <button
                 className="mobile-drawer-btn download-btn android-download-btn"
                 onClick={() => { setMobileMenuOpen(false); onOpenDownloadApp(); }}
-                title="Download & Install Vindhy Physio App on Android"
+                title="Download & Install Vindhy Physiotherapy App on Android"
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style={{ marginRight: '4px' }}>
                   <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4114 13.8533 8.081 12 8.081s-3.5902.3304-5.1367.8687L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
@@ -627,7 +627,7 @@ function BodyMap() {
               <p>{copy}</p>
               <div className="card-action-box">
                 <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent("Vindhy Physio " + title + " treatment")}`}
+                  href={`https://www.google.com/search?q=${encodeURIComponent("Vindhy Physiotherapy " + title + " treatment")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="explore-btn"
@@ -661,7 +661,7 @@ function Programs() {
         <p className="eyebrow">CLINICAL METHODOLOGY</p>
         <h2>Structured therapy programs engineered for lasting recovery.</h2>
         <p className="section-sublead">
-          At <strong>Vindhy Physio & Rehab Center</strong>, every patient journey begins with diagnostic evaluation, progressing systematically through pain management, tissue healing, functional strengthening, and relapse prevention.
+          At <strong>Vindhy Physiotherapy & Rehab Center</strong>, every patient journey begins with diagnostic evaluation, progressing systematically through pain management, tissue healing, functional strengthening, and relapse prevention.
         </p>
       </div>
       <div className="programs-grid">
@@ -682,12 +682,12 @@ function PatientFAQSection() {
 
   const faqs = [
     {
-      q: "What clinical conditions are treated by Dr. Satyam Vishwakarma at Vindhy Physio?",
+      q: "What clinical conditions are treated by Dr. Satyam Vishwakarma at Vindhy Physiotherapy & Rehab Center?",
       a: "Dr. Satyam Vishwakarma specializes in evidence-based rehabilitation for spine & lower back pain (sciatica, disc herniation, slip disc), cervical spondylosis & neck stiffness, knee osteoarthritis & ACL post-operative recovery, frozen shoulder (adhesive capsulitis), paralysis & stroke neuro-rehabilitation, pediatric motor therapy (CP), sports injuries, and clinical cupping (hijama) for myofascial decompression."
     },
     {
       q: "How does the online Patient Portal & daily attendance calendar work?",
-      a: "When you begin physical therapy at Vindhy Physio & Rehab Center, your digital profile tracks consecutive daily attendance in real-time. Each attended session turns green on your personalized interactive calendar. You can review attended session dates, treatment milestones, recovery percentages, and download clinic-authenticated receipts directly on your phone."
+      a: "When you begin physical therapy at Vindhy Physiotherapy & Rehab Center, your digital profile tracks consecutive daily attendance in real-time. Each attended session turns green on your personalized interactive calendar. You can review attended session dates, treatment milestones, recovery percentages, and download clinic-authenticated receipts directly on your phone."
     },
     {
       q: "How are session fees and rehabilitation packages structured?",
@@ -809,7 +809,7 @@ function PatientFAQSection() {
               Dr. Satyam Vishwakarma (DPT, BPT, CCYP BHU)
             </h4>
             <p style={{ margin: 0, fontSize: "13px", color: "#cbd5e1", maxWidth: "560px", lineHeight: "1.5" }}>
-              Evidence-based musculoskeletal &amp; neuromuscular rehabilitation at Amravati Chauraha, Vindhyachal, Mirzapur.
+              Evidence-based musculoskeletal &amp; neuromuscular rehabilitation at Atal Chauraha (Amravati), Vindhyachal, Mirzapur.
             </p>
           </div>
           <a
@@ -1287,7 +1287,7 @@ function Footer({ onOpenDoctorPortal, onOpenPatientPortal, isDark = false }) {
         </div>
       </div>
       <div className="footer-bottom-bar">
-        <p>© {new Date().getFullYear()} Vindhy Physio & Rehab Center. All rights reserved. Dr. Satyam Vishwakarma (DPT, BPT, CCYP BHU) • 7+ Years Experience.</p>
+        <p>© {new Date().getFullYear()} Vindhy Physiotherapy & Rehab Center. All rights reserved. Dr. Satyam Vishwakarma (DPT, BPT, CCYP BHU) • 7+ Years Experience.</p>
       </div>
     </footer>
   );
@@ -1345,7 +1345,7 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
     } else {
       localStorage.setItem('vindhy_app_installed', 'true');
       if (onInstalled) onInstalled();
-      alert("📲 To install Vindhy Physio App on Android:\n1. Tap the three dots (⋮) in Chrome (top right)\n2. Select 'Install app' or 'Add to Home screen'\n3. Tap 'Install'");
+      alert("📲 To install Vindhy Physiotherapy App on Android:\n1. Tap the three dots (⋮) in Chrome (top right)\n2. Select 'Install app' or 'Add to Home screen'\n3. Tap 'Install'");
       onClose();
     }
   };
@@ -1364,11 +1364,11 @@ function AppDownloadModal({ isOpen, onClose, deferredPrompt, onInstalled }) {
         <div className="app-download-header">
           <img
             src="/icon-192.png"
-            alt="Vindhy Physio & Rehab Center"
+            alt="Vindhy Physiotherapy & Rehab Center"
             className="app-download-logo"
           />
           <div className="app-download-meta">
-            <h3>Download Vindhy App 📱</h3>
+            <h3>Download Clinic App 📱</h3>
             <span className="app-download-badge">Official Clinic App</span>
           </div>
         </div>

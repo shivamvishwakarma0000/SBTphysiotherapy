@@ -661,3 +661,42 @@ export async function supabasePullAllData() {
     enquiries: (eRes.data || []).map(rowToEnquiry)
   };
 }
+
+/**
+ * Universal Key-Value Clinic Settings Sync (used for deleted tombstones, sync state, etc.)
+ */
+export async function supabaseGetSetting(key) {
+  const sb = getSupabaseClient();
+  if (!sb || !key) return null;
+  try {
+    const { data, error } = await sb
+      .from("clinic_settings")
+      .select("setting_value")
+      .eq("setting_key", String(key))
+      .maybeSingle();
+    if (error) throw error;
+    return data?.setting_value || null;
+  } catch (err) {
+    console.warn("supabaseGetSetting notice:", err);
+    return null;
+  }
+}
+
+export async function supabaseSetSetting(key, value) {
+  const sb = getSupabaseClient();
+  if (!sb || !key) return false;
+  try {
+    const { error } = await sb
+      .from("clinic_settings")
+      .upsert({
+        setting_key: String(key),
+        setting_value: value,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "setting_key" });
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.warn("supabaseSetSetting notice:", err);
+    return false;
+  }
+}

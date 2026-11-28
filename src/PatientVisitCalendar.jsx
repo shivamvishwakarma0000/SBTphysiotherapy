@@ -5,7 +5,7 @@ import { patientApi } from "./apiService";
 /**
  * PatientVisitCalendar
  * State-of-the-art clinical rehabilitation calendar component
- * Built for Vindhya Physio & Rehab Center (Dr. Satyam Vishwakarma)
+ * Built for Vindhy Physiotherapy & Rehab Center (Dr. Satyam Vishwakarma)
  * Features:
  *  1. Total visits count & attendance adherence metrics
  *  2. Attended visit days highlighted with clinical badges
@@ -833,7 +833,7 @@ export default function PatientVisitCalendar({
           {phone && (
             <a
               href={`https://wa.me/91${String(phone).replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
-                `Namaste ${patientName || "Patient"} ji, Dr. Satyam Vishwakarma has prescribed your daily physical therapy protocol from ${dailyCourseSpan.startKey} to ${dailyCourseSpan.endKey} (${dailyCourseSpan.totalDays} Days). All consecutive daily therapy slots are reserved for you at Vindhy Physio & Rehab Center.`
+                `Namaste ${patientName || "Patient"} ji, Dr. Satyam Vishwakarma has prescribed your daily physical therapy protocol from ${dailyCourseSpan.startKey} to ${dailyCourseSpan.endKey} (${dailyCourseSpan.totalDays} Days). All consecutive daily therapy slots are reserved for you at Vindhy Physiotherapy & Rehab Center.`
               )}`}
               target="_blank"
               rel="noreferrer"
@@ -1037,7 +1037,7 @@ export default function PatientVisitCalendar({
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", paddingTop: "8px", borderTop: "1px dashed #bae6fd" }}>
                   <a
                     href={`https://wa.me/91${String(phone).replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
-                      `Namaste ${patientName || "Patient"} ji, Dr. Satyam Vishwakarma has scheduled your next physiotherapy follow-up on ${selectedDateStr}. Please arrive at Vindhy Physio & Rehab Center on time for optimal rehabilitation.`
+                      `Namaste ${patientName || "Patient"} ji, Dr. Satyam Vishwakarma has scheduled your next physiotherapy follow-up on ${selectedDateStr}. Please arrive at Vindhy Physiotherapy & Rehab Center on time for optimal rehabilitation.`
                     )}`}
                     target="_blank"
                     rel="noreferrer"

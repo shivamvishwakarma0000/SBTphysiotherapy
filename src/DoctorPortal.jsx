@@ -571,7 +571,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
           address: locationAddressInput.trim(),
           lat: newLat,
           lng: newLng,
-          name: place.display_name.split(",")[0] || "Vindhy Physio & Rehab Center"
+          name: place.display_name.split(",")[0] || "Vindhy Physiotherapy & Rehab Center"
         };
         setClinicLocation(updated);
         localStorage.setItem("vindhy_clinic_location", JSON.stringify(updated));
@@ -594,7 +594,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
       address: locationAddressInput.trim() || DEFAULT_CLINIC_LOCATION.address,
       lat: parseFloat(locationLatInput) || DEFAULT_CLINIC_LOCATION.lat,
       lng: parseFloat(locationLngInput) || DEFAULT_CLINIC_LOCATION.lng,
-      name: "Vindhy Physio & Rehab Center"
+      name: "Vindhy Physiotherapy & Rehab Center"
     };
     setClinicLocation(updated);
     localStorage.setItem("vindhy_clinic_location", JSON.stringify(updated));
@@ -1794,7 +1794,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
     const perSession = selectedPatient.packagePerSessionFee || Math.round(pkgTotal / totalDays);
     const tomorrowStr = selectedPatient.followUpDate || "Tomorrow 10:30 AM";
 
-    const waMsg = `Namaste ${selectedPatient.name || "Patient"} ji,\n\nDr. Satyam Vishwakarma has confirmed and locked your *${duration}* Rehabilitation Protocol at *Vindhy Physio & Rehab Center*.\n\n📅 *Reserved Schedule:* ${startStr} to ${endStr}\n⏱️ *Total Duration:* ${totalDays} Consecutive Days (Daily Attendance)\n💰 *Package Settlement:* ₹${pkgTotal} (₹${perSession}/session)\n🎯 *Next Follow-Up Session:* ${tomorrowStr} at 10:30 AM\n\nAll consecutive daily calendar slots are now officially reserved for you. Consistent daily attendance is crucial for your full recovery!\n\n📍 *Clinic:* Amravati Chauraha, Vindhyachal, Mirzapur\n📞 *Helpdesk:* +91 9793093316`;
+    const waMsg = `Namaste ${selectedPatient.name || "Patient"} ji,\n\nDr. Satyam Vishwakarma has confirmed and locked your *${duration}* Rehabilitation Protocol at *Vindhy Physiotherapy & Rehab Center*.\n\n📅 *Reserved Schedule:* ${startStr} to ${endStr}\n⏱️ *Total Duration:* ${totalDays} Consecutive Days (Daily Attendance)\n💰 *Package Settlement:* ₹${pkgTotal} (₹${perSession}/session)\n🎯 *Next Follow-Up Session:* ${tomorrowStr} at 10:30 AM\n\nAll consecutive daily calendar slots are now officially reserved for you. Consistent daily attendance is crucial for your full recovery!\n\n📍 *Clinic:* Atal Chauraha (Amravati), Vindhyachal, Mirzapur\n📞 *Helpdesk:* +91 9793093316`;
     const waUrl = `https://wa.me/91${cleanPh}?text=${encodeURIComponent(waMsg)}`;
     window.open(waUrl, "_blank");
   };
@@ -1805,14 +1805,27 @@ export default function DoctorPortal({ onClose, themeProps }) {
     setConsultLoading(true);
     try {
       const data = await api.finalizeConsultation(activeConsultPatient.patientId, consultForm);
-      fetchStats();
-      fetchPatients();
-      fetchTodayVisits();
-      fetchReviewQueue();
+
+      // Immediately update local React state so UI updates instantly without any waiting room flicker!
+      setPatients(prev => prev.map(p =>
+        p.patientId === data.patient.patientId
+          ? { ...p, status: "Active", totalVisits: data.patient.totalVisits || 1, lastVisitDate: data.visit.date }
+          : p
+      ));
+
       setActiveConsultPatient(null);
+
+      // Refresh in background
+      await Promise.all([
+        fetchStats(),
+        fetchPatients(),
+        fetchTodayVisits(),
+        fetchReviewQueue()
+      ]);
+
       // Immediately open the official receipt modal
       setActiveReceipt({ patient: data.patient, visit: data.visit });
-      setShareFeedback(`✅ Consultation finalized! Fee: ${data.visit.fee}. ⭐ WhatsApp review scheduled for delivery in 2 hours.`);
+      setShareFeedback(`✅ Consultation finalized! Visit #${data.visit.visitNumber} receipt generated.`);
     } catch (err) {
       alert("Error finalizing consultation: " + err.message);
     } finally {
@@ -1856,7 +1869,8 @@ export default function DoctorPortal({ onClose, themeProps }) {
     try {
       const data = await api.getPatientDetails(patientId);
       if (data.ok) {
-        const isWaiting = data.patient.status === "Waiting for Doctor" || (data.patient.totalVisits || 0) === 0;
+        const hasNoVisits = (!data.visits || data.visits.length === 0) && (data.patient.totalVisits || 0) === 0;
+        const isWaiting = data.patient.status === "Waiting for Doctor" && hasNoVisits;
         if (isWaiting) {
           alert(`Patient ${data.patient.name} (${data.patient.patientId}) is currently in the Waiting Queue and has not completed doctor consultation yet. Opening consultation room now.`);
           handleOpenConsultationModal(data.patient);
@@ -2279,7 +2293,8 @@ export default function DoctorPortal({ onClose, themeProps }) {
       reason: visit.reason || "",
       diagnosis: visit.diagnosis || "",
       treatmentNotes: visit.treatmentNotes || "",
-      followUpDate: visit.followUpDate || ""
+      followUpDate: visit.followUpDate || "",
+      followUpTime: visit.followUpTime || (visit.followUpDate ? "10:30 AM" : "")
     });
   };
 
@@ -2304,7 +2319,8 @@ export default function DoctorPortal({ onClose, themeProps }) {
         reason: editReceiptForm.reason,
         diagnosis: editReceiptForm.diagnosis,
         treatmentNotes: editReceiptForm.treatmentNotes,
-        followUpDate: editReceiptForm.followUpDate
+        followUpDate: editReceiptForm.followUpDate,
+        followUpTime: editReceiptForm.followUpTime
       };
 
       const res = await api.updateVisit(editingReceiptVisit.visitId, updates);
@@ -2552,7 +2568,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
 
     // Clean, highly professional WhatsApp receipt message
     const receiptSummary = 
-`🏥 *VINDHYA PHYSIO & REHAB CENTER*
+`🏥 *VINDHY PHYSIOTHERAPY & REHAB CENTER*
 *Official Patient Consultation & Clinical Receipt*
 --------------------------------------------
 👤 *Patient Name:* ${patient.name}
@@ -2564,7 +2580,7 @@ export default function DoctorPortal({ onClose, themeProps }) {
 🗓️ *Next Follow-up:* ${followUpSummary}
 --------------------------------------------
 👨‍⚕️ *Consultant:* Dr. Satyam Vishwakarma
-📍 *Clinic Address:* Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)
+📍 *Clinic Address:* Atal Chauraha (Amravati), Vindhyachal, Mirzapur (U.P.)
 📞 *Helpline:* +91 9793093316 | WhatsApp: +91 9793093316
 --------------------------------------------
 📄 *Official Digital Clinical Receipt*
@@ -2643,7 +2659,7 @@ _(Saved in patient clinic records)_`;
           <div className="login-header">
             <img
               src={CLINIC_LOGO_B64 || "/vindhy-receipt-logo.png"}
-              alt="Vindhy Physio & Rehab Center"
+              alt="Vindhy Physiotherapy & Rehab Center"
               className="login-logo-img prominent-landing-logo"
             />
             <h2>Doctor Portal Login</h2>
@@ -2777,7 +2793,7 @@ _(Saved in patient clinic records)_`;
           <div className="doctor-nav-brand">
             <img
               src={CLINIC_LOGO_B64 || "/vindhy-logo-light.png"}
-              alt="Vindhy Physio & Rehab Center"
+              alt="Vindhy Physiotherapy & Rehab Center"
               className="doctor-nav-logo"
             />
             <div className="doctor-brand-text">
@@ -2804,7 +2820,7 @@ _(Saved in patient clinic records)_`;
                     if (window.deferredPWAInstallPrompt) {
                       window.deferredPWAInstallPrompt.prompt();
                     } else {
-                      alert("To install the Vindhy Physio App on your phone, tap your browser's menu (⋮ or Share icon) and select 'Add to Home Screen' or 'Install App'.");
+                      alert("To install the Vindhy Physiotherapy App on your phone, tap your browser's menu (⋮ or Share icon) and select 'Add to Home Screen' or 'Install App'.");
                     }
                   }}
                   title="Download / Install App on Phone"
@@ -3019,7 +3035,7 @@ _(Saved in patient clinic records)_`;
               <div className="mobile-hero-brand">
                 <img
                   src={CLINIC_LOGO_B64}
-                  alt="Vindhy Physio & Rehab Center"
+                  alt="Vindhy Physiotherapy & Rehab Center"
                   className="mobile-hero-logo"
                 />
               </div>
@@ -3031,7 +3047,7 @@ _(Saved in patient clinic records)_`;
                     Hello, Dr. Satyam!
                   </h1>
                   <p className="greeting-subtitle" style={{ color: "rgba(255, 255, 255, 0.95)", textShadow: "0 1px 4px rgba(0, 0, 0, 0.6)" }}>
-                    Clinical Operations • Vindhy Physio &amp; Rehab Center
+                    Clinical Operations • Vindhy Physiotherapy &amp; Rehab Center
                   </p>
                 </div>
               </div>
@@ -4490,7 +4506,7 @@ _(Saved in patient clinic records)_`;
                                 📞 Call
                               </a>
                               <a
-                                href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${patientName}, thank you for contacting Vindhy Physio & Rehab Center. Dr. Satyam Vishwakarma is reviewing your consultation booking for ${e.painArea || "Physiotherapy"}.`)}`}
+                                href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${patientName}, thank you for contacting Vindhy Physiotherapy & Rehab Center. Dr. Satyam Vishwakarma is reviewing your consultation booking for ${e.painArea || "Physiotherapy"}.`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
@@ -5170,7 +5186,7 @@ _(Saved in patient clinic records)_`;
                   .join("")
                   .toUpperCase();
 
-                const waMessage = `Namaste ${item.patientName} ji 🙏,\nThis is a gentle reminder from Dr. Satyam Vishwakarma at Vindhy Physio & Rehab Center.\n\nYour ${item.isSelfBooked ? "appointment" : "follow-up session"} is scheduled for TODAY (${todayKey}) at ${item.time || "10:30 AM"}.\nFocus: ${item.diagnosis || "Physical Therapy Rehabilitation"}\n\nPlease let us know your expected arrival time so we can keep your treatment bed ready.\nClinic: Vindhy Physio & Rehab Center, Robertsganj.\nSee you soon! 🏥✨`;
+                const waMessage = `Namaste ${item.patientName} ji 🙏,\nThis is a gentle reminder from Dr. Satyam Vishwakarma at Vindhy Physiotherapy & Rehab Center.\n\nYour ${item.isSelfBooked ? "appointment" : "follow-up session"} is scheduled for TODAY (${todayKey}) at ${item.time || "10:30 AM"}.\nFocus: ${item.diagnosis || "Physical Therapy Rehabilitation"}\n\nPlease let us know your expected arrival time so we can keep your treatment bed ready.\nClinic: Vindhy Physiotherapy & Rehab Center, Atal Chauraha (Amravati), Vindhyachal, Mirzapur.\nSee you soon! 🏥✨`;
 
                 return (
                   <div
@@ -7179,7 +7195,7 @@ _(Saved in patient clinic records)_`;
                         position: "relative"
                       }}
                     >
-                      {/* Row 1: Visit Badge, Clean Date & Time, Fee, and Compact Top-Right Dustbin Icon Button */}
+                      {/* Row 1: Visit Badge, Clean Date & Time, Fee */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                           <span className="visit-num-badge" style={{ background: "#0284c7", color: "#ffffff", fontWeight: "800", padding: "3px 8px", borderRadius: "6px", fontSize: "12px" }}>
@@ -7194,83 +7210,132 @@ _(Saved in patient clinic records)_`;
                             </span>
                           )}
                         </div>
-
-                        {/* Edit & Delete Buttons on Top-Right */}
-                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditReceiptModal(v);
-                            }}
-                            style={{
-                              background: "#f0fdf4",
-                              color: "#15803d",
-                              border: "1.5px solid #86efac",
-                              borderRadius: "7px",
-                              padding: "4px 8px",
-                              fontSize: "11.5px",
-                              fontWeight: "800",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "3px",
-                              cursor: "pointer",
-                              boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
-                            }}
-                            title="Edit Visit Number & Receipt Details"
-                          >
-                            <span>✏️</span>
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="delete-visit-btn-icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteVisit(v);
-                            }}
-                            style={{
-                              background: "#fee2e2",
-                              color: "#dc2626",
-                              border: "1.5px solid #f87171",
-                              borderRadius: "7px",
-                              width: "30px",
-                              height: "30px",
-                              minWidth: "30px",
-                              padding: 0,
-                              fontSize: "13px",
-                              fontWeight: "800",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              cursor: "pointer",
-                              flexShrink: 0,
-                              boxShadow: "0 1px 4px rgba(220, 38, 38, 0.15)",
-                              transition: "all 0.15s ease"
-                            }}
-                            title="Delete this visit / receipt"
-                          >
-                            ✕
-                          </button>
-                        </div>
                       </div>
 
-                      {/* Row 2: Slip & WhatsApp PDF + Download in the SAME ROW side by side */}
+                      {/* Top Row: WhatsApp (50%) & Download PDF (50%) */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "10px", width: "100%" }}>
                         <button
-                          className="receipt-btn finalize-action-btn"
-                          style={{ minHeight: "38px", padding: "8px 10px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}
-                          onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
+                          type="button"
+                          className="whatsapp-share-btn"
+                          style={{
+                            width: "100%",
+                            minHeight: "36px",
+                            padding: "6px 10px",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            borderRadius: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "5px",
+                            margin: 0
+                          }}
+                          onClick={() => handleWhatsAppDirectShare({ patient: selectedPatient, visit: v })}
+                          title="Send WhatsApp"
                         >
-                          📄 Slip & WhatsApp PDF
+                          💬 WhatsApp
                         </button>
                         <button
+                          type="button"
                           className="secondary-btn"
+                          style={{
+                            width: "100%",
+                            minHeight: "36px",
+                            padding: "6px 10px",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            borderRadius: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "5px",
+                            margin: 0
+                          }}
                           onClick={() => handleDownloadPDF({ patient: selectedPatient, visit: v })}
-                          style={{ minHeight: "38px", padding: "8px 10px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}
-                          title="Instant Download PDF"
+                          title="Download PDF"
                         >
-                          📥 Download
+                          📥 PDF
+                        </button>
+                      </div>
+
+                      {/* Bottom Row: View Slip (40%), Edit (40%), Cross (20%) */}
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 1fr", gap: "8px", marginTop: "8px", width: "100%" }}>
+                        <button
+                          type="button"
+                          className="receipt-btn finalize-action-btn"
+                          style={{
+                            width: "100%",
+                            minHeight: "36px",
+                            padding: "6px 8px",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            borderRadius: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            margin: 0
+                          }}
+                          onClick={() => handleFinalizeAndIssueReceipt(selectedPatient, v)}
+                          title="Preview official slip & WhatsApp"
+                        >
+                          📄 View Slip
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            width: "100%",
+                            minHeight: "36px",
+                            background: "#f0fdf4",
+                            color: "#15803d",
+                            border: "1.5px solid #86efac",
+                            borderRadius: "8px",
+                            padding: "6px 8px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            margin: 0,
+                            transition: "all 0.15s ease"
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditReceiptModal(v);
+                          }}
+                          title="Edit visit number or receipt details"
+                        >
+                          <span>✏️</span>
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            width: "100%",
+                            minHeight: "36px",
+                            background: "#fee2e2",
+                            color: "#dc2626",
+                            border: "1.5px solid #fca5a5",
+                            borderRadius: "8px",
+                            padding: "6px 0",
+                            fontSize: "14px",
+                            fontWeight: "900",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            margin: 0,
+                            transition: "all 0.15s ease"
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteVisit(v);
+                          }}
+                          title="Delete this receipt"
+                        >
+                          ✕
                         </button>
                       </div>
 
@@ -7852,11 +7917,11 @@ _(Saved in patient clinic records)_`;
                 <div className="receipt-banner-left">
                   <img
                     src="/vindhy-receipt-logo.png"
-                    alt="Vindhy Physio & Rehab Center"
+                    alt="Vindhy Physiotherapy & Rehab Center"
                     className="receipt-logo"
                   />
                   <p className="receipt-banner-address">
-                    Amravati Chauraha, Vindhyachal, Mirzapur (U.P.)<br />
+                    Atal Chauraha (Amravati), Vindhyachal, Mirzapur (U.P.)<br />
                     Phone: +91 9793093316 &nbsp;|&nbsp; WhatsApp: +91 9793093316
                   </p>
                 </div>
@@ -7984,7 +8049,7 @@ _(Saved in patient clinic records)_`;
 
               <div className="receipt-footer">
                 <p>Thank you for choosing Vindhy Physiotherapy &amp; Rehab Center</p>
-                <span>For appointments &amp; medical inquiries: Call 9793093316 | WhatsApp: 9793093316 | Amravati Chauraha, Vindhyachal</span>
+                <span>For appointments &amp; medical inquiries: Call 9793093316 | WhatsApp: 9793093316 | Atal Chauraha (Amravati), Vindhyachal, Mirzapur</span>
               </div>
             </div>
 
@@ -8174,6 +8239,47 @@ _(Saved in patient clinic records)_`;
                   placeholder="e.g. Cervical spine mobilization & traction"
                   onChange={(e) => setEditReceiptForm({ ...editReceiptForm, reason: e.target.value })}
                 />
+              </div>
+
+              {/* Follow-Up Date & Follow-Up Timing */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                    🗓️ Next Follow-Up Date
+                  </label>
+                  <input
+                    type="date"
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "13px",
+                      boxSizing: "border-box"
+                    }}
+                    value={editReceiptForm.followUpDate || ""}
+                    onChange={(e) => setEditReceiptForm({ ...editReceiptForm, followUpDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                    ⏰ Follow-Up Timing
+                  </label>
+                  <input
+                    type="text"
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "13px",
+                      boxSizing: "border-box"
+                    }}
+                    value={editReceiptForm.followUpTime || ""}
+                    placeholder="10:30 AM"
+                    onChange={(e) => setEditReceiptForm({ ...editReceiptForm, followUpTime: e.target.value })}
+                  />
+                </div>
               </div>
 
               {/* Action Buttons */}

@@ -59,7 +59,7 @@ export class ErrorBoundary extends React.Component {
           >
             <div style={{ fontSize: "42px", marginBottom: "12px" }}>🩺</div>
             <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#ffffff", margin: "0 0 8px 0" }}>
-              Vindhy Physio & Rehab Center
+              Vindhy Physiotherapy & Rehab Center
             </h2>
             <p style={{ fontSize: "14px", color: "#93c5fd", margin: "0 0 20px 0", lineHeight: "1.5" }}>
               {this.props.fallbackMessage || "Your health portal session is ready. Tap below to enter."}

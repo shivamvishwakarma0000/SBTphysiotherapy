@@ -1,4 +1,4 @@
-// Vindhy Physio & Rehab Center Service Worker
+// Vindhy Physiotherapy & Rehab Center Service Worker
 const CACHE_NAME = 'vindhy-physio-v2';
 const STATIC_ASSETS = [
   '/',

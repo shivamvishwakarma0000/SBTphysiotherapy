@@ -6,7 +6,7 @@ export const CLINIC_SHARE_URL = "https://share.google/zvf8bGCaBsoiHA60S";
 export const CLINIC_EXACT_LOCATION = {
   name: "Vindhy Physiotherapy & Rehab Center",
   doctor: "Dr. Satyam Vishwakarma (DPT, BPT)",
-  address: "Vindhy Physiotherapy, Amravati Chauraha, Kantit, Vindhyachal, Mirzapur, Uttar Pradesh 231001",
+  address: "Vindhy Physiotherapy & Rehab Center, Atal Chauraha (Amravati), Vindhyachal, Mirzapur, Uttar Pradesh 231001",
   lat: 25.1612,
   lng: 82.5085,
   shareUrl: CLINIC_SHARE_URL,
@@ -75,13 +75,13 @@ export default function ClinicLeafletMap({
 
     const marker = L.marker([targetLat, targetLng], {
       icon: clinicIcon,
-      title: "Vindhy Physiotherapy - Dr. Satyam Vishwakarma"
+      title: "Vindhy Physiotherapy & Rehab Center - Dr. Satyam Vishwakarma"
     }).addTo(map);
 
     const popupHtml = `
       <div style="font-family: inherit; font-size: 12px; color: #0f172a; line-height: 1.4; min-width: 200px; padding: 2px;">
         <div style="font-weight: 800; font-size: 13px; color: #0f766e; margin-bottom: 2px;">
-          🏥 Vindhy Physiotherapy
+          🏥 Vindhy Physiotherapy & Rehab Center
         </div>
         <div style="font-size: 11px; font-weight: 700; color: #0284c7; margin-bottom: 5px;">
           Dr. Satyam Vishwakarma (DPT, BPT)
@@ -155,7 +155,7 @@ export default function ClinicLeafletMap({
       {/* Quick Recenter Overlay Button */}
       <button
         onClick={handleCenter}
-        title="Center map to Vindhy Physiotherapy clinic"
+        title="Center map to Vindhy Physiotherapy & Rehab Center"
         style={{
           position: "absolute",
           bottom: "10px",
